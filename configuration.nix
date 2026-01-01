@@ -8,7 +8,7 @@
   ...
 }:
 let
-  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
+  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/release-25.11.tar.gz";
 
   nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
   nix-rice-lib = import (nix-rice + "/lib.nix") {
@@ -41,14 +41,16 @@ let
   android_sdk = android_nixpkgs.sdk (
     sdkPkgs: with sdkPkgs; [
       build-tools-35-0-0
-      build-tools-36-0-0
+      build-tools-36-1-0
       cmake-3-22-1
+      cmake-4-1-2
       cmdline-tools-latest
       emulator
-      ndk-26-3-11579264
-      ndk-27-0-12077973
-      ndk-29-0-13599879
+      ndk-28-2-13676358
+      ndk-29-0-14206865
       platform-tools
+      platforms-android-28
+      platforms-android-29
       platforms-android-30
       platforms-android-31
       platforms-android-32
@@ -56,10 +58,11 @@ let
       platforms-android-34
       platforms-android-35
       platforms-android-36
-      system-images-android-36-google-apis-playstore-x86-64
+      platforms-android-36-1
+      system-images-android-36-1-google-apis-playstore-x86-64
       tools
     ]
-  );
+  ); # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/stable
   android_sdk_path = "${android_sdk}/share/android-sdk";
 
   font_preferences = {
@@ -181,18 +184,17 @@ in
       };
     };
 
-    kernelPackages = pkgs.linuxKernel.packages.linux_6_16;
-    # kernelPackages = pkgs.linuxKernel.packages.linux_zen;
+    kernelPackages = pkgs.linuxKernel.packages.linux_6_18;
 
     extraModulePackages = with config.boot.kernelPackages; [
+      # openafs # Build Failure
       apfs
       cpupower
       mm-tools
-      openafs
       tmon
       turbostat
       usbip
-      zfs_unstable
+      zfs_2_4
     ];
 
     kernelModules = [
@@ -273,17 +275,11 @@ in
       nixos-version.enable = true;
     };
 
-    autoUpgrade = {
-      enable = false;
-      channel = "https://nixos.org/channels/nixos-unstable";
-      operation = "boot";
-      allowReboot = false;
-    };
-
     # activationScripts = { };
+
     # userActivationScripts = { };
 
-    stateVersion = "24.11";
+    stateVersion = "25.11";
   };
 
   nix = {
@@ -301,7 +297,7 @@ in
       sandbox = true;
       auto-optimise-store = true;
 
-      cores = 0; # 0 = All
+      cores = 1; # 0 = All
       max-jobs = 1;
     };
 
@@ -354,7 +350,7 @@ in
 
         addons = with pkgs; [
           fcitx5-gtk
-          # fcitx5-openbangla-keyboard # Build Failure
+          fcitx5-openbangla-keyboard
         ];
       };
     };
@@ -459,7 +455,7 @@ in
           };
         };
 
-        greetd = {
+        lemurs = {
           unixAuth = true;
           nodelay = false;
 
@@ -552,6 +548,10 @@ in
     audit = {
       enable = false;
     };
+
+    auditd = {
+      enable = false;
+    };
   };
 
   hardware = {
@@ -567,6 +567,11 @@ in
       intel = {
         updateMicrocode = true;
       };
+    };
+
+    i2c = {
+      enable = true;
+      group = "i2c";
     };
 
     graphics = {
@@ -668,11 +673,6 @@ in
       };
     };
 
-    rtl-sdr = {
-      enable = true;
-      package = pkgs.rtl-sdr;
-    };
-
     sane = {
       enable = true;
       backends-package = (
@@ -686,7 +686,10 @@ in
       openFirewall = true;
     };
 
-    steam-hardware.enable = true;
+    rtl-sdr = {
+      enable = true;
+      package = pkgs.rtl-sdr;
+    };
   };
 
   virtualisation = {
@@ -728,18 +731,6 @@ in
           package = pkgs.swtpm;
         };
 
-        # ovmf = {
-        #   enable = true;
-        #   packages = [
-        #     (pkgs.OVMFFull.override {
-        #       secureBoot = true;
-        #       httpSupport = true;
-        #       tpmSupport = true;
-        #       tlsSupport = true;
-        #     }).fd
-        #   ];
-        # };
-
         runAsRoot = true;
       };
     };
@@ -747,15 +738,38 @@ in
 
     containers.enable = true;
 
-    podman = {
+    docker = {
       enable = true;
-      package = pkgs.podman;
-      dockerCompat = true;
+      package = (
+        pkgs.docker_29.override {
+          buildxSupport = true;
+          composeSupport = true;
+          sbomSupport = true;
+          initSupport = true;
 
-      defaultNetwork.settings.dns_enabled = true;
+          withSystemd = true;
+          withBtrfs = true;
+          withLvm = true;
+          withSeccomp = true;
+        }
+      );
+
+      logDriver = "journald";
+
+      listenOptions = [
+        "/run/docker.sock"
+      ];
+
+      daemon.settings = {
+        ipv6 = true;
+
+        live-restore = true;
+      };
+
+      enableOnBoot = true;
     };
 
-    oci-containers.backend = "podman";
+    oci-containers.backend = "docker";
 
     waydroid = {
       enable = true;
@@ -808,8 +822,6 @@ in
       );
 
       implementation = "broker";
-
-      # packages = with pkgs; [ ];
     };
 
     timesyncd = {
@@ -867,11 +879,11 @@ in
           rebootKey = "reboot";
           rebootKeyLongPress = "reboot";
 
-          suspendKey = "ignore";
-          suspendKeyLongPress = "ignore";
+          suspendKey = "suspend";
+          suspendKeyLongPress = "suspend";
 
-          hibernateKey = "ignore";
-          hibernateKeyLongPress = "ignore";
+          hibernateKey = "hibernate";
+          hibernateKeyLongPress = "hibernate";
         };
       };
     };
@@ -879,42 +891,17 @@ in
     udev = {
       enable = true;
       packages = with pkgs; [
-        android-udev-rules
         game-devices-udev-rules
         libmtp.out
         rtl-sdr
-        steam-devices-udev-rules
       ];
     };
 
-    libinput = {
+    udisks2 = {
       enable = true;
+      package = pkgs.udisks2;
 
-      mouse = {
-        leftHanded = false;
-        disableWhileTyping = false;
-        tapping = true;
-        middleEmulation = true;
-        clickMethod = "buttonareas";
-        scrollMethod = "twofinger";
-        naturalScrolling = true;
-        horizontalScrolling = true;
-        tappingDragLock = true;
-        sendEventsMode = "enabled";
-      };
-
-      touchpad = {
-        leftHanded = false;
-        disableWhileTyping = false;
-        tapping = true;
-        middleEmulation = true;
-        clickMethod = "buttonareas";
-        scrollMethod = "twofinger";
-        naturalScrolling = true;
-        horizontalScrolling = true;
-        tappingDragLock = true;
-        sendEventsMode = "enabled";
-      };
+      mountOnMedia = false;
     };
 
     fprintd = {
@@ -926,23 +913,51 @@ in
       # };
     };
 
-    greetd = {
+    displayManager.lemurs = {
       enable = true;
-      package = pkgs.greetd;
-
-      restart = true;
+      package = pkgs.lemurs;
 
       settings = {
-        default_session = {
-          command = "${pkgs.lib.getExe pkgs.tuigreet} --greet-align center --time --greeting Welcome --user-menu --asterisks --asterisks-char \"*\" --cmd \"${pkgs.lib.getExe config.programs.uwsm.package} start hyprland-uwsm.desktop\"";
-          user = "bitscoper";
+        pam_service = "lemurs";
+
+        environment_switcher = {
+          include_tty_shell = true;
+
+          switcher_visibility = "visible";
+          show_movers = true;
+
+          remember = true;
         };
+
+        username_field = {
+          remember = true;
+        };
+
+        password_field = {
+          content_replacement_character = "*";
+        };
+
+        background = {
+          show_background = true;
+        };
+
+        "background.style" = {
+          show_border = false;
+        }; # Not Working
+
+        focus_behaviour = "default";
       };
     };
 
     gnome = {
       gnome-keyring.enable = true;
-      gcr-ssh-agent.enable = true;
+
+      gcr-ssh-agent = {
+        enable = true;
+        package = pkgs.gcr_4;
+      };
+
+      sushi.enable = true;
     };
 
     gvfs = {
@@ -952,13 +967,6 @@ in
           udevSupport = true;
         }
       );
-    };
-
-    udisks2 = {
-      enable = true;
-      package = pkgs.udisks2;
-
-      mountOnMedia = false;
     };
 
     pipewire = {
@@ -973,6 +981,10 @@ in
           rocSupport = true;
         }
       );
+
+      extraLv2Packages = with pkgs; [
+      ];
+
       systemWide = false;
 
       audio.enable = true;
@@ -991,6 +1003,9 @@ in
             enableDocs = true;
           }
         );
+
+        extraLv2Packages = with pkgs; [
+        ];
 
         extraConfig.bluetoothEnhancements = {
           "monitor.bluez.properties" = {
@@ -1288,6 +1303,15 @@ in
       enable = true;
     };
 
+    gpsd = {
+      enable = true;
+
+      readonly = true;
+
+      listenany = true;
+      port = 2947;
+    };
+
     bind = {
       enable = false;
       package = pkgs.bind;
@@ -1321,14 +1345,7 @@ in
 
     postgresql = {
       enable = true;
-      package = (
-        pkgs.postgresql_17_jit.override {
-          # curlSupport = true;
-          # pamSupport = true;
-          # systemdSupport = true;
-          # uringSupport = true;
-        }
-      );
+      package = pkgs.postgresql_18_jit;
 
       enableTCPIP = true;
 
@@ -1426,7 +1443,7 @@ in
       enablePAM = true;
       showPAMFailure = true;
 
-      # pluginSettings = { };
+      # pluginSettings = {};
     };
 
     icecast = {
@@ -1523,7 +1540,7 @@ in
     java = {
       enable = true;
       package = (
-        pkgs.jdk25.override {
+        pkgs.jdk.override {
           enableGtk = true;
         }
       );
@@ -1573,6 +1590,10 @@ in
     xwayland.enable = true;
 
     bash = {
+      vteIntegration = true;
+
+      blesh.enable = true;
+
       completion = {
         enable = true;
         package = pkgs.bash-completion;
@@ -1595,33 +1616,6 @@ in
       '';
     };
 
-    fish = {
-      enable = true;
-      package = pkgs.fish;
-
-      vendor = {
-        config.enable = true;
-        functions.enable = true;
-        completions.enable = true;
-      };
-
-      # shellAbbrs = { };
-      # shellAliases = { };
-
-      # promptInit = '''';
-      # loginShellInit = '''';
-      # shellInit = '''';
-
-      interactiveShellInit = ''
-        if command -q nix-your-shell
-          nix-your-shell fish | source
-        end
-        function save_history --on-event fish_prompt
-          history --save
-        end
-      '';
-    };
-
     zoxide = {
       enable = true;
       package = (
@@ -1631,7 +1625,6 @@ in
       );
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
 
       flags = [
         "--cmd cd"
@@ -1646,7 +1639,6 @@ in
       loadInNixShell = true;
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
 
       silent = false;
     };
@@ -1655,7 +1647,6 @@ in
       package = pkgs.nix-index;
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
     };
 
     gnupg = {
@@ -1735,26 +1726,25 @@ in
 
     adb.enable = true;
 
-    nano = {
+    nano.enable = false;
+
+    neovim = {
       enable = true;
-      package = pkgs.nano;
+      package = pkgs.neovim-unwrapped;
 
-      syntaxHighlight = true;
+      withPython3 = true;
 
-      nanorc = ''
-        set linenumbers
-        set softwrap
-        set indicator
-        set autoindent
-      '';
+      viAlias = true;
+      vimAlias = true;
+      defaultEditor = true;
     };
 
     bat = {
       enable = true;
       package = pkgs.bat;
       extraPackages = with pkgs.bat-extras; [
-        batdiff
         batgrep
+        batdiff
         batman
         batpipe
         batwatch
@@ -1763,7 +1753,9 @@ in
     };
 
     gnome-disks.enable = true;
+
     system-config-printer.enable = true;
+
     seahorse.enable = true;
 
     nm-applet = {
@@ -1773,33 +1765,16 @@ in
 
     nautilus-open-any-terminal = {
       enable = true;
-      terminal = "tilix";
+      terminal = "ghostty";
     };
-
-    file-roller.enable = true;
 
     firefox = {
       enable = true;
       package = pkgs.firefox-devedition;
       languagePacks = [
-        "ar"
         "bn"
         "en-US"
       ];
-
-      # nativeMessagingHosts = {
-      #   packages = with pkgs; [
-      #     (pkgs.keepassxc.override {
-      #       withKeePassBrowser = true;
-      #       withKeePassBrowserPasskeys = true;
-      #       withKeePassFDOSecrets = true;
-      #       withKeePassKeeShare = true;
-      #       withKeePassNetworking = true;
-      #       withKeePassSSHAgent = true;
-      #       withKeePassYubiKey = true;
-      #     })
-      #   ];
-      # };
 
       policies = {
         Extensions = {
@@ -1818,8 +1793,6 @@ in
 
           Locked = [
             "@testpilot-containers" # "Firefox Multi-Account Containers"
-            "jid1-BoFifL9Vbdl2zQ@jetpack" # "Decentraleyes"
-            "uBlock0@raymondhill.net" # "uBlock Origin"
           ];
         };
       };
@@ -1878,16 +1851,15 @@ in
         obs-text-pthread
         obs-transition-table
         obs-vaapi
-        obs-vertical-canvas
         obs-vkcapture
       ];
     };
 
-    ghidra = {
-      enable = true;
-      package = pkgs.ghidra;
-      gdb = true;
-    };
+    # ghidra = {
+    #   enable = true;
+    #   package = pkgs.ghidra;
+    #   gdb = true;
+    # }; # Build Failure
 
     wireshark = {
       enable = true;
@@ -1903,19 +1875,6 @@ in
 
       openFirewall = true;
     };
-
-    steam = {
-      enable = true;
-      package = pkgs.steam;
-
-      extraCompatPackages = with pkgs; [
-        proton-ge-bin
-      ];
-
-      localNetworkGameTransfers.openFirewall = true;
-      remotePlay.openFirewall = true;
-      dedicatedServer.openFirewall = true;
-    }; # Unfree
 
     virt-manager = {
       enable = true;
@@ -1942,28 +1901,6 @@ in
               enable-overamplification = true;
             };
 
-            "com/gexperts/Tilix" = {
-              auto-hide-mouse = false;
-              close-with-last-session = false;
-              control-scroll-zoom = true;
-              enable-wide-handle = true;
-              encodings = [
-                "UTF-8"
-              ];
-              focus-follow-mouse = true;
-              middle-click-close = false;
-              new-instance-mode = "new-window";
-              paste-strip-first-char = false;
-              paste-strip-trailing-whitespace = false;
-              tab-position = "top";
-              terminal-title-show-when-single = true;
-              terminal-title-style = "normal";
-              theme-variant = "dark";
-              use-overlay-scrollbar = false;
-              window-save-state = false;
-              window-style = "normal";
-            };
-
             "org/gnome/desktop/privacy" = {
               remember-app-usage = false;
               remember-recent-files = false;
@@ -1973,9 +1910,11 @@ in
               send-software-usage-stats = false;
               usb-protection = true;
             };
+
             "org/gtk/gtk4/settings/file-chooser" = {
               sort-directories-first = true;
             };
+
             "org/gnome/nautilus/preferences" = {
               click-policy = "double";
               recursive-search = "always";
@@ -1985,6 +1924,7 @@ in
               show-image-thumbnails = "always";
               date-time-format = "simple";
             };
+
             "org/gnome/nautilus/icon-view" = {
               captions = [
                 "size"
@@ -2004,11 +1944,13 @@ in
                 "statusbar-date"
               ];
             };
+
             "org/gnome/eog/ui" = {
               image-gallery = false;
               sidebar = true;
               statusbar = true;
             };
+
             "org/gnome/eog/view" = {
               autorotate = true;
               extrapolate = true;
@@ -2016,6 +1958,7 @@ in
               transparency = "checked";
               use-background-color = false;
             };
+
             "org/gnome/eog/fullscreen" = {
               loop = false;
               upscale = false;
@@ -2064,6 +2007,7 @@ in
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
+
             "org/virt-manager/virt-manager/connections" = {
               autoconnect = [
                 "qemu:///system"
@@ -2072,19 +2016,23 @@ in
                 "qemu:///system"
               ];
             };
+
             "org/virt-manager/virt-manager/new-vm" = {
               cpu-default = "host-passthrough";
             };
+
             "org/virt-manager/virt-manager/console" = {
               auto-redirect = false;
               autoconnect = true;
             };
+
             "org/virt-manager/virt-manager/stats" = {
               enable-cpu-poll = true;
               enable-disk-poll = true;
               enable-memory-poll = true;
               enable-net-poll = true;
             };
+
             "org/virt-manager/virt-manager/vmlist-fields" = {
               cpu-usage = true;
               disk-usage = true;
@@ -2092,6 +2040,7 @@ in
               memory-usage = true;
               network-traffic = true;
             };
+
             "org/virt-manager/virt-manager/confirm" = {
               delete-storage = true;
               forcepoweroff = true;
@@ -2099,6 +2048,10 @@ in
               poweroff = true;
               removedev = true;
               unapplied-dev = true;
+            };
+
+            "system/locale" = {
+              region = "en_US.UTF-8";
             };
           };
         }
@@ -2166,7 +2119,14 @@ in
       ANDROID_SDK_ROOT = android_sdk_path;
       ANDROID_HOME = android_sdk_path;
 
-      LD_LIBRARY_PATH = lib.mkForce "${pkgs.lib.makeLibraryPath (with pkgs; [ sqlite ])}:$LD_LIBRARY_PATH";
+      LD_LIBRARY_PATH = lib.mkForce "${
+        pkgs.lib.makeLibraryPath (
+          with pkgs;
+          [
+            sqlite
+          ]
+        )
+      }:$LD_LIBRARY_PATH";
     };
 
     sessionVariables = {
@@ -2189,11 +2149,16 @@ in
     systemPackages =
       with pkgs;
       [
-        # gpredicts # Build Failure
+        # cope # Conflicts
+        # dart # flutter adds the compatible versions
+        # elf-dissector # Build Failure
+        # gradle # flutter adds the compatible versions
         # reiser4progs # Marked Broken
+        aapt
         above
         acl
         acpidump-all
+        adb-sync
         addlicense
         agi # Cannot find libswt
         aircrack-ng
@@ -2202,6 +2167,7 @@ in
         alsa-tools
         alsa-utils
         alsa-utils-nhlt
+        analyze-build
         android_sdk # Custom
         android-backup-extractor
         android-tools
@@ -2211,15 +2177,19 @@ in
         arduino-cli
         arduino-ide
         arduino-language-server
-        arj
         armitage
+        asciinema
+        asciinema-agg
+        asciinema-scenario
         audacity
         autopsy
         avrdude
+        banner
         baobab
         bash-language-server
         bcachefs-tools
         binary
+        binutils
         binwalk
         bleachbit
         bluez-tools
@@ -2230,71 +2200,95 @@ in
         bulk_extractor
         bustle
         butt
-        bzip3
         cameractrls-gtk4
         celestia
         certbot-full
         clang
         clang-analyzer
+        clang-manpages
         clang-tools
         clinfo
         cliphist
         cloc
         cmake
         cmake-language-server
+        coc-flutter
+        codevis
         collision
-        cpio
+        compose2nix
+        coppwr
         cramfsprogs
+        crow-translate
         cryptsetup
         ctop
         cups-filters
         cups-printers
         curtail
         cve-bin-tool
-        cvehound
         d-spy
         darktable
-        dart
         dbeaver-bin
         dconf-editor
         dconf2nix
         debase
+        diffoci
+        diffsitter
         dig
+        dive
         dmg2img
         dmidecode
         dnsrecon
+        docker-buildx
+        docker-client
+        docker-compose
+        docker-compose-language-service
+        docker-credential-gcr
+        docker-credential-helpers
+        docker-gc
+        docker-init
         docker-language-server
+        docker-sbom
         dosfstools
         dropwatch
         e2fsprogs
         efibootmgr
+        egypt
         eog
         esptool
         evtest
         evtest-qt
         exfatprogs
         f2fs-tools
+        fd
+        fdroidcl
         ferrishot
         ffmpegthumbnailer
         fh
         file
+        file-roller
         fileinfo
         filezilla
-        fish-lsp
         flake-checker
         flare-floss
         flutter
         fontfor
+        freecad
         fritzing
         fstl
+        fzf
         gcc15
         gdb
+        ghex
+        ghostty
         gimp3-with-plugins
         git-filter-repo
+        git-repo
         github-changelog-generator
+        gnirehtet
         gnome-characters
         gnome-clocks
         gnome-decoder
+        gnome-firmware
         gnome-font-viewer
         gnome-frog
         gnome-graphs
@@ -2305,7 +2299,9 @@ in
         gnused
         gnutar
         gource
-        gparted
+        gpredict
+        gradle-completion
+        groovy
         guestfs-tools
         gzip
         hashcat
@@ -2315,6 +2311,7 @@ in
         hfsprogs
         hieroglyphic
         host
+        hugo
         hw-probe
         hydra-check
         hyprls
@@ -2334,42 +2331,45 @@ in
         jq
         kernel-hardening-checker
         kernelshark
-        keyutils
         killall
         kind
         kmod
+        kotlin
+        kotlin-language-server
         kubectl
         kubectl-graph
         kubectl-tree
         kubectl-view-secret
         kubernetes-helm
+        kubeshark
+        lazygit
         letterpress
-        lhasa
         libreoffice-fresh
+        libsecret
         libva-utils
         linux-exploit-suggester
         linuxConsoleTools
-        linuxquota
+        lld
+        llvm-manpages
         logdy
         logtop
-        lrzip
         lsb-release
         lshw
         lsof
         lsscsi
         lssecret
+        lua
         lvm2
         lynis
         lyto
-        lz4
-        lzip
-        lzop
+        lyx
         macchanger
         mailcap
-        masscan
         massdns
         md-lsp
         meld
+        mermaid-cli
+        mesa-demos
         metadata-cleaner
         metasploit
         mfcuk
@@ -2387,53 +2387,48 @@ in
         ninja
         nix-diff
         nix-info
+        nix-tour
         nixd
         nixfmt-rfc-style
         nixpkgs-lint
         nixpkgs-review
         nmap
         ntfs3g
-        nuclei
         nvme-cli
         onionshare-gui
         openafs
         opendmarc
-        openh264
         openssl
-        p7zip
         paper-clip
-        patchelf
         pciutils
-        pdf4qt
         pdfarranger
         pg_top
         pinta
         pkg-config
         platformio
         playerctl
-        podman-compose
-        podman-desktop# Uses Electron
-        postgres-lsp
-        prctl
+        postgres-language-server
+        procps
         profile-cleaner
         progress
         protonvpn-gui
+        ps
         psmisc
-        psysh
         pwvucontrol
         qalculate-gtk
         qemu-utils
-        qpwgraph
         qr-backup
         radare2
+        raider
+        rclone
+        rclone-ui
         reiserfsprogs
+        ripgrep
         rpi-imager
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
         rtl-sdr-osmocom
-        rzip
-        scalpel
         scrcpy
         screen
         sdrangel
@@ -2447,9 +2442,9 @@ in
         smartmontools
         sof-tools
         songrec
+        sound-theme-freedesktop
         soundconverter
         sox
-        spooftooph
         sslscan
         stegseek
         subfinder
@@ -2464,17 +2459,16 @@ in
         terminal-colors
         terminaltexteffects
         texliveFull
-        theharvester
-        tilix
         time
         tpm2-tools
         traitor
         tree
+        tree-sitter
         trufflehog
-        trustymail
         udftools
         udiskie
-        unar
+        ugit
+        undollar
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
@@ -2483,23 +2477,29 @@ in
         usbip-ssh
         usbutils
         util-linux
+        valgrind
+        video2x
         virt-top
         virt-v2v
         virtiofsd
         vulkan-caps-viewer
         vulkan-tools
         wafw00f
+        wakeonlan
         waycheck
         waydroid-helper
         wayland-utils
         waylevel
         wayvnc
         webfontkitgenerator
+        websocat
         wev
         whatfiles
         which
         whois
+        winboat
         wl-clipboard
+        wordbook
         wpprobe
         wvkbd # wvkbd-mobintl
         x2goclient
@@ -2509,15 +2509,12 @@ in
         xfsprogs
         xfstests
         xoscope
-        xz
         yaml-language-server
         yara-x
         zenity
         zenmap
         zfs
         zip
-        zpaq
-        zstd
         (blender.override {
           colladaSupport = true;
           jackaudioSupport = true;
@@ -2545,114 +2542,120 @@ in
           zlibSupport = true;
           zstdSupport = true;
         })
-        (ffmpeg-full.override {
-          withAlsa = true;
-          withAom = true;
-          withAribb24 = true;
-          withAribcaption = true;
-          withAss = true;
-          withAvisynth = true;
-          withBluray = true;
-          withBs2b = true;
-          withBzlib = true;
-          withCaca = true;
-          withCdio = true;
-          withCelt = true;
-          withChromaprint = true;
-          withCodec2 = true;
-          withDav1d = true;
-          withDavs2 = true;
-          withDc1394 = true;
-          withDrm = true;
-          withDvdnav = true;
-          withDvdread = true;
-          withFlite = true;
-          withFontconfig = true;
-          withFreetype = true;
-          withFrei0r = true;
-          withFribidi = true;
-          withGme = true;
-          withGnutls = true;
-          withGsm = true;
-          withHarfbuzz = true;
-          withIconv = true;
-          withIlbc = true;
-          withJack = true;
-          withJxl = true;
-          withKvazaar = true;
-          withLadspa = true;
-          withLc3 = true;
-          withLcevcdec = true;
-          withLcms2 = true;
-          withLzma = true;
-          withModplug = true;
-          withMp3lame = true;
-          withMysofa = true;
-          withOpenal = true;
-          withOpencl = true;
-          withOpencoreAmrnb = true;
-          withOpencoreAmrwb = true;
-          withOpengl = true;
-          withOpenh264 = true;
-          withOpenjpeg = true;
-          withOpenmpt = true;
-          withOpus = true;
-          withPlacebo = true;
-          withPulse = true;
-          withQrencode = true;
-          withQuirc = true;
-          withRav1e = true;
-          withRist = true;
-          withRtmp = true;
-          withRubberband = true;
-          withSamba = true;
-          withSdl2 = true;
-          withShaderc = true;
-          withShine = true;
-          withSnappy = true;
-          withSoxr = true;
-          withSpeex = true;
-          withSrt = true;
-          withSsh = true;
-          withSvg = true;
-          withSvtav1 = true;
-          withTheora = true;
-          withTwolame = true;
-          withUavs3d = true;
-          withV4l2 = true;
-          withV4l2M2m = true;
-          withVaapi = true;
-          withVdpau = true;
-          withVidStab = true;
-          withVmaf = true;
-          withVoAmrwbenc = true;
-          withVorbis = true;
-          withVpx = true;
-          withVulkan = true;
-          withVvenc = true;
-          withWebp = true;
-          withX264 = true;
-          withX265 = true;
-          withXavs = true;
-          withXavs2 = true;
-          withXevd = true;
-          withXeve = true;
-          withXml2 = true;
-          withXvid = true;
-          withZimg = true;
-          withZlib = true;
-          withZmq = true;
-          withZvbi = true;
+        (
+          (ffmpeg-full.override {
+            withAlsa = true;
+            withAom = true;
+            withAribb24 = true;
+            withAribcaption = true;
+            withAss = true;
+            withAvisynth = true;
+            withBluray = true;
+            withBs2b = true;
+            withBzlib = true;
+            withCaca = true;
+            withCdio = true;
+            withCelt = true;
+            withChromaprint = true;
+            withCodec2 = true;
+            withDav1d = true;
+            withDavs2 = true;
+            withDc1394 = true;
+            withDrm = true;
+            withDvdnav = true;
+            withDvdread = true;
+            withFlite = true;
+            withFontconfig = true;
+            withFreetype = true;
+            withFrei0r = true;
+            withFribidi = true;
+            withGme = true;
+            withGnutls = true;
+            withGsm = true;
+            withHarfbuzz = true;
+            withIconv = true;
+            withIlbc = true;
+            withJack = true;
+            withJxl = true;
+            withKvazaar = true;
+            withLadspa = true;
+            withLc3 = true;
+            withLcevcdec = true;
+            withLcms2 = true;
+            withLzma = true;
+            withModplug = true;
+            withMp3lame = true;
+            withMysofa = true;
+            withOpenal = true;
+            withOpencl = true;
+            withOpencoreAmrnb = true;
+            withOpencoreAmrwb = true;
+            withOpengl = true;
+            withOpenh264 = true;
+            withOpenjpeg = true;
+            withOpenmpt = true;
+            withOpus = true;
+            withPlacebo = true;
+            withPulse = true;
+            withQrencode = true;
+            withQuirc = true;
+            withRav1e = true;
+            withRist = true;
+            withRtmp = true;
+            withRubberband = true;
+            withSamba = true;
+            withSdl2 = true;
+            withShaderc = true;
+            withShine = true;
+            withSnappy = true;
+            withSoxr = true;
+            withSpeex = true;
+            withSrt = true;
+            withSsh = true;
+            withSvg = true;
+            withSvtav1 = true;
+            withTheora = true;
+            withTwolame = true;
+            withUavs3d = true;
+            withV4l2 = true;
+            withV4l2M2m = true;
+            withVaapi = true;
+            withVdpau = true;
+            withVidStab = true;
+            withVmaf = true;
+            withVoAmrwbenc = true;
+            withVorbis = true;
+            withVpx = true;
+            withVulkan = true;
+            withVvenc = true;
+            withWebp = true;
+            withX264 = true;
+            withX265 = true;
+            withXavs = true;
+            withXavs2 = true;
+            withXevd = true;
+            withXeve = true;
+            withXml2 = true;
+            withXvid = true;
+            withZimg = true;
+            withZlib = true;
+            withZmq = true;
+            withZvbi = true;
 
-          withUnfree = false;
+            withUnfree = false;
 
-          withGrayscale = true;
-          withSwscaleAlpha = true;
-          withMultithread = true;
-          withNetwork = true;
-        })
-        (freecad.override {
-          spaceNavSupport = true;
+            withGrayscale = true;
+            withSwscaleAlpha = true;
+            withMultithread = true;
+            withNetwork = true;
+          }).overrideAttrs
+          (_: {
+            doCheck = false;
+          })
+        )
+        (gnss-sdr.override {
+          enableRawUdp = true;
+          enableOsmosdr = true;
         })
         (hardinfo2.override {
           printingSupport = true;
@@ -2668,7 +2671,7 @@ in
           with3d = true;
           withI18n = true;
         })
-        (python313FreeThreading.override {
+        (python314.override {
           bluezSupport = true;
           mimetypesSupport = true;
           withReadline = true;
@@ -2678,33 +2681,33 @@ in
           trackerSearch = true;
           webuiSupport = false;
         })
-        # (sdrpp.override {
-        #   airspy_source = true;
-        #   airspyhf_source = true;
-        #   bladerf_source = true;
-        #   file_source = true;
-        #   hackrf_source = true;
-        #   limesdr_source = true;
-        #   plutosdr_source = true;
-        #   rfspace_source = true;
-        #   rtl_sdr_source = true;
-        #   rtl_tcp_source = true;
-        #   soapy_source = true;
-        #   spyserver_source = true;
-        #   usrp_source = true;
+        (sdrpp.override {
+          airspy_source = true;
+          airspyhf_source = true;
+          bladerf_source = true;
+          file_source = true;
+          hackrf_source = true;
+          limesdr_source = true;
+          plutosdr_source = true;
+          rfspace_source = true;
+          rtl_sdr_source = true;
+          rtl_tcp_source = true;
+          soapy_source = true;
+          spyserver_source = true;
+          usrp_source = true;
 
-        #   audio_sink = true;
-        #   network_sink = true;
-        #   portaudio_sink = true;
+          audio_sink = true;
+          network_sink = true;
+          portaudio_sink = true;
 
-        #   m17_decoder = true;
-        #   meteor_demodulator = true;
+          m17_decoder = true;
+          meteor_demodulator = true;
 
-        #   frequency_manager = true;
-        #   recorder = true;
-        #   rigctl_server = true;
-        #   scanner = true;
-        # }) # Build Failure
+          frequency_manager = true;
+          recorder = true;
+          rigctl_server = true;
+          scanner = true;
+        })
         (tor-browser.override {
           libnotifySupport = true;
           waylandSupport = true;
@@ -2729,24 +2732,19 @@ in
         })
         config.services.phpfpm.phpPackage
       ]
-      ++ (with unixtools; [
-        arp
-        fdisk
-        ifconfig
-        netstat
-        nettools
-        ping
-        route
-        util-linux
-        whereis
-      ])
-      ++ (with fishPlugins; [
-        async-prompt
-        autopair
-        done
-        fish-you-should-use
-        sponge
-      ])
+      ++ config.boot.extraModulePackages
+      # ++ (with ghidra-extensions; [
+      #   findcrypt
+      #   ghidra-delinker-extension
+      #   ghidra-golanganalyzerextension
+      #   ghidraninja-ghidra-scripts
+      #   gnudisassembler
+      #   lightkeeper
+      #   machinelearning
+      #   ret-sync
+      #   sleighdevtools
+      #   wasm
+      # ]) # Build Failure
       ++ (with gst_all_1; [
         (gst-libav.override {
           enableDocumentation = true;
@@ -2791,19 +2789,137 @@ in
       ++ (with texlivePackages; [
         latexmk
       ])
-      ++ (with ghidra-extensions; [
-        findcrypt
-        ghidra-delinker-extension
-        ghidra-golanganalyzerextension
-        ghidraninja-ghidra-scripts
-        gnudisassembler
-        lightkeeper
-        machinelearning
-        ret-sync
-        sleighdevtools
-        wasm
+      ++ (with tree-sitter-grammars; [
+        tree-sitter-bash
+        tree-sitter-bibtex
+        tree-sitter-c
+        tree-sitter-cmake
+        tree-sitter-comment
+        tree-sitter-cpp
+        tree-sitter-css
+        tree-sitter-dart
+        tree-sitter-dockerfile
+        tree-sitter-embedded-template
+        tree-sitter-html
+        tree-sitter-http
+        tree-sitter-hyprlang
+        tree-sitter-javascript
+        tree-sitter-json
+        tree-sitter-json5
+        tree-sitter-kotlin
+        tree-sitter-latex
+        tree-sitter-llvm
+        tree-sitter-lua
+        tree-sitter-make
+        tree-sitter-markdown
+        tree-sitter-markdown-inline
+        tree-sitter-nix
+        tree-sitter-php
+        tree-sitter-python
+        tree-sitter-query
+        tree-sitter-regex
+        tree-sitter-scheme
+        tree-sitter-sql
+        tree-sitter-todotxt
+        tree-sitter-toml
+        tree-sitter-vim
+        tree-sitter-yaml
       ])
-      ++ config.boot.extraModulePackages;
+      ++ (with unixtools; [
+        arp
+        column
+        fdisk
+        fsck
+        getopt
+        ifconfig
+        net-tools
+        ping
+        procps
+        script
+        util-linux
+        wall
+        watch
+        whereis
+        write
+        xxd
+      ])
+      ++ (with vimPlugins; [
+        LazyVim
+        nvim-treesitter
+        nvim-treesitter-context
+        nvim-treesitter-pairs
+        nvim-treesitter-refactor
+        nvim-treesitter-textobjects
+        nvim-treesitter-textsubjects
+      ])
+      ++ (with vimPlugins.nvim-treesitter-parsers; [
+        arduino
+        asm
+        bash
+        bibtex
+        c
+        cmake
+        comment
+        cpp
+        css
+        csv
+        dart
+        desktop
+        diff
+        disassembly
+        dockerfile
+        dtd
+        embedded_template
+        git_config
+        git_rebase
+        gitattributes
+        gitcommit
+        gitignore
+        gpg
+        groovy
+        hjson
+        hlsplaylist
+        html
+        hyprlang
+        ini
+        java
+        javascript
+        jq
+        json
+        json5
+        jsonc
+        kotlin
+        latex
+        llvm
+        lua
+        make
+        markdown
+        markdown_inline
+        mermaid
+        nginx
+        nix
+        passwd
+        php
+        phpdoc
+        printf
+        properties
+        python
+        query
+        readline
+        regex
+        requirements
+        robots
+        scheme
+        sql
+        ssh_config
+        todotxt
+        toml
+        udev
+        vim
+        vimdoc
+        xml
+        yaml
+      ]);
   };
 
   xdg = {
@@ -2817,101 +2933,6 @@ in
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
         "inode/directory" = "nautilus.desktop";
-
-        "text/1d-interleaved-parityfec" = "codium.desktop";
-        "text/cache-manifest" = "codium.desktop";
-        "text/calendar" = "codium.desktop";
-        "text/cql-expression" = "codium.desktop";
-        "text/cql-identifier" = "codium.desktop";
-        "text/cql" = "codium.desktop";
-        "text/css" = "codium.desktop";
-        "text/csv-schema" = "codium.desktop";
-        "text/csv" = "codium.desktop";
-        "text/dns" = "codium.desktop";
-        "text/encaprtp" = "codium.desktop";
-        "text/enriched" = "codium.desktop";
-        "text/example" = "codium.desktop";
-        "text/fhirpath" = "codium.desktop";
-        "text/flexfec" = "codium.desktop";
-        "text/fwdred" = "codium.desktop";
-        "text/gff3" = "codium.desktop";
-        "text/grammar-ref-list" = "codium.desktop";
-        "text/hl7v2" = "codium.desktop";
-        "text/html" = "codium.desktop";
-        "text/javascript" = "codium.desktop";
-        "text/jcr-cnd" = "codium.desktop";
-        "text/markdown" = "codium.desktop";
-        "text/mizar" = "codium.desktop";
-        "text/n3" = "codium.desktop";
-        "text/parameters" = "codium.desktop";
-        "text/parityfec" = "codium.desktop";
-        "text/plain" = "codium.desktop";
-        "text/provenance-notation" = "codium.desktop";
-        "text/prs.fallenstein.rst" = "codium.desktop";
-        "text/prs.lines.tag" = "codium.desktop";
-        "text/prs.prop.logic" = "codium.desktop";
-        "text/prs.texi" = "codium.desktop";
-        "text/raptorfec" = "codium.desktop";
-        "text/RED" = "codium.desktop";
-        "text/rfc822-headers" = "codium.desktop";
-        "text/richtext" = "codium.desktop";
-        "text/rtf" = "codium.desktop";
-        "text/rtp-enc-aescm128" = "codium.desktop";
-        "text/rtploopback" = "codium.desktop";
-        "text/rtx" = "codium.desktop";
-        "text/SGML" = "codium.desktop";
-        "text/shaclc" = "codium.desktop";
-        "text/shex" = "codium.desktop";
-        "text/spdx" = "codium.desktop";
-        "text/strings" = "codium.desktop";
-        "text/t140" = "codium.desktop";
-        "text/tab-separated-values" = "codium.desktop";
-        "text/troff" = "codium.desktop";
-        "text/turtle" = "codium.desktop";
-        "text/ulpfec" = "codium.desktop";
-        "text/uri-list" = "codium.desktop";
-        "text/vcard" = "codium.desktop";
-        "text/vnd.a" = "codium.desktop";
-        "text/vnd.abc" = "codium.desktop";
-        "text/vnd.ascii-art" = "codium.desktop";
-        "text/vnd.curl" = "codium.desktop";
-        "text/vnd.debian.copyright" = "codium.desktop";
-        "text/vnd.DMClientScript" = "codium.desktop";
-        "text/vnd.dvb.subtitle" = "codium.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "codium.desktop";
-        "text/vnd.exchangeable" = "codium.desktop";
-        "text/vnd.familysearch.gedcom" = "codium.desktop";
-        "text/vnd.ficlab.flt" = "codium.desktop";
-        "text/vnd.fly" = "codium.desktop";
-        "text/vnd.fmi.flexstor" = "codium.desktop";
-        "text/vnd.gml" = "codium.desktop";
-        "text/vnd.graphviz" = "codium.desktop";
-        "text/vnd.hans" = "codium.desktop";
-        "text/vnd.hgl" = "codium.desktop";
-        "text/vnd.in3d.3dml" = "codium.desktop";
-        "text/vnd.in3d.spot" = "codium.desktop";
-        "text/vnd.IPTC.NewsML" = "codium.desktop";
-        "text/vnd.IPTC.NITF" = "codium.desktop";
-        "text/vnd.latex-z" = "codium.desktop";
-        "text/vnd.motorola.reflex" = "codium.desktop";
-        "text/vnd.ms-mediapackage" = "codium.desktop";
-        "text/vnd.net2phone.commcenter.command" = "codium.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "codium.desktop";
-        "text/vnd.senx.warpscript" = "codium.desktop";
-        "text/vnd.sosi" = "codium.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "codium.desktop";
-        "text/vnd.trolltech.linguist" = "codium.desktop";
-        "text/vnd.typst" = "codium.desktop";
-        "text/vnd.vcf" = "codium.desktop";
-        "text/vnd.wap.si" = "codium.desktop";
-        "text/vnd.wap.sl" = "codium.desktop";
-        "text/vnd.wap.wml" = "codium.desktop";
-        "text/vnd.wap.wmlscript" = "codium.desktop";
-        "text/vnd.zoo.kcl" = "codium.desktop";
-        "text/vtt" = "codium.desktop";
-        "text/wgsl" = "codium.desktop";
-        "text/xml-external-parsed-entity" = "codium.desktop";
-        "text/xml" = "codium.desktop";
 
         "image/aces" = "org.gnome.eog.desktop";
         "image/apng" = "org.gnome.eog.desktop";
@@ -3360,7 +3381,7 @@ in
     enforceIdUniqueness = true;
     mutableUsers = true;
 
-    defaultUserShell = pkgs.fish;
+    defaultUserShell = pkgs.bash;
 
     motd = "Welcome";
 
@@ -3370,23 +3391,41 @@ in
       name = "bitscoper";
       description = "Abdullah As-Sadeed"; # Full Name
 
+      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
+
       extraGroups = [
-        "adbusers"
+        "adbusers" # Not in builtins.attrNames config.users.groups
+        "adm"
         "audio"
+        "avahi"
+        "cdrom"
         "dialout"
+        "docker"
+        "floppy"
+        "fwupd-refresh"
         "hardinfo2"
+        "i2c"
         "input"
         "jellyfin"
         "kvm"
         "libvirtd"
         "lp"
+        "lpadmin"
         "networkmanager"
+        "nm-openvpn"
+        "pipewire"
         "plugdev"
-        "podman"
+        "polkituser"
         "qemu-libvirtd"
+        "render"
+        "rtkit"
         "scanner"
         "seat"
+        "sgx"
+        "systemd-journal"
+        "tape"
         "tty"
+        "users"
         "uucp"
         "video"
         "wheel"
@@ -3411,7 +3450,6 @@ in
           shell = {
             enableShellIntegration = true;
             enableBashIntegration = true;
-            enableFishIntegration = true;
           };
 
           pointerCursor = {
@@ -3433,7 +3471,7 @@ in
 
           enableDebugInfo = false;
 
-          stateVersion = "24.11";
+          stateVersion = "25.11";
         };
 
         wayland.windowManager.hyprland = {
@@ -3546,7 +3584,7 @@ in
               "SUPER, A, exec, uwsm app -- wofi --show drun --disable-history | xargs -r uwsm app --"
               "SUPER, R, exec, uwsm app -- wofi --show run --disable-history | xargs -r uwsm app --"
 
-              "SUPER, T, exec, uwsm app -- tilix"
+              "SUPER, T, exec, uwsm app -- ghostty"
 
               ", XF86Explorer, exec, uwsm app -- nautilus"
               "SUPER, F, exec, uwsm app -- nautilus"
@@ -3565,6 +3603,9 @@ in
               "SUPER, E, exec, uwsm app -- codium"
 
               "SUPER, D, exec, uwsm app -- dbeaver"
+
+              "SUPER, P, exec, uwsm app -- scrcpy --render-driver=opengl"
+              "SUPER ALT, P, exec, uwsm app -- scrcpy --render-driver=opengl -e"
 
               "SUPER, V, exec, uwsm app -- vlc"
             ];
@@ -4023,13 +4064,6 @@ in
         };
 
         programs = {
-          nix-your-shell = {
-            enable = true;
-            package = pkgs.nix-your-shell;
-
-            enableFishIntegration = true;
-          };
-
           dircolors = {
             enable = true;
             package = (
@@ -4040,7 +4074,6 @@ in
             );
 
             enableBashIntegration = true;
-            enableFishIntegration = true;
           };
 
           kubecolor = {
@@ -4898,7 +4931,7 @@ in
               insensitive = true;
 
               single_click = true;
-              term = "tilix";
+              term = "ghostty";
             };
 
             style = ''
@@ -4953,7 +4986,6 @@ in
                     bierner.markdown-footnotes
                     bierner.markdown-mermaid
                     bierner.markdown-preview-github-styles
-                    bmalehorn.vscode-fish
                     bradgashler.htmltagwrap
                     chanhx.crabviz
                     christian-kohler.path-intellisense
@@ -4964,6 +4996,7 @@ in
                     dart-code.flutter
                     davidanson.vscode-markdownlint
                     dendron.adjust-heading-level
+                    docker.docker
                     dotenv.dotenv-vscode
                     ecmel.vscode-html-css
                     edonet.vscode-command-runner
@@ -4994,6 +5027,7 @@ in
                     llvm-vs-code-extensions.vscode-clangd
                     lokalise.i18n-ally
                     mads-hartmann.bash-ide-vscode
+                    mathiasfrohlich.kotlin
                     mechatroner.rainbow-csv
                     meganrogge.template-string-converter
                     mishkinf.goto-next-previous-member
@@ -5012,6 +5046,7 @@ in
                     ms-toolsai.jupyter-renderers
                     ms-toolsai.vscode-jupyter-cell-tags
                     ms-toolsai.vscode-jupyter-slideshow
+                    ms-vscode-remote.remote-containers
                     ms-vscode.anycode
                     ms-vscode.cmake-tools
                     ms-vscode.cpptools # Unfree
@@ -5076,14 +5111,14 @@ in
                     {
                       name = "arb-editor";
                       publisher = "Google";
-                      version = "0.2.1";
-                      sha256 = "uHdQeW9ZXYg6+VnD6cb5CU10/xV5hCtxt5K+j0qb7as=";
+                      version = "0.2.2";
+                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
                     }
                     {
                       name = "vscode-serial-monitor";
                       publisher = "ms-vscode";
-                      version = "0.13.251006001";
-                      sha256 = "iKY2CRbG4kHSiw0VXOMjkCdzMcXf0u5rJMwAvRrCtIk=";
+                      version = "0.13.251128001";
+                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
                   ];
 
