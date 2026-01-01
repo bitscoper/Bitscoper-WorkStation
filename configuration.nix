@@ -1492,7 +1492,7 @@ in
 
     ollama = {
       enable = true;
-      package = pkgs.ollama;
+      package = pkgs.ollama-cpu; # Or pkgs.ollama-vulkan Or pkgs.ollama
 
       host = "0.0.0.0";
       port = 11434;
@@ -2278,6 +2278,7 @@ in
         fzf
         gcc15
         gdb
+        gemini-cli
         ghex
         ghostty
         gimp3-with-plugins
@@ -2298,6 +2299,8 @@ in
         gnumake
         gnused
         gnutar
+        gollama
+        google-lighthouse
         gource
         gpredict
         gradle-completion
@@ -2482,6 +2485,7 @@ in
         virt-top
         virt-v2v
         virtiofsd
+        vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
         wafw00f
@@ -4973,11 +4977,8 @@ in
                     albymor.increment-selection
                     alefragnani.bookmarks
                     alexisvt.flutter-snippets
-                    antfu.slidev
                     anweber.vscode-httpyac
-                    arrterian.nix-env-selector
                     bierner.color-info
-                    bierner.comment-tagged-templates
                     bierner.docs-view
                     bierner.emojisense
                     bierner.github-markdown-preview
@@ -4987,41 +4988,39 @@ in
                     bierner.markdown-mermaid
                     bierner.markdown-preview-github-styles
                     bradgashler.htmltagwrap
+                    budparr.language-hugo-vscode
                     chanhx.crabviz
-                    christian-kohler.path-intellisense
                     codezombiech.gitignore
+                    continue.continue
                     coolbear.systemd-unit-file
                     cweijan.vscode-database-client2
                     dart-code.dart-code
                     dart-code.flutter
                     davidanson.vscode-markdownlint
+                    dbaeumer.vscode-eslint
                     dendron.adjust-heading-level
                     docker.docker
                     dotenv.dotenv-vscode
                     ecmel.vscode-html-css
-                    edonet.vscode-command-runner
                     esbenp.prettier-vscode
-                    ethansk.restore-terminals
                     fabiospampinato.vscode-open-in-github
                     firefox-devtools.vscode-firefox-debug
                     formulahendry.auto-close-tag
                     formulahendry.auto-rename-tag
-                    formulahendry.code-runner
                     foxundermoon.shell-format
                     github.vscode-github-actions
                     github.vscode-pull-request-github
+                    Google.gemini-cli-vscode-ide-companion
                     grapecity.gc-excelviewer
                     gruntfuggly.todo-tree
                     hars.cppsnippets
                     hbenl.vscode-test-explorer
-                    hediet.vscode-drawio
                     ibm.output-colorizer
                     iciclesoft.workspacesort
                     iliazeus.vscode-ansi
                     james-yu.latex-workshop
                     jbockle.jbockle-format-files
                     jellyedwards.gitsweep
-                    jkillian.custom-local-formatters
                     jnoortheen.nix-ide
                     jock.svg
                     llvm-vs-code-extensions.vscode-clangd
@@ -5029,25 +5028,14 @@ in
                     mads-hartmann.bash-ide-vscode
                     mathiasfrohlich.kotlin
                     mechatroner.rainbow-csv
-                    meganrogge.template-string-converter
                     mishkinf.goto-next-previous-member
                     mkhl.direnv
                     moshfeu.compare-folders
-                    ms-azuretools.vscode-containers
-                    ms-azuretools.vscode-docker
                     ms-kubernetes-tools.vscode-kubernetes-tools
                     ms-python.black-formatter
                     ms-python.debugpy
                     ms-python.isort
                     ms-python.python
-                    ms-toolsai.datawrangler
-                    ms-toolsai.jupyter
-                    ms-toolsai.jupyter-keymap
-                    ms-toolsai.jupyter-renderers
-                    ms-toolsai.vscode-jupyter-cell-tags
-                    ms-toolsai.vscode-jupyter-slideshow
-                    ms-vscode-remote.remote-containers
-                    ms-vscode.anycode
                     ms-vscode.cmake-tools
                     ms-vscode.cpptools # Unfree
                     ms-vscode.hexeditor
@@ -5064,9 +5052,7 @@ in
                     rioj7.commandonallfiles
                     rubymaniac.vscode-paste-and-indent
                     ryu1kn.partial-diff
-                    sanaajani.taskrunnercode
                     shardulm94.trailing-spaces
-                    slevesque.vscode-multiclip
                     spywhere.guides
                     stylelint.vscode-stylelint
                     tailscale.vscode-tailscale
@@ -5074,11 +5060,8 @@ in
                     timonwong.shellcheck
                     usernamehw.errorlens
                     vincaslt.highlight-matching-tag
-                    visualstudioexptteam.intellicode-api-usage-examples
-                    visualstudioexptteam.vscodeintellicode
                     vscjava.vscode-gradle
                     vscode-icons-team.vscode-icons
-                    vspacecode.whichkey
                     wmaurer.change-case
                     xdebug.php-debug
                     zainchen.json
