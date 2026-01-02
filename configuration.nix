@@ -455,23 +455,6 @@ in
           };
         };
 
-        lemurs = {
-          unixAuth = true;
-          nodelay = false;
-
-          fprintAuth = true;
-
-          logFailures = true;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-        };
-
         hyprlock = {
           unixAuth = true;
           nodelay = false;
@@ -913,40 +896,15 @@ in
       # };
     };
 
-    displayManager.lemurs = {
+    displayManager = {
       enable = true;
-      package = pkgs.lemurs;
 
-      settings = {
-        pam_service = "lemurs";
-
-        environment_switcher = {
-          include_tty_shell = true;
-
-          switcher_visibility = "visible";
-          show_movers = true;
-
-          remember = true;
-        };
-
-        username_field = {
-          remember = true;
-        };
-
-        password_field = {
-          content_replacement_character = "*";
-        };
-
-        background = {
-          show_background = true;
-        };
-
-        "background.style" = {
-          show_border = false;
-        }; # Not Working
-
-        focus_behaviour = "default";
+      cosmic-greeter = {
+        enable = true;
+        package = pkgs.cosmic-greeter;
       };
+
+      logToJournal = true;
     };
 
     gnome = {
@@ -2149,7 +2107,6 @@ in
     systemPackages =
       with pkgs;
       [
-        # cope # Conflicts
         # dart # flutter adds the compatible versions
         # elf-dissector # Build Failure
         # gradle # flutter adds the compatible versions
@@ -2157,6 +2114,7 @@ in
         aapt
         above
         acl
+        acpica-tools
         acpidump-all
         adb-sync
         addlicense
@@ -2167,11 +2125,11 @@ in
         alsa-tools
         alsa-utils
         alsa-utils-nhlt
-        analyze-build
         android_sdk # Custom
         android-backup-extractor
         android-tools
         apfsprogs
+        apitrace
         apkeep
         apkleaks
         arduino-cli
@@ -2203,16 +2161,11 @@ in
         cameractrls-gtk4
         celestia
         certbot-full
-        clang
-        clang-analyzer
-        clang-manpages
-        clang-tools
         clinfo
         cliphist
         cloc
         cmake
         cmake-language-server
-        coc-flutter
         codevis
         collision
         compose2nix
@@ -2221,7 +2174,6 @@ in
         crow-translate
         cryptsetup
         ctop
-        cups-filters
         cups-printers
         curtail
         cve-bin-tool
@@ -2249,13 +2201,11 @@ in
         docker-language-server
         docker-sbom
         dosfstools
-        dropwatch
         e2fsprogs
         efibootmgr
         egypt
         eog
         esptool
-        evtest
         evtest-qt
         exfatprogs
         f2fs-tools
@@ -2335,7 +2285,6 @@ in
         kernel-hardening-checker
         kernelshark
         killall
-        kind
         kmod
         kotlin
         kotlin-language-server
@@ -2352,8 +2301,6 @@ in
         libva-utils
         linux-exploit-suggester
         linuxConsoleTools
-        lld
-        llvm-manpages
         logdy
         logtop
         lsb-release
@@ -2377,7 +2324,6 @@ in
         metasploit
         mfcuk
         mfoc
-        minikube
         mission-center
         mousam
         mtools
@@ -2390,16 +2336,16 @@ in
         ninja
         nix-diff
         nix-info
-        nix-tour
         nixd
         nixfmt-rfc-style
-        nixpkgs-lint
         nixpkgs-review
         nmap
         ntfs3g
         nvme-cli
         onionshare-gui
+        open-interpreter
         openafs
+        openai-whisper
         opendmarc
         openssl
         paper-clip
@@ -2431,7 +2377,6 @@ in
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
-        rtl-sdr-osmocom
         scrcpy
         screen
         sdrangel
@@ -2468,6 +2413,7 @@ in
         tree
         tree-sitter
         trufflehog
+        trustymail
         udftools
         udiskie
         ugit
@@ -2812,7 +2758,6 @@ in
         tree-sitter-json5
         tree-sitter-kotlin
         tree-sitter-latex
-        tree-sitter-llvm
         tree-sitter-lua
         tree-sitter-make
         tree-sitter-markdown
@@ -2894,7 +2839,6 @@ in
         jsonc
         kotlin
         latex
-        llvm
         lua
         make
         markdown
@@ -3419,13 +3363,9 @@ in
         "nm-openvpn"
         "pipewire"
         "plugdev"
-        "polkituser"
         "qemu-libvirtd"
         "render"
-        "rtkit"
         "scanner"
-        "seat"
-        "sgx"
         "systemd-journal"
         "tape"
         "tty"
@@ -5023,7 +4963,6 @@ in
                     jellyedwards.gitsweep
                     jnoortheen.nix-ide
                     jock.svg
-                    llvm-vs-code-extensions.vscode-clangd
                     lokalise.i18n-ally
                     mads-hartmann.bash-ide-vscode
                     mathiasfrohlich.kotlin
