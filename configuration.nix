@@ -2092,6 +2092,8 @@ in
     };
 
     shellAliases = {
+      code = "codium";
+
       fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
 
       upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
@@ -2107,6 +2109,7 @@ in
     systemPackages =
       with pkgs;
       [
+        # autopsy # Build Failure
         # dart # flutter adds the compatible versions
         # elf-dissector # Build Failure
         # gradle # flutter adds the compatible versions
@@ -2140,7 +2143,6 @@ in
         asciinema-agg
         asciinema-scenario
         audacity
-        autopsy
         avrdude
         banner
         baobab
@@ -2166,6 +2168,7 @@ in
         cloc
         cmake
         cmake-language-server
+        code-nautilus
         codevis
         collision
         compose2nix
@@ -2228,7 +2231,6 @@ in
         fzf
         gcc15
         gdb
-        gemini-cli
         ghex
         ghostty
         gimp3-with-plugins
@@ -2346,6 +2348,7 @@ in
         open-interpreter
         openafs
         openai-whisper
+        opencode
         opendmarc
         openssl
         paper-clip
@@ -2411,7 +2414,6 @@ in
         tpm2-tools
         traitor
         tree
-        tree-sitter
         trufflehog
         trustymail
         udftools
@@ -2666,6 +2668,9 @@ in
           pipewireSupport = true;
           pulseaudioSupport = true;
           libvaSupport = true;
+        })
+        (tree-sitter.override {
+          webUISupport = true;
         })
         (virt-viewer.override {
           spiceSupport = true;
@@ -4931,7 +4936,6 @@ in
                     budparr.language-hugo-vscode
                     chanhx.crabviz
                     codezombiech.gitignore
-                    continue.continue
                     coolbear.systemd-unit-file
                     cweijan.vscode-database-client2
                     dart-code.dart-code
@@ -4950,7 +4954,6 @@ in
                     foxundermoon.shell-format
                     github.vscode-github-actions
                     github.vscode-pull-request-github
-                    Google.gemini-cli-vscode-ide-companion
                     grapecity.gc-excelviewer
                     gruntfuggly.todo-tree
                     hars.cppsnippets
@@ -5041,6 +5044,12 @@ in
                       publisher = "ms-vscode";
                       version = "0.13.251128001";
                       sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
+                    }
+                    {
+                      name = "opencode";
+                      publisher = "sst-dev";
+                      version = "0.0.13";
+                      sha256 = "6adXUaoh/OP5yYItH3GAQ7GpupfmTGaxkKP6hYUMYNQ=";
                     }
                   ];
 
