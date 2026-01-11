@@ -8,6 +8,10 @@
   ...
 }:
 let
+  unstable = import (builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz";
+  }) { };
+
   home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/release-25.11.tar.gz";
 
   nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
@@ -2110,10 +2114,10 @@ in
       with pkgs;
       [
         # autopsy # Build Failure
-        # dart # flutter adds the compatible versions
         # elf-dissector # Build Failure
-        # gradle # flutter adds the compatible versions
         # reiser4progs # Marked Broken
+        # unstable.dart # flutter adds the compatible versions
+        # unstable.gradle # flutter adds the compatible versions
         aapt
         above
         acl
@@ -2223,7 +2227,6 @@ in
         filezilla
         flake-checker
         flare-floss
-        flutter
         fontfor
         freecad
         fritzing
@@ -2422,6 +2425,7 @@ in
         undollar
         universal-android-debloater # uad-ng
         unix-privesc-check
+        unstable.flutter
         unzip
         upnp-router-control
         upscayl
