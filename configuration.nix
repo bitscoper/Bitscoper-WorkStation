@@ -8,11 +8,11 @@
   ...
 }:
 let
-  unstable = import (builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz";
-  }) { };
+  # stable = import (builtins.fetchTarball {
+  #   url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
+  # }) { };
 
-  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/release-25.11.tar.gz";
+  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
   nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
   nix-rice-lib = import (nix-rice + "/lib.nix") {
@@ -40,7 +40,7 @@ let
         }
       ))
       {
-        channel = "stable";
+        channel = "canary";
       };
   android_sdk = android_nixpkgs.sdk (
     sdkPkgs: with sdkPkgs; [
@@ -66,7 +66,7 @@ let
       system-images-android-36-1-google-apis-playstore-x86-64
       tools
     ]
-  ); # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/stable
+  ); # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
   android_sdk_path = "${android_sdk}/share/android-sdk";
 
   font_preferences = {
@@ -198,7 +198,7 @@ in
       tmon
       turbostat
       usbip
-      zfs_2_4
+      zfs_unstable
     ];
 
     kernelModules = [
@@ -283,7 +283,7 @@ in
 
     # userActivationScripts = { };
 
-    stateVersion = "25.11";
+    stateVersion = "26.05";
   };
 
   nix = {
@@ -369,7 +369,7 @@ in
 
     wireless = {
       dbusControlled = true;
-      userControlled.enable = true;
+      userControlled = true;
     };
 
     networkmanager = {
@@ -1417,15 +1417,12 @@ in
         port = 17101;
       };
 
-      user = "nobody";
-      group = "nogroup";
-
       admin = {
         user = "bitscoper";
         password = secrets.password_1_of_bitscoper;
       };
 
-      extraConf = ''
+      extraConfig = ''
         <location>${config.networking.fqdn}</location>
         <admin>bitscoper@${config.networking.fqdn}</admin>
         <authentication>
@@ -1441,8 +1438,6 @@ in
         </logging>
         <server-id>${config.networking.fqdn}</server-id>
       ''; # <loglevel>2</loglevel> = Warn
-
-      logDir = "/var/log/icecast/";
     };
 
     jellyfin = {
@@ -1685,8 +1680,6 @@ in
     };
 
     usbtop.enable = true;
-
-    adb.enable = true;
 
     nano.enable = false;
 
@@ -2113,11 +2106,16 @@ in
     systemPackages =
       with pkgs;
       [
+        # armitage # Build Failure
         # autopsy # Build Failure
+        # bulk_extractor # Build Failure
+        # certbot-full # Build Failure
+        # dart # flutter adds the compatible versions
+        # debase # Build Failure
         # elf-dissector # Build Failure
+        # gradle # flutter adds the compatible versions
         # reiser4progs # Marked Broken
-        # unstable.dart # flutter adds the compatible versions
-        # unstable.gradle # flutter adds the compatible versions
+        # xfstests # Build Failure
         aapt
         above
         acl
@@ -2142,7 +2140,6 @@ in
         arduino-cli
         arduino-ide
         arduino-language-server
-        armitage
         asciinema
         asciinema-agg
         asciinema-scenario
@@ -2161,12 +2158,12 @@ in
         btop
         btrfs-assistant
         btrfs-progs
-        bulk_extractor
         bustle
         butt
         cameractrls-gtk4
+        cdrkit
         celestia
-        certbot-full
+        certbot
         clinfo
         cliphist
         cloc
@@ -2189,7 +2186,6 @@ in
         dbeaver-bin
         dconf-editor
         dconf2nix
-        debase
         diffoci
         diffsitter
         dig
@@ -2209,6 +2205,7 @@ in
         docker-sbom
         dosfstools
         e2fsprogs
+        easyeda2kicad
         efibootmgr
         egypt
         eog
@@ -2227,6 +2224,7 @@ in
         filezilla
         flake-checker
         flare-floss
+        flutter
         fontfor
         freecad
         fritzing
@@ -2342,7 +2340,7 @@ in
         nix-diff
         nix-info
         nixd
-        nixfmt-rfc-style
+        nixfmt
         nixpkgs-review
         nmap
         ntfs3g
@@ -2425,7 +2423,6 @@ in
         undollar
         universal-android-debloater # uad-ng
         unix-privesc-check
-        unstable.flutter
         unzip
         upnp-router-control
         upscayl
@@ -2463,7 +2460,6 @@ in
         xdg-utils
         xfsdump
         xfsprogs
-        xfstests
         xoscope
         yaml-language-server
         yara-x
@@ -2471,13 +2467,13 @@ in
         zenmap
         zfs
         zip
-        (blender.override {
-          colladaSupport = true;
-          jackaudioSupport = true;
-          openUsdSupport = true;
-          spaceNavSupport = true;
-          waylandSupport = true;
-        })
+        # (blender.override {
+        #   colladaSupport = true;
+        #   jackaudioSupport = true;
+        #   openUsdSupport = true;
+        #   spaceNavSupport = true;
+        #   waylandSupport = true;
+        # }) # Paused
         (coreutils-full.override {
           aclSupport = true;
           withOpenssl = true;
@@ -2616,12 +2612,11 @@ in
         (hardinfo2.override {
           printingSupport = true;
         })
-        (kicad.override {
+        (kicad-unstable.override {
           addons = with pkgs.kicadAddons; [
             kikit
             kikit-library
           ];
-          stable = true;
           withNgspice = true;
           withScripting = true;
           with3d = true;
@@ -2674,7 +2669,7 @@ in
           libvaSupport = true;
         })
         (tree-sitter.override {
-          webUISupport = true;
+          # webUISupport = true; # Build Failure
         })
         (virt-viewer.override {
           spiceSupport = true;
@@ -2811,6 +2806,8 @@ in
         nvim-treesitter-textsubjects
       ])
       ++ (with vimPlugins.nvim-treesitter-parsers; [
+        # jsonc # Build Failure
+        # robots # Build Failure
         arduino
         asm
         bash
@@ -2845,7 +2842,6 @@ in
         jq
         json
         json5
-        jsonc
         kotlin
         latex
         lua
@@ -2865,7 +2861,6 @@ in
         readline
         regex
         requirements
-        robots
         scheme
         sql
         ssh_config
@@ -3424,7 +3419,7 @@ in
 
           enableDebugInfo = false;
 
-          stateVersion = "25.11";
+          stateVersion = "26.05";
         };
 
         wayland.windowManager.hyprland = {
@@ -3597,8 +3592,6 @@ in
               gaps_in = 2;
               gaps_out = "2, 0, 0, 0"; # Top, Right, Bottom, Left
 
-              no_border_on_floating = false;
-
               border_size = 0;
 
               no_focus_fallback = false;
@@ -3666,11 +3659,8 @@ in
               use_nearest_neighbor = true;
             };
 
-            windowrule = [
-              "suppressevent maximize, class:.*"
-              "nofocus, class:^$, title:^$, xwayland:1, floating:1, fullscreen:0, pinned:0"
-              "bordercolor rgba(ff0000ff), xwayland:1" # TODO: Test and Adjust
-            ];
+            # windowrule = [
+            # ];
 
             input = {
               kb_layout = "us";
