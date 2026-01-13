@@ -14,23 +14,9 @@ let
 
   home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
-  nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
-  nix-rice-lib = import (nix-rice + "/lib.nix") {
-    lib = pkgs.lib;
-    kitty-themes-src = null;
-  };
+  dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
 
-  convert_hex_color_code_to_rgba_color_code =
-    hex_color:
-    let
-      color_set = nix-rice-lib.color.hexToRgba hex_color;
-
-      red = builtins.floor color_set.r;
-      green = builtins.floor color_set.g;
-      blue = builtins.floor color_set.b;
-      alpha = builtins.floor (color_set.a / 255);
-    in
-    "rgba(${toString red}, ${toString green}, ${toString blue}, ${toString alpha})";
+  # quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
 
   android_nixpkgs =
     pkgs.callPackage
@@ -84,12 +70,30 @@ let
 
   cursor = {
     theme = {
-      name = "Bibata-Modern-Classic";
-      package = pkgs.bibata-cursors;
+      name = "hyprcursor";
+      package = pkgs.hyprcursor;
     };
 
     size = builtins.floor (design_factor * 1.50); # 24
   };
+
+  nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
+  nix-rice-lib = import (nix-rice + "/lib.nix") {
+    lib = pkgs.lib;
+    kitty-themes-src = null;
+  };
+
+  convert_hex_color_code_to_rgba_color_code =
+    hex_color:
+    let
+      color_set = nix-rice-lib.color.hexToRgba hex_color;
+
+      red = builtins.floor color_set.r;
+      green = builtins.floor color_set.g;
+      blue = builtins.floor color_set.b;
+      alpha = builtins.floor (color_set.a / 255);
+    in
+    "rgba(${toString red}, ${toString green}, ${toString blue}, ${toString alpha})";
 
   fetched_gtk_css_file = builtins.fetchurl {
     url = "https://gitlab.gnome.org/GNOME/gtk/-/raw/gtk-3-24/gtk/theme/Adwaita/gtk-contained-dark.css";
@@ -149,19 +153,14 @@ let
   };
 
   design_factor = 16;
-  animation_duration = 200; # ms
-
-  wallpaper = builtins.fetchurl {
-    url = "https://raw.githubusercontent.com/JaKooLit/Wallpaper-Bank/refs/heads/main/wallpapers/Dark_Nature.png";
-  };
-
-  backlight_device = "intel_backlight";
 
   secrets = import ./secrets.nix;
 in
 {
   imports = [
     (import "${home-manager}/nixos")
+
+    dankmaterialshellPluginRegistryFlake.modules.default
 
     ./hardware-configuration.nix
   ];
@@ -443,23 +442,6 @@ in
 
       services = {
         login = {
-          unixAuth = true;
-          nodelay = false;
-
-          fprintAuth = true;
-
-          logFailures = true;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-        };
-
-        hyprlock = {
           unixAuth = true;
           nodelay = false;
 
@@ -903,9 +885,23 @@ in
     displayManager = {
       enable = true;
 
-      cosmic-greeter = {
+      dms-greeter = {
         enable = true;
-        package = pkgs.cosmic-greeter;
+        package = pkgs.dms-shell;
+
+        quickshell.package = pkgs.quickshell;
+        # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+
+        compositor = {
+          name = "hyprland";
+          customConfig = builtins.readFile "/home/bitscoper/.config/hypr/hyprland.conf";
+        };
+
+        configHome = "/home/bitscoper";
+
+        logs = {
+          save = true;
+        };
       };
 
       logToJournal = true;
@@ -1203,8 +1199,6 @@ in
 
       openFirewall = true;
     };
-
-    blueman.enable = true;
 
     printing = {
       enable = true;
@@ -1544,6 +1538,40 @@ in
       xwayland.enable = true;
     };
 
+    dms-shell = {
+      enable = true;
+      package = pkgs.dms-shell;
+
+      quickshell.package = pkgs.quickshell;
+      # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+
+      systemd = {
+        enable = true;
+        restartIfChanged = true;
+      };
+
+      enableAudioWavelength = true;
+      enableCalendarEvents = true;
+      enableClipboard = true;
+      enableDynamicTheming = true;
+      enableSystemMonitoring = true;
+      enableVPN = true;
+
+      plugins = {
+        dockerManager.enable = true;
+        tailscale.enable = true;
+      }; # From dankmaterialshellPluginRegistryFlake
+    };
+
+    dsearch = {
+      enable = true;
+      package = pkgs.dsearch;
+
+      systemd = {
+        enable = true;
+      };
+    };
+
     xwayland.enable = true;
 
     bash = {
@@ -1712,11 +1740,6 @@ in
     system-config-printer.enable = true;
 
     seahorse.enable = true;
-
-    nm-applet = {
-      enable = true;
-      indicator = true;
-    };
 
     nautilus-open-any-terminal = {
       enable = true;
@@ -1944,21 +1967,6 @@ in
               show-less-popular = true;
             };
 
-            "io/github/amit9838/mousam" = {
-              unit = "metric";
-              use-24h-clock = false;
-              use-gradient-bg = true;
-            };
-
-            "io/missioncenter/MissionCenter" = {
-              apps-page-core-count-affects-percentages = true;
-              apps-page-merged-process-stats = false;
-              apps-page-remember-sorting = false;
-              performance-page-network-dynamic-scaling = true;
-              performance-smooth-graphs = false;
-              window-interface-style = "dark";
-            };
-
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
@@ -2113,7 +2121,6 @@ in
         # dart # flutter adds the compatible versions
         # debase # Build Failure
         # elf-dissector # Build Failure
-        # gradle # flutter adds the compatible versions
         # reiser4progs # Marked Broken
         # xfstests # Build Failure
         aapt
@@ -2154,8 +2161,6 @@ in
         binwalk
         bleachbit
         bluez-tools
-        brightnessctl
-        btop
         btrfs-assistant
         btrfs-progs
         bustle
@@ -2169,11 +2174,11 @@ in
         cloc
         cmake
         cmake-language-server
+        cmatrix
         code-nautilus
         codevis
         collision
         compose2nix
-        coppwr
         cramfsprogs
         crow-translate
         cryptsetup
@@ -2215,7 +2220,6 @@ in
         f2fs-tools
         fd
         fdroidcl
-        ferrishot
         ffmpegthumbnailer
         fh
         file
@@ -2271,7 +2275,7 @@ in
         hw-probe
         hydra-check
         hyprls
-        hyprpicker
+        hyprpwcenter
         i2c-tools
         iaito
         iftop
@@ -2327,13 +2331,10 @@ in
         metasploit
         mfcuk
         mfoc
-        mission-center
-        mousam
         mtools
         mtr-gui
         nautilus
         nethogs
-        networkmanagerapplet
         nikto
         nilfs-utils
         ninja
@@ -2359,7 +2360,6 @@ in
         pinta
         pkg-config
         platformio
-        playerctl
         postgres-language-server
         procps
         profile-cleaner
@@ -2367,7 +2367,6 @@ in
         protonvpn-gui
         ps
         psmisc
-        pwvucontrol
         qalculate-gtk
         qemu-utils
         qr-backup
@@ -2403,7 +2402,6 @@ in
         subtitleedit
         switcheroo
         symlinks
-        syshud
         systemd-lsp
         szyszka
         telegram-desktop
@@ -2467,13 +2465,13 @@ in
         zenmap
         zfs
         zip
-        # (blender.override {
-        #   colladaSupport = true;
-        #   jackaudioSupport = true;
-        #   openUsdSupport = true;
-        #   spaceNavSupport = true;
-        #   waylandSupport = true;
-        # }) # Paused
+        (blender.override {
+          colladaSupport = true;
+          jackaudioSupport = true;
+          openUsdSupport = true;
+          spaceNavSupport = true;
+          waylandSupport = true;
+        })
         (coreutils-full.override {
           aclSupport = true;
           withOpenssl = true;
@@ -2612,7 +2610,7 @@ in
         (hardinfo2.override {
           printingSupport = true;
         })
-        (kicad-unstable.override {
+        (kicad-testing.override {
           addons = with pkgs.kicadAddons; [
             kikit
             kikit-library
@@ -2622,10 +2620,17 @@ in
           with3d = true;
           withI18n = true;
         })
-        (python314.override {
+        (python315FreeThreading.override {
           bluezSupport = true;
+          enableNoSemanticInterposition = true;
+          enableOptimizations = true;
           mimetypesSupport = true;
+          withExpat = true;
+          withGdbm = true;
+          withMpdecimal = true;
+          withOpenssl = true;
           withReadline = true;
+          withSqlite = true;
         })
         (qbittorrent.override {
           guiSupport = true;
@@ -3338,49 +3343,50 @@ in
     motd = "Welcome";
 
     users.bitscoper = {
-      isNormalUser = true;
+        isNormalUser = true;
 
-      name = "bitscoper";
-      description = "Abdullah As-Sadeed"; # Full Name
+        name = "bitscoper";
+        description = "Abdullah As-Sadeed"; # Full Name
 
-      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
+        # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
 
-      extraGroups = [
-        "adbusers" # Not in builtins.attrNames config.users.groups
-        "adm"
-        "audio"
-        "avahi"
-        "cdrom"
-        "dialout"
-        "docker"
-        "floppy"
-        "fwupd-refresh"
-        "hardinfo2"
-        "i2c"
-        "input"
-        "jellyfin"
-        "kvm"
-        "libvirtd"
-        "lp"
-        "lpadmin"
-        "networkmanager"
-        "nm-openvpn"
-        "pipewire"
-        "plugdev"
-        "qemu-libvirtd"
-        "render"
-        "scanner"
-        "systemd-journal"
-        "tape"
-        "tty"
-        "users"
-        "uucp"
-        "video"
-        "wheel"
-        "wireshark"
-      ];
+        extraGroups = [
+          "adbusers" # Not in builtins.attrNames config.users.groups
+          "adm"
+          "audio"
+          "avahi"
+          "cdrom"
+          "dialout"
+          "docker"
+          "floppy"
+          "fwupd-refresh"
+          "greeter"
+          "hardinfo2"
+          "i2c"
+          "input"
+          "jellyfin"
+          "kvm"
+          "libvirtd"
+          "lp"
+          "lpadmin"
+          "networkmanager"
+          "nm-openvpn"
+          "pipewire"
+          "plugdev"
+          "qemu-libvirtd"
+          "render"
+          "scanner"
+          "systemd-journal"
+          "tape"
+          "tty"
+          "users"
+          "uucp"
+          "video"
+          "wheel"
+          "wireshark"
+        ];
 
-      useDefaultShell = true;
+        useDefaultShell = true;
     };
   };
 
@@ -3440,8 +3446,9 @@ in
             ];
           };
 
-          # plugins = with pkgs.hyprlandPlugins; [
-          # ];
+          plugins = with pkgs.hyprlandPlugins; [
+            hypr-dynamic-cursors
+          ];
 
           xwayland.enable = true;
 
@@ -3461,21 +3468,25 @@ in
 
             exec-once = [
               "setfacl --modify user:jellyfin:--x ~"
-              "adb start-server"
 
               "uwsm app -- wl-paste --type text --watch cliphist store"
               "uwsm app -- wl-paste --type image --watch cliphist store"
-              "uwsm app -- syshud"
+
               "uwsm app -- udiskie --tray --appindicator --automount --notify --file-manager nautilus"
+
+              "adb start-server"
 
               "rm -rf ~/.local/share/applications/waydroid.*"
             ];
 
             bind = [
+              "SUPER, I, exec, dms ipc call keybinds toggle hyprland"
+
               "SUPER, L, exec, loginctl lock-session"
-              "SUPER CTRL, L, exec, uwsm stop"
-              "SUPER CTRL, P, exec, systemctl poweroff"
-              "SUPER CTRL, R, exec, systemctl reboot"
+              "SUPER CTRL, I, exec, dms ipc call inhibit toggle"
+              "SUPER CTRL, P, exec, dms ipc call powermenu toggle"
+
+              "SUPER, O, exec, dms ipc call hypr toggleOverview"
 
               "SUPER, 1, workspace, 1"
               "SUPER, 2, workspace, 2"
@@ -3496,11 +3507,6 @@ in
               "SUPER, up, movefocus, u"
               "SUPER, down, movefocus, d"
 
-              "SUPER SHIFT, T, togglesplit,"
-              "SUPER SHIFT, F, togglefloating,"
-              ", F11, fullscreen, 0"
-              "SUPER, Q, killactive,"
-
               "SUPER SHIFT, 1, movetoworkspace, 1"
               "SUPER SHIFT, 2, movetoworkspace, 2"
               "SUPER SHIFT, 3, movetoworkspace, 3"
@@ -3512,7 +3518,6 @@ in
               "SUPER SHIFT, 9, movetoworkspace, 9"
               "SUPER SHIFT, 0, movetoworkspace, 10"
               "SUPER SHIFT, S, movetoworkspace, special:magic"
-
               "SUPER SHIFT ALT, 1, movetoworkspacesilent, 1"
               "SUPER SHIFT ALT, 2, movetoworkspacesilent, 2"
               "SUPER SHIFT ALT, 3, movetoworkspacesilent, 3"
@@ -3525,22 +3530,30 @@ in
               "SUPER SHIFT ALT, 0, movetoworkspacesilent, 10"
               "SUPER SHIFT ALT, S, movetoworkspacesilent, special:magic"
 
-              "SUPER, C, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
+              "SUPER SHIFT, T, togglesplit,"
+              "SUPER SHIFT, F, togglefloating,"
+              ", F11, fullscreen, 0"
+              "SUPER, Q, killactive,"
 
-              ", PRINT, exec, uwsm app -- ferrishot"
+              ", PRINT, exec, dms screenshot region --cursor --format=png"
 
-              "SUPER, A, exec, uwsm app -- wofi --show drun --disable-history | xargs -r uwsm app --"
+              "SUPER, A, exec, dms ipc call spotlight toggle"
               "SUPER, R, exec, uwsm app -- wofi --show run --disable-history | xargs -r uwsm app --"
+
+              "SUPER, C, exec, dms ipc call clipboard toggle"
+
+              "SUPER, N, exec, dms ipc call notifications open"
 
               "SUPER, T, exec, uwsm app -- ghostty"
 
               ", XF86Explorer, exec, uwsm app -- nautilus"
               "SUPER, F, exec, uwsm app -- nautilus"
+              "SUPER ALT, F, exec, dms ipc call spotlight toggleQuery \"/\""
 
               "SUPER, K, exec, uwsm app -- keepassxc"
               "SUPER ALT, K, exec, uwsm app -- keepassxc --lock"
 
-              "SUPER, U, exec, uwsm app -- missioncenter"
+              "SUPER, U, exec, dms ipc call processlist open"
 
               "SUPER, W, exec, uwsm app -- firefox-devedition"
               "SUPER ALT, W, exec, uwsm app -- firefox-devedition --private-window"
@@ -3553,7 +3566,6 @@ in
               "SUPER, D, exec, uwsm app -- dbeaver"
 
               "SUPER, P, exec, uwsm app -- scrcpy --render-driver=opengl"
-              "SUPER ALT, P, exec, uwsm app -- scrcpy --render-driver=opengl -e"
 
               "SUPER, V, exec, uwsm app -- vlc"
             ];
@@ -3564,22 +3576,22 @@ in
             ]; # Mouse
 
             bindl = [
-              ", XF86AudioPlay, exec, playerctl play-pause"
-              ", XF86AudioPause, exec, playerctl play-pause"
-              ", XF86AudioStop, exec, playerctl stop"
+              ", XF86AudioPlay, exec, dms ipc call mpris playPause"
+              ", XF86AudioPause, exec, dms ipc call mpris playPause"
+              ", XF86AudioStop, exec, dms ipc call mpris stop"
+              ", XF86AudioPrev, exec, dms ipc call mpris previous"
+              ", XF86AudioNext, exec, dms ipc call mpris next"
 
-              ", XF86AudioPrev, exec, playerctl previous"
-              ", XF86AudioNext, exec, playerctl next"
+              ", XF86AudioMute, exec, dms ipc call audio mute"
+              ", XF86AudioMicMute, exec, dms ipc call audio micmute"
             ]; # Will also work when locked
 
             bindel = [
-              ", XF86MonBrightnessUp, exec, brightnessctl s 1%+"
-              ", XF86MonBrightnessDown, exec, brightnessctl s 1%-"
+              ", XF86MonBrightnessUp, exec, dms ipc call brightness increment 1 \"\""
+              ", XF86MonBrightnessDown, exec, dms ipc call brightness decrement 1 \"\""
 
-              ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+"
-              ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-"
-              ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-              ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+              ", XF86AudioRaiseVolume, exec, dms ipc call audio increment 1"
+              ", XF86AudioLowerVolume, exec, dms ipc call audio decrement 1"
             ]; # Repeat and will work when locked
 
             general = {
@@ -3769,8 +3781,28 @@ in
               # Name, On/Off, Speed, Bezier
             };
 
-            # plugin = {
-            # };
+            plugin = {
+              dynamic-cursors = {
+                enabled = true;
+
+                hyprcursor = {
+                  enabled = true;
+                };
+
+                mode = "rotate";
+                threshold = 1;
+                rotate = {
+                  length = cursor.size;
+                };
+
+                shake = {
+                  enabled = true;
+                  ipc = true;
+
+                  effects = true;
+                };
+              };
+            };
           };
         };
 
@@ -3832,136 +3864,6 @@ in
         };
 
         services = {
-          swaync = {
-            enable = true;
-            package = pkgs.swaynotificationcenter;
-
-            settings = {
-              "\$schema" = "${pkgs.swaynotificationcenter}/etc/xdg/swaync/configSchema.json";
-              cssPriority = "application";
-
-              layer-shell = true;
-              layer-shell-cover-screen = true;
-              fit-to-screen = false;
-
-              control-center-layer = "overlay";
-              control-center-exclusive-zone = true;
-              control-center-positionX = "right";
-              control-center-positionY = "top";
-              control-center-margin-top = builtins.floor (design_factor * 0.50); # 8
-              control-center-margin-right = builtins.floor (design_factor * 0.50); # 8
-              control-center-margin-bottom = builtins.floor (design_factor * 0.50); # 8
-              control-center-margin-left = builtins.floor (design_factor * 0.50); # 8
-
-              layer = "overlay";
-              positionX = "right";
-              positionY = "top";
-
-              text-empty = "No Notifications";
-              widgets = [
-                "title"
-                "notifications"
-                "mpris"
-                "dnd"
-              ];
-              widget-config = {
-                title = {
-                  text = "Notifications";
-
-                  clear-all-button = true;
-                  button-text = "Clear";
-                };
-
-                mpris = {
-                  image-radius = design_factor;
-                  blur = true;
-                };
-
-                dnd = {
-                  text = "Do Not Disturb";
-                };
-              };
-
-              image-visibility = "when-available";
-              relative-timestamps = true;
-              notification-inline-replies = true;
-              notification-2fa-action = true;
-              transition-time = animation_duration;
-
-              timeout = 8;
-              timeout-critical = 0; # 0 = Disable
-              timeout-low = 4;
-
-              keyboard-shortcuts = true;
-              hide-on-action = true;
-              hide-on-clear = true;
-              script-fail-notify = true;
-            };
-
-            style = ''
-              .blank-window {
-                background: transparent;
-              }
-
-              .control-center {
-                border-radius: ${toString design_factor}px;
-                background-color: ${colors.hex.borders};
-                font-size: ${toString font_preferences.size}px;
-                color: ${colors.hex.foreground};
-              }
-
-              .widget-title,
-              .widget-dnd  {
-                font-size: ${toString (font_preferences.size * 1.5)}px;
-                color: ${colors.hex.foreground};
-              }
-
-              .widget-title > button {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification .notification-default-action {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification .notification-default-action .notification-content {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification .notification-default-action .notification-content .body-image {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification .notification-default-action .notification-content .inline-reply .inline-reply-entry {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .notification-row .notification-background .notification .notification-default-action .notification-content .inline-reply .inline-reply-button {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .widget-mpris .widget-mpris-player {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .widget-mpris .widget-mpris-player .widget-mpris-album-art {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .widget-dnd > switch {
-                border-radius: ${toString design_factor}px;
-              }
-
-              .widget-dnd > switch slider {
-                border-radius: ${toString design_factor}px;
-              }
-            '';
-          };
-
           hypridle = {
             enable = true;
             package = pkgs.hypridle;
@@ -3972,7 +3874,7 @@ in
                 ignore_wayland_inhibit = false;
                 ignore_dbus_inhibit = false;
 
-                lock_cmd = "pidof hyprlock || hyprlock --immediate";
+                lock_cmd = "dms ipc call lock lock";
               };
 
               listener = [
@@ -3982,25 +3884,6 @@ in
                   timeout = 300; # 5 Minutes
                   on-timeout = "loginctl lock-session";
                 }
-              ];
-            };
-          };
-
-          hyprpaper = {
-            enable = true;
-            package = pkgs.hyprpaper;
-
-            settings = {
-              ipc = "on";
-
-              splash = false;
-
-              preload = [
-                wallpaper
-              ];
-
-              wallpaper = [
-                ", ${wallpaper}"
               ];
             };
           };
@@ -4031,755 +3914,10 @@ in
             };
           };
 
-          hyprlock = {
-            enable = true;
-            package = pkgs.hyprlock;
-
-            sourceFirst = true;
-
-            settings = {
-              general = {
-                immediate_render = true;
-                fractional_scaling = 2; # 2 = Automatic
-
-                text_trim = false;
-                hide_cursor = false;
-
-                ignore_empty_input = true;
-                fail_timeout = 2000; # ms
-              };
-
-              auth = {
-                pam = {
-                  enabled = true;
-                  module = "hyprlock";
-                };
-
-                fingerprint = {
-                  enabled = true;
-
-                  ready_message = "Scan Fingerprint";
-                  present_message = "Scanning Fingerprint";
-
-                  retry_delay = 250; # ms
-                };
-              };
-
-              background = [
-                {
-                  monitor = ""; # "" = All
-                  path = wallpaper;
-                }
-              ];
-
-              label = [
-                {
-                  monitor = ""; # "" = All
-                  halign = "center";
-                  valign = "top";
-                  position = "0, -128";
-
-                  text_align = "center";
-                  font_family = font_preferences.name.sans_serif;
-                  color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-                  font_size = design_factor * 4;
-                  text = "$TIME12";
-                }
-
-                {
-                  monitor = ""; # "" = All
-                  halign = "center";
-                  valign = "center";
-                  position = "0, 0";
-
-                  text_align = "center";
-                  font_family = font_preferences.name.sans_serif;
-                  color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-                  font_size = design_factor;
-                  text = "$DESC"; # Full Name
-                }
-              ];
-
-              input-field = [
-                {
-                  monitor = ""; # "" = All
-                  halign = "center";
-                  valign = "bottom";
-                  position = "0, 128";
-
-                  size = "256, 48";
-                  rounding = design_factor;
-                  outline_thickness = 1;
-                  outer_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
-                  shadow_passes = 0;
-                  hide_input = false;
-                  inner_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
-                  font_family = font_preferences.name.sans_serif;
-                  font_color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-                  placeholder_text = "Enter Password";
-                  dots_center = true;
-                  dots_rounding = -1;
-
-                  fade_on_empty = true;
-
-                  invert_numlock = false;
-                  capslock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-                  numlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-                  bothlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-
-                  check_color = convert_hex_color_code_to_rgba_color_code colors.hex.success;
-                  fail_color = convert_hex_color_code_to_rgba_color_code colors.hex.error;
-                  fail_text = "$FAIL <b>($ATTEMPTS)</b>";
-                }
-              ];
-            };
-          };
-
-          waybar = {
-            enable = true;
-            package = (
-              pkgs.waybar.override {
-                enableManpages = true;
-                evdevSupport = true;
-                gpsSupport = true;
-                inputSupport = true;
-                jackSupport = true;
-                mprisSupport = true;
-                pipewireSupport = true;
-                pulseSupport = true;
-                rfkillSupport = true;
-                sndioSupport = true;
-                systemdSupport = true;
-                traySupport = true;
-                udevSupport = true;
-                wireplumberSupport = true;
-                withMediaPlayer = true;
-              }
-            );
-
-            systemd.enable = true;
-
-            settings = {
-              top_bar = {
-                start_hidden = false;
-                reload_style_on_change = true;
-                position = "top";
-                exclusive = true;
-                layer = "top";
-                passthrough = false;
-                fixed-center = true;
-                spacing = 4;
-
-                modules-left = [
-                  "group/backlight-and-ppd-and-idle-inhibitor"
-                  "group/pulseaudio-and-bluetooth"
-                  "group/hardware-statistics"
-                  "network"
-                  "privacy"
-                ];
-
-                modules-center = [
-                  "clock"
-                ];
-
-                modules-right = [
-                  "group/swaync-and-systemd"
-                  "tray"
-                  "group/workspaces-and-taskbar"
-                ];
-
-                clock = {
-                  timezone = config.time.timeZone;
-                  locale = "en_US";
-                  interval = 1;
-
-                  format = "{:%I:%M %p}";
-                  format-alt = "{:%A, %B %d, %Y}";
-
-                  tooltip = true;
-                  tooltip-format = "<tt><small>{calendar}</small></tt>";
-
-                  calendar = {
-                    mode = "year";
-                    mode-mon-col = 3;
-                    weeks-pos = "right";
-
-                    format = {
-                      months = "<b>{}</b>";
-                      days = "{}";
-                      weekdays = "<b>{}</b>";
-                      weeks = "<i>{:%U}</i>";
-                      today = "<u>{}</u>";
-                    };
-                  };
-                };
-
-                "group/backlight-and-ppd-and-idle-inhibitor" = {
-                  modules = [
-                    "backlight"
-                    "power-profiles-daemon"
-                    "idle_inhibitor"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = animation_duration;
-                  };
-                  "orientation" = "inherit";
-                };
-
-                backlight = {
-                  device = backlight_device;
-                  interval = 1;
-
-                  format = "{percent}% {icon}";
-                  format-icons = [
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                  ];
-
-                  tooltip = true;
-                  tooltip-format = "{percent}% {icon}";
-
-                  on-scroll-up = "brightnessctl s +1%";
-                  on-scroll-down = "brightnessctl s 1%-";
-                  reverse-scrolling = false;
-                  reverse-mouse-scrolling = false;
-                  scroll-step = 1.0;
-                };
-
-                power-profiles-daemon = {
-                  format = "{icon}";
-                  format-icons = {
-                    performance = "";
-                    balanced = "";
-                    power-saver = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Driver: {driver}\nProfile: {profile}";
-                };
-
-                idle_inhibitor = {
-                  start-activated = false;
-
-                  format = "{icon}";
-                  format-icons = {
-                    activated = "";
-                    deactivated = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format-activated = "{status}";
-                  tooltip-format-deactivated = "{status}";
-                };
-
-                "group/pulseaudio-and-bluetooth" = {
-                  modules = [
-                    "pulseaudio"
-                    "bluetooth"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = animation_duration;
-                  };
-                  "orientation" = "inherit";
-                };
-
-                pulseaudio = {
-                  format = "{volume}% {icon} {format_source}";
-                  format-muted = "{icon} {format_source}";
-
-                  format-bluetooth = "{volume}% {icon} 󰂱 {format_source}";
-                  format-bluetooth-muted = "{icon} 󰂱 {format_source}";
-
-                  format-source = " {volume}% ";
-                  format-source-muted = "";
-
-                  format-icons = {
-                    default = [
-                      ""
-                      ""
-                      ""
-                    ];
-                    default-muted = "";
-
-                    speaker = "󰓃";
-                    speaker-muted = "󰓄";
-
-                    headphone = "󰋋";
-                    headphone-muted = "󰟎";
-
-                    headset = "󰋎";
-                    headset-muted = "󰋐";
-
-                    hands-free = "󰏳";
-                    hands-free-muted = "󰗿";
-
-                    phone = "";
-                    phone-muted = "";
-
-                    portable = "";
-                    portable-muted = "";
-
-                    hdmi = "󰽟";
-                    hdmi-muted = "󰽠";
-
-                    hifi = "󰴸";
-                    hifi-muted = "󰓄";
-
-                    car = "󰄋";
-                    car-muted = "󰸜";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "{desc}";
-
-                  scroll-step = 1.0;
-                  reverse-scrolling = false;
-                  reverse-mouse-scrolling = false;
-                  max-volume = 100;
-                  on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
-                  on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
-
-                  on-click = "uwsm app -- pwvucontrol";
-                };
-
-                bluetooth = {
-                  format = "{status} {icon}";
-                  format-disabled = "Disabled {icon}";
-                  format-off = "Off {icon}";
-                  format-on = "On {icon}";
-                  format-connected = "{device_alias} {icon}";
-                  format-connected-battery = "{device_alias} 󰂱 ({device_battery_percentage}%)";
-                  format-icons = {
-                    no-controller = "󰂲";
-                    disabled = "󰂲";
-                    off = "󰂲";
-                    on = "󰂯";
-                    connected = "󰂱";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Status: {status}\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
-                  tooltip-format-disabled = "Status: Disabled";
-                  tooltip-format-off = "Status: Off";
-                  tooltip-format-on = "Status: On\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
-                  tooltip-format-connected = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
-                  tooltip-format-connected-battery = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
-                  tooltip-format-enumerate-connected = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}";
-                  tooltip-format-enumerate-connected-battery = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}\n\tBattery: {device_battery_percentage}%";
-
-                  on-click = "uwsm app -- blueman-manager";
-                };
-
-                "group/hardware-statistics" = {
-                  modules = [
-                    "battery"
-                    "cpu"
-                    "memory"
-                    "disk"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = animation_duration;
-                  };
-                  "orientation" = "inherit";
-                };
-
-                battery = {
-                  bat = "BAT0";
-                  adapter = "AC0";
-                  design-capacity = false;
-                  weighted-average = true;
-                  interval = 1;
-
-                  full-at = 100;
-                  states = {
-                    warning = 25;
-                    critical = 10;
-                  };
-
-                  format = "{capacity}% {icon}";
-                  format-plugged = "{capacity}% ";
-                  format-charging = "{capacity}% ";
-                  format-full = "{capacity}% {icon}";
-                  format-alt = "{time} {icon}";
-                  format-time = "{H} h {m} min";
-                  format-icons = [
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                  ];
-
-                  tooltip = true;
-                  tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
-                };
-
-                cpu = {
-                  interval = 1;
-
-                  format = "{usage}% ";
-
-                  tooltip = true;
-
-                  on-click = "uwsm app -- missioncenter";
-                };
-
-                memory = {
-                  interval = 1;
-
-                  format = "{percentage}% ";
-
-                  tooltip = true;
-                  tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
-
-                  on-click = "uwsm app -- missioncenter";
-                };
-
-                disk = {
-                  path = "/";
-                  unit = "GB";
-                  interval = 1;
-
-                  format = "{percentage_used}% 󰋊";
-
-                  tooltip = true;
-                  tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
-
-                  on-click = "uwsm app -- missioncenter";
-                };
-
-                network = {
-                  interval = 1;
-
-                  format = "{bandwidthUpBytes} {bandwidthDownBytes}";
-                  format-disconnected = "Disconnected 󱘖";
-                  format-linked = "No IP 󰀦";
-                  format-ethernet = "{bandwidthUpBytes}   {bandwidthDownBytes}";
-                  format-wifi = "{bandwidthUpBytes}   {bandwidthDownBytes}";
-
-                  tooltip = true;
-                  tooltip-format = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-                  tooltip-format-disconnected = "Disconnected";
-                  tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-                  tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-
-                  on-click = "uwsm app -- nm-connection-editor";
-                };
-
-                privacy = {
-                  icon-size = font_preferences.size;
-                  icon-spacing = builtins.floor (design_factor * 0.50); # 8
-                  transition-duration = 200;
-
-                  modules = [
-                    {
-                      type = "screenshare";
-                      tooltip = true;
-                      tooltip-icon-size = font_preferences.size;
-                    }
-                    {
-                      type = "audio-in";
-                      tooltip = true;
-                      tooltip-icon-size = font_preferences.size;
-                    }
-                  ];
-                };
-
-                "group/swaync-and-systemd" = {
-                  modules = [
-                    "custom/swaync"
-                    "systemd-failed-units"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = false;
-                    transition-duration = animation_duration;
-                  };
-                  "orientation" = "inherit";
-                };
-
-                "custom/swaync" = {
-                  format = "{} {icon}";
-                  format-icons = {
-                    notification = "<span foreground=\"${colors.hex.warning}\"><sup></sup></span>";
-                    none = "";
-
-                    inhibited-notification = "<span foreground=\"${colors.hex.warning}\"><sup></sup></span>";
-                    inhibited-none = "";
-
-                    dnd-notification = "<span foreground=\"${colors.hex.warning}\"><sup></sup></span>";
-                    dnd-none = "";
-
-                    dnd-inhibited-notification = "<span foreground=\"${colors.hex.warning}\"><sup></sup></span>";
-                    dnd-inhibited-none = "";
-                  };
-
-                  tooltip = false;
-
-                  return-type = "json";
-                  exec-if = "which swaync-client";
-                  exec = "uwsm app -- swaync-client -swb";
-                  on-click = "swaync-client -t -sw";
-                  on-click-right = "swaync-client -d -sw";
-                  escape = true;
-                };
-
-                systemd-failed-units = {
-                  system = true;
-                  user = true;
-
-                  hide-on-ok = false;
-
-                  format = "{nr_failed_system}, {nr_failed_user} ";
-                  format-ok = "";
-                };
-
-                tray = {
-                  show-passive-items = true;
-                  reverse-direction = false;
-                  icon-size = font_preferences.size;
-                  spacing = 4;
-                };
-
-                "group/workspaces-and-taskbar" = {
-                  modules = [
-                    "hyprland/workspaces"
-                    "wlr/taskbar"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = false;
-                    transition-duration = animation_duration;
-                  };
-                  "orientation" = "inherit";
-                };
-
-                "hyprland/workspaces" = {
-                  all-outputs = false;
-                  show-special = true;
-                  special-visible-only = false;
-                  active-only = false;
-                  format = "{name}";
-                  move-to-monitor = false;
-                };
-
-                "wlr/taskbar" = {
-                  all-outputs = false;
-                  active-first = false;
-                  sort-by-app-id = false;
-                  format = "{icon}";
-                  icon-size = font_preferences.size;
-                  markup = true;
-
-                  tooltip = true;
-                  tooltip-format = "Title: {title}\nName: {name}\nID: {app_id}\nState: {state}";
-
-                  on-click = "activate";
-                };
-              };
-            };
-
-            style = ''
-              * {
-                font-family: ${font_preferences.name.sans_serif};
-                font-size: ${toString font_preferences.size};
-              }
-
-              window#waybar {
-                border: none;
-                background-color: transparent;
-              }
-
-              .modules-right > widget:last-child > #workspaces {
-                margin-right: 0;
-              }
-
-              .modules-left > widget:first-child > #workspaces {
-                margin-left: 0;
-              }
-
-              #power-profiles-daemon,
-              #idle_inhibitor,
-              #backlight,
-              #pulseaudio,
-              #bluetooth,
-              #network,
-              #clock,
-              #custom-swaync,
-              #privacy,
-              #systemd-failed-units,
-              #disk,
-              #memory,
-              #cpu,
-              #battery,
-              #window {
-                border-radius: ${toString design_factor}px;
-                background-color: ${colors.hex.borders};
-                padding: 2px 8px;
-                color: ${colors.hex.foreground};
-              }
-
-              #power-profiles-daemon.power-saver,
-              #power-profiles-daemon.balanced {
-                color: ${colors.hex.success};
-              }
-
-              #power-profiles-daemon.performance {
-                color: ${colors.hex.foreground};
-              }
-
-              #idle_inhibitor.deactivated {
-                color: ${colors.hex.foreground};
-              }
-
-              #idle_inhibitor.activated {
-                color: ${colors.hex.success};
-              }
-
-              #pulseaudio.muted,
-              #pulseaudio.source-muted {
-                color: ${colors.hex.error};
-              }
-
-              #pulseaudio.bluetooth {
-                color: ${colors.hex.foreground};
-              }
-
-              #bluetooth.no-controller,
-              #bluetooth.disabled,
-              #bluetooth.off {
-                color: ${colors.hex.error};
-              }
-
-              #bluetooth.on,
-              #bluetooth.discoverable,
-              #bluetooth.pairable {
-                color: ${colors.hex.foreground};
-              }
-
-              #bluetooth.discovering,
-              #bluetooth.connected {
-                color: ${colors.hex.success};
-              }
-
-              #network.disabled,
-              #network.disconnected,
-              #network.linked {
-                color: ${colors.hex.error};
-              }
-
-              #network.etherenet,
-              #network.wifi {
-                color: ${colors.hex.foreground};
-              }
-
-              #custom-swaync {
-                font-family: ${font_preferences.name.mono};
-              }
-
-              #privacy-item.audio-in,
-              #privacy-item.screenshare {
-                color: ${colors.hex.success};
-              }
-
-              #systemd-failed-units.ok {
-                color: ${colors.hex.foreground};
-              }
-
-              #systemd-failed-units.degraded {
-                color: ${colors.hex.error};
-              }
-
-              #battery.plugged,
-              #battery.full {
-                color: ${colors.hex.foreground};
-              }
-
-              #battery.charging {
-                color: ${colors.hex.success};
-              }
-
-              #battery.warning {
-                color: ${colors.hex.warning};
-              }
-
-              #battery.critical {
-                color: ${colors.hex.error};
-              }
-
-              #workspaces,
-              #taskbar,
-              #tray {
-                background-color: transparent;
-              }
-
-              button {
-                margin: 0px 2px;
-                border-radius: ${toString design_factor}px;
-                background-color: ${colors.hex.borders};
-                padding: 0px;
-                color: ${colors.hex.foreground};
-              }
-
-              button * {
-                padding: 0px 4px;
-              }
-
-              button.active {
-                background-color: ${colors.hex.background};
-              }
-
-              #window label {
-                padding: 0px 4px;
-                font-size: ${toString font_preferences.size};
-              }
-
-              #tray > widget {
-                border-radius: ${toString design_factor}px;
-                background-color: ${colors.hex.borders};
-                color: ${colors.hex.foreground};
-              }
-
-              #tray image {
-                padding: 0px 8px;
-              }
-
-              #tray > .passive {
-                -gtk-icon-effect: dim;
-              }
-
-              #tray > .active {
-                background-color: ${colors.hex.borders};
-              }
-
-              #tray > .needs-attention {
-                background-color: ${colors.hex.success};
-                -gtk-icon-effect: highlight;
-              }
-
-              #tray > widget:hover {
-                background-color: ${colors.hex.background};
-              }
-            '';
-          };
-
-          gradle = {
-            enable = true;
-            package = pkgs.gradle;
-          };
+          # gradle = {
+          #   enable = true;
+          #   package = pkgs.gradle;
+          # }; # flutter adds the compatible versions
 
           matplotlib = {
             enable = true;
@@ -5085,5 +4223,4 @@ in
 # FIXME: Cockpit > Login
 # FIXME: ELAN7001 SPI Fingerprint Sensor
 # FIXME: MariaDB > Login
-# FIXME: Unified Greeter and Lockscreen Themes
 # FIXME: Wofi > Window > Border Radius > Transperant Background
