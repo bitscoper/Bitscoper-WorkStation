@@ -51,8 +51,8 @@ let
       platforms-android-36-1
       system-images-android-36-1-google-apis-playstore-x86-64
       tools
-    ]
-  ); # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
+    ] # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
+  );
   android_sdk_path = "${android_sdk}/share/android-sdk";
 
   font_preferences = {
@@ -190,7 +190,7 @@ in
     kernelPackages = pkgs.linuxKernel.packages.linux_6_18;
 
     extraModulePackages = with config.boot.kernelPackages; [
-      # openafs # Build Failure
+      openafs
       apfs
       cpupower
       mm-tools
@@ -300,7 +300,7 @@ in
       sandbox = true;
       auto-optimise-store = true;
 
-      cores = 1; # 0 = All
+      cores = 0; # 0 = All
       max-jobs = 1;
     };
 
@@ -1558,7 +1558,14 @@ in
       enableVPN = true;
 
       plugins = {
+        calculator.enable = true;
+        dankHooks.enable = true;
         dockerManager.enable = true;
+        emojiLauncher.enable = true;
+        hyprlandSubmap.enable = true;
+        kubernetes.enable = true;
+        nixMonitor.enable = true;
+        prayerTimes.enable = true;
         tailscale.enable = true;
       }; # From dankmaterialshellPluginRegistryFlake
     };
@@ -1837,7 +1844,7 @@ in
     #   enable = true;
     #   package = pkgs.ghidra;
     #   gdb = true;
-    # }; # Build Failure
+    # }; # FIXME: Build Failure
 
     wireshark = {
       enable = true;
@@ -2114,15 +2121,15 @@ in
     systemPackages =
       with pkgs;
       [
-        # armitage # Build Failure
-        # autopsy # Build Failure
-        # bulk_extractor # Build Failure
-        # certbot-full # Build Failure
+        # armitage # FIXME: Build Failure
+        # autopsy # FIXME: Build Failure
+        # bulk_extractor # FIXME: Build Failure
+        # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible versions
-        # debase # Build Failure
-        # elf-dissector # Build Failure
+        # debase # FIXME: Build Failure
+        # elf-dissector # FIXME: Build Failure
         # reiser4progs # Marked Broken
-        # xfstests # Build Failure
+        # xfstests # FIXME: Build Failure
         aapt
         above
         acl
@@ -2130,7 +2137,7 @@ in
         acpidump-all
         adb-sync
         addlicense
-        agi # Cannot find libswt
+        agi # FIXME: Cannot find libswt
         aircrack-ng
         alpaca
         alsa-plugins
@@ -2166,6 +2173,7 @@ in
         bustle
         butt
         cameractrls-gtk4
+        cava
         cdrkit
         celestia
         certbot
@@ -2208,6 +2216,7 @@ in
         docker-init
         docker-language-server
         docker-sbom
+        dockerfile-language-server
         dosfstools
         e2fsprogs
         easyeda2kicad
@@ -2303,6 +2312,7 @@ in
         kubeshark
         lazygit
         letterpress
+        libnotify
         libreoffice-fresh
         libsecret
         libva-utils
@@ -2350,7 +2360,6 @@ in
         open-interpreter
         openafs
         openai-whisper
-        opencode
         opendmarc
         openssl
         paper-clip
@@ -2674,7 +2683,7 @@ in
           libvaSupport = true;
         })
         (tree-sitter.override {
-          # webUISupport = true; # Build Failure
+          # webUISupport = true; # FIXME: Build Failure
         })
         (virt-viewer.override {
           spiceSupport = true;
@@ -2703,7 +2712,7 @@ in
       #   ret-sync
       #   sleighdevtools
       #   wasm
-      # ]) # Build Failure
+      # ]) # FIXME: Build Failure
       ++ (with gst_all_1; [
         (gst-libav.override {
           enableDocumentation = true;
@@ -2811,8 +2820,8 @@ in
         nvim-treesitter-textsubjects
       ])
       ++ (with vimPlugins.nvim-treesitter-parsers; [
-        # jsonc # Build Failure
-        # robots # Build Failure
+        # jsonc # FIXME: Build Failure
+        # robots # FIXME: Build Failure
         arduino
         asm
         bash
@@ -3343,50 +3352,50 @@ in
     motd = "Welcome";
 
     users.bitscoper = {
-        isNormalUser = true;
+      isNormalUser = true;
 
-        name = "bitscoper";
-        description = "Abdullah As-Sadeed"; # Full Name
+      name = "bitscoper";
+      description = "Abdullah As-Sadeed"; # Full Name
 
-        # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
+      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
 
-        extraGroups = [
-          "adbusers" # Not in builtins.attrNames config.users.groups
-          "adm"
-          "audio"
-          "avahi"
-          "cdrom"
-          "dialout"
-          "docker"
-          "floppy"
-          "fwupd-refresh"
-          "greeter"
-          "hardinfo2"
-          "i2c"
-          "input"
-          "jellyfin"
-          "kvm"
-          "libvirtd"
-          "lp"
-          "lpadmin"
-          "networkmanager"
-          "nm-openvpn"
-          "pipewire"
-          "plugdev"
-          "qemu-libvirtd"
-          "render"
-          "scanner"
-          "systemd-journal"
-          "tape"
-          "tty"
-          "users"
-          "uucp"
-          "video"
-          "wheel"
-          "wireshark"
-        ];
+      extraGroups = [
+        "adbusers" # Not in builtins.attrNames config.users.groups
+        "adm"
+        "audio"
+        "avahi"
+        "cdrom"
+        "dialout"
+        "docker"
+        "floppy"
+        "fwupd-refresh"
+        "greeter"
+        "hardinfo2"
+        "i2c"
+        "input"
+        "jellyfin"
+        "kvm"
+        "libvirtd"
+        "lp"
+        "lpadmin"
+        "networkmanager"
+        "nm-openvpn"
+        "pipewire"
+        "plugdev"
+        "qemu-libvirtd"
+        "render"
+        "scanner"
+        "systemd-journal"
+        "tape"
+        "tty"
+        "users"
+        "uucp"
+        "video"
+        "wheel"
+        "wireshark"
+      ];
 
-        useDefaultShell = true;
+      useDefaultShell = true;
     };
   };
 
@@ -4118,7 +4127,6 @@ in
                     ms-vscode.test-adapter-converter
                     njpwerner.autodocstring
                     oderwat.indent-rainbow
-                    piousdeer.adwaita-theme
                     platformio.platformio-vscode-ide
                     quicktype.quicktype
                     redhat.vscode-xml
@@ -4178,10 +4186,10 @@ in
                       sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
                     {
-                      name = "opencode";
-                      publisher = "sst-dev";
-                      version = "0.0.13";
-                      sha256 = "6adXUaoh/OP5yYItH3GAQ7GpupfmTGaxkKP6hYUMYNQ=";
+                      name = "dms-theme";
+                      publisher = "danklinux";
+                      version = "0.0.3";
+                      sha256 = "sha256-MI1x1wiqvwg/N89oMuNVp0qlRT84ubvuMjtpkX0WKQY=";
                     }
                   ];
 
