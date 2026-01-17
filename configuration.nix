@@ -16,7 +16,7 @@ let
 
   dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
 
-  # quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
+  quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
 
   android_nixpkgs =
     pkgs.callPackage
@@ -499,11 +499,6 @@ in
       );
     };
 
-    soteria = {
-      enable = true;
-      package = pkgs.soteria;
-    };
-
     rtkit.enable = true;
 
     wrappers = {
@@ -778,10 +773,67 @@ in
         enable = true;
       };
     }; # Custom Service Unit File due to Errors
-
   };
 
   services = {
+    upower = {
+      enable = true;
+      package = pkgs.upower;
+
+      allowRiskyCriticalPowerAction = false;
+      criticalPowerAction = "PowerOff";
+
+      ignoreLid = true;
+    };
+
+    thermald = {
+      enable = true;
+      package = pkgs.thermald;
+
+      ignoreCpuidCheck = false;
+
+      debug = false;
+    };
+
+    power-profiles-daemon = {
+      enable = true;
+      package = pkgs.power-profiles-daemon;
+    };
+
+    acpid = {
+      enable = true;
+
+      # powerEventCommands = '''';
+      # acEventCommands = '''';
+      # lidEventCommands = '''';
+
+      logEvents = false;
+    };
+
+    logind = {
+      settings = {
+        Login = {
+          killUserProcesses = true;
+
+          lidSwitch = "ignore";
+          lidSwitchDocked = "ignore";
+          lidSwitchExternalPower = "ignore";
+
+          powerKey = "poweroff";
+          powerKeyLongPress = "poweroff";
+
+          rebootKey = "reboot";
+          rebootKeyLongPress = "reboot";
+
+          suspendKey = "suspend";
+          suspendKeyLongPress = "suspend";
+
+          hibernateKey = "hibernate";
+          hibernateKeyLongPress = "hibernate";
+        };
+      };
+    };
+
     dbus = {
       enable = true;
       dbusPackage = (
@@ -807,54 +859,6 @@ in
           enableFlashrom = true;
         }
       );
-    };
-
-    acpid = {
-      enable = true;
-
-      # powerEventCommands = '''';
-      # acEventCommands = '''';
-      # lidEventCommands = '''';
-
-      logEvents = false;
-    };
-
-    thermald = {
-      enable = true;
-      package = pkgs.thermald;
-
-      ignoreCpuidCheck = false;
-
-      debug = false;
-    };
-
-    power-profiles-daemon = {
-      enable = true;
-      package = pkgs.power-profiles-daemon;
-    };
-
-    logind = {
-      settings = {
-        Login = {
-          killUserProcesses = true;
-
-          lidSwitch = "ignore";
-          lidSwitchDocked = "ignore";
-          lidSwitchExternalPower = "ignore";
-
-          powerKey = "poweroff";
-          powerKeyLongPress = "poweroff";
-
-          rebootKey = "reboot";
-          rebootKeyLongPress = "reboot";
-
-          suspendKey = "suspend";
-          suspendKeyLongPress = "suspend";
-
-          hibernateKey = "hibernate";
-          hibernateKeyLongPress = "hibernate";
-        };
-      };
     };
 
     udev = {
@@ -889,8 +893,8 @@ in
         enable = true;
         package = pkgs.dms-shell;
 
-        quickshell.package = pkgs.quickshell;
-        # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+        # quickshell.package = pkgs.quickshell;
+        quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
 
         compositor = {
           name = "hyprland";
@@ -1542,8 +1546,8 @@ in
       enable = true;
       package = pkgs.dms-shell;
 
-      quickshell.package = pkgs.quickshell;
-      # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+      # quickshell.package = pkgs.quickshell;
+      quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
 
       systemd = {
         enable = true;
@@ -1552,7 +1556,7 @@ in
 
       enableAudioWavelength = true;
       enableCalendarEvents = true;
-      enableClipboard = true;
+      enableClipboardPaste = true;
       enableDynamicTheming = true;
       enableSystemMonitoring = true;
       enableVPN = true;
@@ -2104,6 +2108,7 @@ in
     };
 
     shellAliases = {
+      firefox = "firefox-devedition";
       code = "codium";
 
       fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
@@ -2127,7 +2132,7 @@ in
         # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible versions
         # debase # FIXME: Build Failure
-        # elf-dissector # FIXME: Build Failure
+        # freecad # FIXME: Build Failure
         # reiser4progs # Marked Broken
         # xfstests # FIXME: Build Failure
         aapt
@@ -2178,7 +2183,6 @@ in
         celestia
         certbot
         clinfo
-        cliphist
         cloc
         cmake
         cmake-language-server
@@ -2222,6 +2226,7 @@ in
         easyeda2kicad
         efibootmgr
         egypt
+        elf-dissector
         eog
         esptool
         evtest-qt
@@ -2239,7 +2244,6 @@ in
         flare-floss
         flutter
         fontfor
-        freecad
         fritzing
         fstl
         fzf
@@ -3308,11 +3312,11 @@ in
     };
   };
 
+  gtk.iconCache.enable = true;
+
   qt = {
     enable = true;
-
-    platformTheme = "gnome";
-    style = "adwaita-dark";
+    platformTheme = "qt5ct"; # Includes qt6ct
   };
 
   documentation = {
@@ -3456,7 +3460,7 @@ in
           };
 
           plugins = with pkgs.hyprlandPlugins; [
-            hypr-dynamic-cursors
+            # hypr-dynamic-cursors # FIXME: Build Failure
           ];
 
           xwayland.enable = true;
@@ -3476,22 +3480,18 @@ in
             ];
 
             exec-once = [
-              "setfacl --modify user:jellyfin:--x ~"
-
-              "uwsm app -- wl-paste --type text --watch cliphist store"
-              "uwsm app -- wl-paste --type image --watch cliphist store"
-
-              "uwsm app -- udiskie --tray --appindicator --automount --notify --file-manager nautilus"
-
+              "dms run --daemon --session" # Workaround
+              "uwsm app -- udiskie --tray --appindicator --automount --notify --file-manager=nautilus" # Workaround
               "adb start-server"
 
+              "setfacl --modify user:jellyfin:--x ~"
               "rm -rf ~/.local/share/applications/waydroid.*"
             ];
 
             bind = [
               "SUPER, I, exec, dms ipc call keybinds toggle hyprland"
 
-              "SUPER, L, exec, loginctl lock-session"
+              "SUPER, L, exec, loginctl lock-session" # dms ipc call lock lock
               "SUPER CTRL, I, exec, dms ipc call inhibit toggle"
               "SUPER CTRL, P, exec, dms ipc call powermenu toggle"
 
@@ -3791,26 +3791,26 @@ in
             };
 
             plugin = {
-              dynamic-cursors = {
-                enabled = true;
+              # dynamic-cursors = {
+              #   enabled = true;
 
-                hyprcursor = {
-                  enabled = true;
-                };
+              #   hyprcursor = {
+              #     enabled = true;
+              #   };
 
-                mode = "rotate";
-                threshold = 1;
-                rotate = {
-                  length = cursor.size;
-                };
+              #   mode = "rotate";
+              #   threshold = 1;
+              #   rotate = {
+              #     length = cursor.size;
+              #   };
 
-                shake = {
-                  enabled = true;
-                  ipc = true;
+              #   shake = {
+              #     enabled = true;
+              #     ipc = true;
 
-                  effects = true;
-                };
-              };
+              #     effects = true;
+              #   };
+              # }; # FIXME: Build Failure
             };
           };
         };
@@ -3867,38 +3867,38 @@ in
 
         qt = {
           enable = true;
-
-          platformTheme.name = "adwaita";
-          style.name = "adwaita-dark";
+          platformTheme.name = "qtct";
         };
 
         services = {
-          hypridle = {
+          poweralertd.enable = true;
+
+          udiskie = {
             enable = true;
-            package = pkgs.hypridle;
+            package = pkgs.udiskie;
 
-            settings = {
-              general = {
-                ignore_systemd_inhibit = false;
-                ignore_wayland_inhibit = false;
-                ignore_dbus_inhibit = false;
+            automount = true;
+            tray = "always";
+            notify = true;
 
-                lock_cmd = "dms ipc call lock lock";
-              };
-
-              listener = [
-                {
-                  ignore_inhibit = false;
-
-                  timeout = 300; # 5 Minutes
-                  on-timeout = "loginctl lock-session";
-                }
-              ];
-            };
+            # settings = { };
           };
         };
 
         programs = {
+          ghostty = {
+            enable = true;
+            package = pkgs.ghostty;
+
+            systemd.enable = true;
+            enableBashIntegration = true;
+            installBatSyntax = true;
+            installVimSyntax = true;
+
+            # settings = { };
+            # themes = { };
+          };
+
           dircolors = {
             enable = true;
             package = (
