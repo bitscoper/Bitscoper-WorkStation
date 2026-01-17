@@ -1477,6 +1477,25 @@ in
   };
 
   programs = {
+    foot = {
+      enable = true;
+      package = pkgs.foot;
+
+      enableBashIntegration = true;
+
+      settings = {
+        main = {
+          font = "${font_preferences.name.mono}:pixelsize=${toString design_factor}";
+        };
+
+        security.osc52 = "enabled";
+
+        bell = {
+          system = "yes";
+        };
+      };
+    };
+
     command-not-found.enable = true;
 
     nix-ld = {
@@ -1754,7 +1773,7 @@ in
 
     nautilus-open-any-terminal = {
       enable = true;
-      terminal = "ghostty";
+      terminal = "foot";
     };
 
     firefox = {
@@ -2232,6 +2251,7 @@ in
         evtest-qt
         exfatprogs
         f2fs-tools
+        fastfetch
         fd
         fdroidcl
         ffmpegthumbnailer
@@ -2250,7 +2270,6 @@ in
         gcc15
         gdb
         ghex
-        ghostty
         gimp3-with-plugins
         git-filter-repo
         git-repo
@@ -2319,6 +2338,7 @@ in
         libnotify
         libreoffice-fresh
         libsecret
+        libsixel
         libva-utils
         linux-exploit-suggester
         linuxConsoleTools
@@ -3553,7 +3573,7 @@ in
 
               "SUPER, N, exec, dms ipc call notifications open"
 
-              "SUPER, T, exec, uwsm app -- ghostty"
+              "SUPER, T, exec, uwsm app -- foot"
 
               ", XF86Explorer, exec, uwsm app -- nautilus"
               "SUPER, F, exec, uwsm app -- nautilus"
@@ -3749,7 +3769,7 @@ in
             decoration = {
               dim_special = 0.25;
 
-              rounding = builtins.floor (design_factor * 0.50); # 8
+              rounding = builtins.floor (design_factor / 2); # 8
 
               active_opacity = 1.0;
               fullscreen_opacity = 1.0;
@@ -3840,7 +3860,7 @@ in
 
           theme = {
             name = "Adwaita-dark";
-            package = pkgs.gnome-themes-extra;
+            package = pkgs.adw-gtk3;
           };
 
           iconTheme = {
@@ -3886,19 +3906,6 @@ in
         };
 
         programs = {
-          ghostty = {
-            enable = true;
-            package = pkgs.ghostty;
-
-            systemd.enable = true;
-            enableBashIntegration = true;
-            installBatSyntax = true;
-            installVimSyntax = true;
-
-            # settings = { };
-            # themes = { };
-          };
-
           dircolors = {
             enable = true;
             package = (
@@ -4021,7 +4028,7 @@ in
               insensitive = true;
 
               single_click = true;
-              term = "ghostty";
+              term = "foot";
             };
 
             style = ''
