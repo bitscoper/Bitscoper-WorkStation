@@ -2138,10 +2138,11 @@ in
       firefox = "firefox-devedition";
       code = "codium";
 
+      unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
+      bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
+
       fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
-
       upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
-
       clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
     };
 
@@ -2343,6 +2344,7 @@ in
         kubeshark
         lazygit
         letterpress
+        libinput
         libnotify
         libreoffice-fresh
         libsecret
