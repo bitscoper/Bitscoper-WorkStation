@@ -893,13 +893,21 @@ in
         enable = true;
         package = pkgs.dms-shell;
 
-        # quickshell.package = pkgs.quickshell;
-        quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+        quickshell.package = pkgs.quickshell;
+        # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
 
-        compositor = {
-          name = "hyprland";
-          customConfig = builtins.readFile "/home/bitscoper/.config/hypr/hyprland.conf";
-        };
+        compositor =
+          let
+            hyprlandConfigurationFile = pkgs.writeText "hyprland.conf" ''
+              monitor=, highres, auto, 1, transform, 0
+              monitor=eDP-1, highres, auto, 1, transform, 0
+              monitor=HDMI-A-1, highres, auto, 1, transform, 1
+            '';
+          in
+          {
+            name = "hyprland";
+            customConfig = builtins.readFile hyprlandConfigurationFile;
+          };
 
         configHome = "/home/bitscoper";
 
@@ -945,6 +953,7 @@ in
       );
 
       extraLv2Packages = with pkgs; [
+        lsp-plugins
       ];
 
       systemWide = false;
@@ -966,8 +975,7 @@ in
           }
         );
 
-        extraLv2Packages = with pkgs; [
-        ];
+        extraLv2Packages = config.services.pipewire.extraLv2Packages;
 
         extraConfig.bluetoothEnhancements = {
           "monitor.bluez.properties" = {
@@ -2483,6 +2491,7 @@ in
         whois
         winboat
         wl-clipboard
+        wl-kbptr
         wordbook
         wpprobe
         wvkbd # wvkbd-mobintl
@@ -3500,8 +3509,6 @@ in
             ];
 
             exec-once = [
-              "dms run --daemon --session" # Workaround
-              "uwsm app -- udiskie --tray --appindicator --automount --notify --file-manager=nautilus" # Workaround
               "adb start-server"
 
               "setfacl --modify user:jellyfin:--x ~"
