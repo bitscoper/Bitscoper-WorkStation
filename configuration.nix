@@ -1596,7 +1596,6 @@ in
         hyprlandSubmap.enable = true;
         kubernetes.enable = true;
         nixMonitor.enable = true;
-        prayerTimes.enable = true;
         tailscale.enable = true;
       }; # From dankmaterialshellPluginRegistryFlake
     };
@@ -1747,17 +1746,18 @@ in
 
     usbtop.enable = true;
 
-    nano.enable = false;
-
-    neovim = {
+    nano = {
       enable = true;
-      package = pkgs.neovim-unwrapped;
+      package = pkgs.nano;
 
-      withPython3 = true;
+      syntaxHighlight = true;
 
-      viAlias = true;
-      vimAlias = true;
-      defaultEditor = true;
+      nanorc = ''
+        set linenumbers
+        set softwrap
+        set indicator
+        set autoindent
+      '';
     };
 
     bat = {
@@ -2178,9 +2178,9 @@ in
         alsa-tools
         alsa-utils
         alsa-utils-nhlt
-        androidSDK # Custom
         android-backup-extractor
         android-tools
+        androidSDK # Custom
         apfsprogs
         apitrace
         apkeep
@@ -2232,7 +2232,6 @@ in
         dconf-editor
         dconf2nix
         diffoci
-        diffsitter
         dig
         dive
         dmg2img
@@ -2261,7 +2260,6 @@ in
         exfatprogs
         f2fs-tools
         fastfetch
-        fd
         fdroidcl
         ffmpegthumbnailer
         fh
@@ -2275,7 +2273,6 @@ in
         fontfor
         fritzing
         fstl
-        fzf
         gcc15
         gdb
         ghex
@@ -2343,7 +2340,6 @@ in
         kubectl-view-secret
         kubernetes-helm
         kubeshark
-        lazygit
         letterpress
         libhsts
         libinput
@@ -2361,7 +2357,6 @@ in
         lsof
         lsscsi
         lssecret
-        lua
         lvm2
         lynis
         lyto
@@ -2420,7 +2415,6 @@ in
         rclone
         rclone-ui
         reiserfsprogs
-        ripgrep
         rpi-imager
         rpmextract
         rpPPPoE
@@ -2477,6 +2471,7 @@ in
         virt-top
         virt-v2v
         virtiofsd
+        vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
         wafw00f
@@ -2718,9 +2713,6 @@ in
           pulseaudioSupport = true;
           libvaSupport = true;
         })
-        (tree-sitter.override {
-          # webUISupport = true; # FIXME: Build Failure
-        })
         (virt-viewer.override {
           spiceSupport = true;
         })
@@ -2793,41 +2785,6 @@ in
       ++ (with texlivePackages; [
         latexmk
       ])
-      ++ (with tree-sitter-grammars; [
-        tree-sitter-bash
-        tree-sitter-bibtex
-        tree-sitter-c
-        tree-sitter-cmake
-        tree-sitter-comment
-        tree-sitter-cpp
-        tree-sitter-css
-        tree-sitter-dart
-        tree-sitter-dockerfile
-        tree-sitter-embedded-template
-        tree-sitter-html
-        tree-sitter-http
-        tree-sitter-hyprlang
-        tree-sitter-javascript
-        tree-sitter-json
-        tree-sitter-json5
-        tree-sitter-kotlin
-        tree-sitter-latex
-        tree-sitter-lua
-        tree-sitter-make
-        tree-sitter-markdown
-        tree-sitter-markdown-inline
-        tree-sitter-nix
-        tree-sitter-php
-        tree-sitter-python
-        tree-sitter-query
-        tree-sitter-regex
-        tree-sitter-scheme
-        tree-sitter-sql
-        tree-sitter-todotxt
-        tree-sitter-toml
-        tree-sitter-vim
-        tree-sitter-yaml
-      ])
       ++ (with unixtools; [
         arp
         column
@@ -2845,82 +2802,6 @@ in
         whereis
         write
         xxd
-      ])
-      ++ (with vimPlugins; [
-        LazyVim
-        nvim-treesitter
-        nvim-treesitter-context
-        nvim-treesitter-pairs
-        nvim-treesitter-refactor
-        nvim-treesitter-textobjects
-        nvim-treesitter-textsubjects
-      ])
-      ++ (with vimPlugins.nvim-treesitter-parsers; [
-        # jsonc # FIXME: Build Failure
-        # robots # FIXME: Build Failure
-        arduino
-        asm
-        bash
-        bibtex
-        c
-        cmake
-        comment
-        cpp
-        css
-        csv
-        dart
-        desktop
-        diff
-        disassembly
-        dockerfile
-        dtd
-        embedded_template
-        git_config
-        git_rebase
-        gitattributes
-        gitcommit
-        gitignore
-        gpg
-        groovy
-        hjson
-        hlsplaylist
-        html
-        hyprlang
-        ini
-        java
-        javascript
-        jq
-        json
-        json5
-        kotlin
-        latex
-        lua
-        make
-        markdown
-        markdown_inline
-        mermaid
-        nginx
-        nix
-        passwd
-        php
-        phpdoc
-        printf
-        properties
-        python
-        query
-        readline
-        regex
-        requirements
-        scheme
-        sql
-        ssh_config
-        todotxt
-        toml
-        udev
-        vim
-        vimdoc
-        xml
-        yaml
       ]);
   };
 
@@ -3468,6 +3349,8 @@ in
 
           # sessionSearchVariables = { };
 
+          activation = { };
+
           enableDebugInfo = false;
 
           stateVersion = "26.05";
@@ -3521,7 +3404,7 @@ in
             bind = [
               "SUPER, I, exec, dms ipc call keybinds toggle hyprland"
 
-              "SUPER, L, exec, loginctl lock-session" # dms ipc call lock lock
+              "SUPER, L, exec, dms ipc call lock lock"
               "SUPER CTRL, I, exec, dms ipc call inhibit toggle"
               "SUPER CTRL, P, exec, dms ipc call powermenu toggle"
 
@@ -3599,6 +3482,8 @@ in
 
               ", XF86Mail, exec, uwsm app -- thunderbird"
               "SUPER, M, exec, uwsm app -- thunderbird"
+
+              "SUPER, E, exec, uwsm app -- codium"
 
               "SUPER, D, exec, uwsm app -- dbeaver"
 
@@ -3867,7 +3752,7 @@ in
           enable = true;
 
           theme = {
-            name = "Adwaita-dark";
+            name = "adw-gtk3-dark";
             package = pkgs.adw-gtk3;
           };
 
@@ -4077,6 +3962,159 @@ in
                 margin-right: 4px;
               }
             '';
+          };
+
+          vscode = {
+            enable = true;
+            package = pkgs.vscodium;
+            mutableExtensionsDir = false;
+
+            profiles = {
+              default = {
+                extensions =
+                  with pkgs.vscode-extensions;
+                  [
+                    aaron-bond.better-comments
+                    adpyke.codesnap
+                    albymor.increment-selection
+                    alefragnani.bookmarks
+                    alexisvt.flutter-snippets
+                    anweber.vscode-httpyac
+                    bierner.color-info
+                    bierner.docs-view
+                    bierner.emojisense
+                    bierner.github-markdown-preview
+                    bierner.markdown-checkbox
+                    bierner.markdown-emoji
+                    bierner.markdown-footnotes
+                    bierner.markdown-mermaid
+                    bierner.markdown-preview-github-styles
+                    bradgashler.htmltagwrap
+                    budparr.language-hugo-vscode
+                    chanhx.crabviz
+                    codezombiech.gitignore
+                    coolbear.systemd-unit-file
+                    cweijan.vscode-database-client2
+                    dart-code.dart-code
+                    dart-code.flutter
+                    davidanson.vscode-markdownlint
+                    dbaeumer.vscode-eslint
+                    dendron.adjust-heading-level
+                    docker.docker
+                    dotenv.dotenv-vscode
+                    ecmel.vscode-html-css
+                    esbenp.prettier-vscode
+                    fabiospampinato.vscode-open-in-github
+                    firefox-devtools.vscode-firefox-debug
+                    formulahendry.auto-close-tag
+                    formulahendry.auto-rename-tag
+                    foxundermoon.shell-format
+                    github.vscode-github-actions
+                    github.vscode-pull-request-github
+                    grapecity.gc-excelviewer
+                    gruntfuggly.todo-tree
+                    hars.cppsnippets
+                    hbenl.vscode-test-explorer
+                    ibm.output-colorizer
+                    iciclesoft.workspacesort
+                    iliazeus.vscode-ansi
+                    james-yu.latex-workshop
+                    jbockle.jbockle-format-files
+                    jellyedwards.gitsweep
+                    jnoortheen.nix-ide
+                    jock.svg
+                    lokalise.i18n-ally
+                    mads-hartmann.bash-ide-vscode
+                    mathiasfrohlich.kotlin
+                    mechatroner.rainbow-csv
+                    mishkinf.goto-next-previous-member
+                    mkhl.direnv
+                    moshfeu.compare-folders
+                    ms-kubernetes-tools.vscode-kubernetes-tools
+                    ms-python.black-formatter
+                    ms-python.debugpy
+                    ms-python.isort
+                    ms-python.python
+                    ms-vscode.cmake-tools
+                    ms-vscode.cpptools # Unfree
+                    ms-vscode.hexeditor
+                    ms-vscode.live-server
+                    ms-vscode.makefile-tools
+                    ms-vscode.test-adapter-converter
+                    njpwerner.autodocstring
+                    oderwat.indent-rainbow
+                    platformio.platformio-vscode-ide
+                    quicktype.quicktype
+                    redhat.vscode-xml
+                    redhat.vscode-yaml
+                    rioj7.commandonallfiles
+                    rubymaniac.vscode-paste-and-indent
+                    ryu1kn.partial-diff
+                    shardulm94.trailing-spaces
+                    spywhere.guides
+                    stylelint.vscode-stylelint
+                    tailscale.vscode-tailscale
+                    tamasfe.even-better-toml
+                    timonwong.shellcheck
+                    usernamehw.errorlens
+                    vincaslt.highlight-matching-tag
+                    vscjava.vscode-gradle
+                    vscode-icons-team.vscode-icons
+                    wmaurer.change-case
+                    xdebug.php-debug
+                    zainchen.json
+                  ]
+                  ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
+                    {
+                      name = "unique-lines";
+                      publisher = "bibhasdn";
+                      version = "1.0.0";
+                      sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
+                    }
+                    {
+                      name = "vscode-sort";
+                      publisher = "henriiik";
+                      version = "0.2.5";
+                      sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
+                    }
+                    {
+                      name = "vscode-sort-json";
+                      publisher = "richie5um2";
+                      version = "1.20.0";
+                      sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
+                    }
+                    {
+                      name = "pubspec-assist";
+                      publisher = "jeroen-meijer";
+                      version = "2.3.2";
+                      sha256 = "+Mkcbeq7b+vkuf2/LYT10mj46sULixLNKGpCEk1Eu/0=";
+                    }
+                    {
+                      name = "arb-editor";
+                      publisher = "Google";
+                      version = "0.2.2";
+                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
+                    }
+                    {
+                      name = "vscode-serial-monitor";
+                      publisher = "ms-vscode";
+                      version = "0.13.251128001";
+                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
+                    }
+                    {
+                      name = "dms-theme";
+                      publisher = "danklinux";
+                      version = "0.0.3";
+                      sha256 = "sha256-MI1x1wiqvwg/N89oMuNVp0qlRT84ubvuMjtpkX0WKQY=";
+                    }
+                  ];
+
+                enableUpdateCheck = true;
+                enableExtensionUpdateCheck = true;
+
+                # userSettings = { };
+              };
+            };
           };
 
           yt-dlp = {
