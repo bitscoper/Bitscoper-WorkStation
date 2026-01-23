@@ -12,13 +12,13 @@ let
   #   url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
   # }) { };
 
-  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
+  homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
   dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
 
   quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
 
-  android_nixpkgs =
+  androidNixPackages =
     pkgs.callPackage
       (import (
         builtins.fetchGit {
@@ -28,7 +28,7 @@ let
       {
         channel = "canary";
       };
-  android_sdk = android_nixpkgs.sdk (
+  androidSDK = androidNixPackages.sdk (
     sdkPkgs: with sdkPkgs; [
       build-tools-35-0-0
       build-tools-36-1-0
@@ -53,9 +53,9 @@ let
       tools
     ] # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
   );
-  android_sdk_path = "${android_sdk}/share/android-sdk";
+  androidSDKPath = "${androidSDK}/share/android-sdk";
 
-  font_preferences = {
+  fontPreferences = {
     package = pkgs.nerd-fonts.noto;
 
     name = {
@@ -158,7 +158,7 @@ let
 in
 {
   imports = [
-    (import "${home-manager}/nixos")
+    (import "${homeManager}/nixos")
 
     dankmaterialshellPluginRegistryFlake.modules.default
 
@@ -316,7 +316,7 @@ in
 
     config = {
       allowUnfree = true;
-      android_sdk.accept_license = true;
+      androidSDK.accept_license = true;
     };
 
     # overlays = [ ];
@@ -1493,7 +1493,7 @@ in
 
       settings = {
         main = {
-          font = "${font_preferences.name.mono}:pixelsize=${toString design_factor}";
+          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
         };
 
         security.osc52 = "enabled";
@@ -2081,19 +2081,19 @@ in
 
       defaultFonts = {
         monospace = [
-          font_preferences.name.mono
+          fontPreferences.name.mono
         ];
 
         sansSerif = [
-          font_preferences.name.sans_serif
+          fontPreferences.name.sans_serif
         ];
 
         serif = [
-          font_preferences.name.serif
+          fontPreferences.name.serif
         ];
 
         emoji = [
-          font_preferences.name.emoji
+          fontPreferences.name.emoji
         ];
       };
 
@@ -2117,8 +2117,8 @@ in
     stub-ld.enable = true;
 
     variables = {
-      ANDROID_SDK_ROOT = android_sdk_path;
-      ANDROID_HOME = android_sdk_path;
+      androidSDK_ROOT = androidSDKPath;
+      ANDROID_HOME = androidSDKPath;
 
       LD_LIBRARY_PATH = lib.mkForce "${
         pkgs.lib.makeLibraryPath (
@@ -2128,6 +2128,8 @@ in
           ]
         )
       }:$LD_LIBRARY_PATH";
+
+      CHROME_EXECUTABLE = "chromium";
     };
 
     sessionVariables = {
@@ -2136,7 +2138,6 @@ in
 
     shellAliases = {
       firefox = "firefox-devedition";
-      code = "codium";
 
       unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
       bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
@@ -2177,7 +2178,7 @@ in
         alsa-tools
         alsa-utils
         alsa-utils-nhlt
-        android_sdk # Custom
+        androidSDK # Custom
         android-backup-extractor
         android-tools
         apfsprogs
@@ -2215,7 +2216,6 @@ in
         cmake
         cmake-language-server
         cmatrix
-        code-nautilus
         codevis
         collision
         compose2nix
@@ -2312,6 +2312,7 @@ in
         hfsprogs
         hieroglyphic
         host
+        hstsparser
         hugo
         hw-probe
         hydra-check
@@ -2344,6 +2345,7 @@ in
         kubeshark
         lazygit
         letterpress
+        libhsts
         libinput
         libnotify
         libreoffice-fresh
@@ -2475,7 +2477,6 @@ in
         virt-top
         virt-v2v
         virtiofsd
-        vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
         wafw00f
@@ -3599,8 +3600,6 @@ in
               ", XF86Mail, exec, uwsm app -- thunderbird"
               "SUPER, M, exec, uwsm app -- thunderbird"
 
-              "SUPER, E, exec, uwsm app -- codium"
-
               "SUPER, D, exec, uwsm app -- dbeaver"
 
               "SUPER, P, exec, uwsm app -- scrcpy --render-driver=opengl"
@@ -3676,7 +3675,7 @@ in
               force_default_wallpaper = 1;
               disable_splash_rendering = true;
 
-              font_family = font_preferences.name.sans_serif;
+              font_family = fontPreferences.name.sans_serif;
 
               close_special_on_empty = true;
 
@@ -3888,9 +3887,9 @@ in
           };
 
           font = {
-            name = font_preferences.name.sans_serif;
-            package = font_preferences.package;
-            size = font_preferences.size;
+            name = fontPreferences.name.sans_serif;
+            package = fontPreferences.package;
+            size = fontPreferences.size;
           };
         };
 
@@ -3915,6 +3914,22 @@ in
         };
 
         programs = {
+          chromium = {
+            enable = true;
+            package = pkgs.ungoogled-chromium;
+
+            dictionaries = with pkgs.hunspellDictsChromium; [
+              en_US
+              en-us
+            ];
+
+            # nativeMessagingHosts = with pkgs; [ ];
+
+            commandLineArgs = [
+              "--password-store=gnome"
+            ];
+          };
+
           dircolors = {
             enable = true;
             package = (
@@ -4062,159 +4077,6 @@ in
                 margin-right: 4px;
               }
             '';
-          };
-
-          vscode = {
-            enable = true;
-            package = pkgs.vscodium;
-            mutableExtensionsDir = false;
-
-            profiles = {
-              default = {
-                extensions =
-                  with pkgs.vscode-extensions;
-                  [
-                    aaron-bond.better-comments
-                    adpyke.codesnap
-                    albymor.increment-selection
-                    alefragnani.bookmarks
-                    alexisvt.flutter-snippets
-                    anweber.vscode-httpyac
-                    bierner.color-info
-                    bierner.docs-view
-                    bierner.emojisense
-                    bierner.github-markdown-preview
-                    bierner.markdown-checkbox
-                    bierner.markdown-emoji
-                    bierner.markdown-footnotes
-                    bierner.markdown-mermaid
-                    bierner.markdown-preview-github-styles
-                    bradgashler.htmltagwrap
-                    budparr.language-hugo-vscode
-                    chanhx.crabviz
-                    codezombiech.gitignore
-                    coolbear.systemd-unit-file
-                    cweijan.vscode-database-client2
-                    dart-code.dart-code
-                    dart-code.flutter
-                    davidanson.vscode-markdownlint
-                    dbaeumer.vscode-eslint
-                    dendron.adjust-heading-level
-                    docker.docker
-                    dotenv.dotenv-vscode
-                    ecmel.vscode-html-css
-                    esbenp.prettier-vscode
-                    fabiospampinato.vscode-open-in-github
-                    firefox-devtools.vscode-firefox-debug
-                    formulahendry.auto-close-tag
-                    formulahendry.auto-rename-tag
-                    foxundermoon.shell-format
-                    github.vscode-github-actions
-                    github.vscode-pull-request-github
-                    grapecity.gc-excelviewer
-                    gruntfuggly.todo-tree
-                    hars.cppsnippets
-                    hbenl.vscode-test-explorer
-                    ibm.output-colorizer
-                    iciclesoft.workspacesort
-                    iliazeus.vscode-ansi
-                    james-yu.latex-workshop
-                    jbockle.jbockle-format-files
-                    jellyedwards.gitsweep
-                    jnoortheen.nix-ide
-                    jock.svg
-                    lokalise.i18n-ally
-                    mads-hartmann.bash-ide-vscode
-                    mathiasfrohlich.kotlin
-                    mechatroner.rainbow-csv
-                    mishkinf.goto-next-previous-member
-                    mkhl.direnv
-                    moshfeu.compare-folders
-                    ms-kubernetes-tools.vscode-kubernetes-tools
-                    ms-python.black-formatter
-                    ms-python.debugpy
-                    ms-python.isort
-                    ms-python.python
-                    ms-vscode.cmake-tools
-                    ms-vscode.cpptools # Unfree
-                    ms-vscode.hexeditor
-                    ms-vscode.live-server
-                    ms-vscode.makefile-tools
-                    ms-vscode.test-adapter-converter
-                    njpwerner.autodocstring
-                    oderwat.indent-rainbow
-                    platformio.platformio-vscode-ide
-                    quicktype.quicktype
-                    redhat.vscode-xml
-                    redhat.vscode-yaml
-                    rioj7.commandonallfiles
-                    rubymaniac.vscode-paste-and-indent
-                    ryu1kn.partial-diff
-                    shardulm94.trailing-spaces
-                    spywhere.guides
-                    stylelint.vscode-stylelint
-                    tailscale.vscode-tailscale
-                    tamasfe.even-better-toml
-                    timonwong.shellcheck
-                    usernamehw.errorlens
-                    vincaslt.highlight-matching-tag
-                    vscjava.vscode-gradle
-                    vscode-icons-team.vscode-icons
-                    wmaurer.change-case
-                    xdebug.php-debug
-                    zainchen.json
-                  ]
-                  ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-                    {
-                      name = "unique-lines";
-                      publisher = "bibhasdn";
-                      version = "1.0.0";
-                      sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
-                    }
-                    {
-                      name = "vscode-sort";
-                      publisher = "henriiik";
-                      version = "0.2.5";
-                      sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
-                    }
-                    {
-                      name = "vscode-sort-json";
-                      publisher = "richie5um2";
-                      version = "1.20.0";
-                      sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
-                    }
-                    {
-                      name = "pubspec-assist";
-                      publisher = "jeroen-meijer";
-                      version = "2.3.2";
-                      sha256 = "+Mkcbeq7b+vkuf2/LYT10mj46sULixLNKGpCEk1Eu/0=";
-                    }
-                    {
-                      name = "arb-editor";
-                      publisher = "Google";
-                      version = "0.2.2";
-                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
-                    }
-                    {
-                      name = "vscode-serial-monitor";
-                      publisher = "ms-vscode";
-                      version = "0.13.251128001";
-                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
-                    }
-                    {
-                      name = "dms-theme";
-                      publisher = "danklinux";
-                      version = "0.0.3";
-                      sha256 = "sha256-MI1x1wiqvwg/N89oMuNVp0qlRT84ubvuMjtpkX0WKQY=";
-                    }
-                  ];
-
-                enableUpdateCheck = true;
-                enableExtensionUpdateCheck = true;
-
-                # userSettings = { };
-              };
-            };
           };
 
           yt-dlp = {
