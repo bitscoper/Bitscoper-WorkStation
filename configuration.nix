@@ -2156,12 +2156,9 @@ in
       with pkgs;
       [
         # armitage # FIXME: Build Failure
-        # autopsy # FIXME: Build Failure
         # bulk_extractor # FIXME: Build Failure
-        # certbot-full # FIXME: Build Failure
-        # dart # flutter adds the compatible versions
+        # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
-        # freecad # FIXME: Build Failure
         # reiser4progs # Marked Broken
         # xfstests # FIXME: Build Failure
         aapt
@@ -2192,6 +2189,7 @@ in
         asciinema-agg
         asciinema-scenario
         audacity
+        autopsy
         avrdude
         banner
         baobab
@@ -2210,7 +2208,7 @@ in
         cava
         cdrkit
         celestia
-        certbot
+        certbot-full
         clinfo
         cloc
         cmake
@@ -2271,6 +2269,7 @@ in
         flare-floss
         flutter
         fontfor
+        freecad
         fritzing
         fstl
         gcc15
@@ -2443,7 +2442,6 @@ in
         symlinks
         systemd-lsp
         szyszka
-        telegram-desktop
         telegraph
         terminal-colors
         terminaltexteffects
@@ -3375,7 +3373,7 @@ in
           };
 
           plugins = with pkgs.hyprlandPlugins; [
-            # hypr-dynamic-cursors # FIXME: Build Failure
+            hypr-dynamic-cursors
           ];
 
           xwayland.enable = true;
@@ -3704,26 +3702,26 @@ in
             };
 
             plugin = {
-              # dynamic-cursors = {
-              #   enabled = true;
+              dynamic-cursors = {
+                enabled = true;
 
-              #   hyprcursor = {
-              #     enabled = true;
-              #   };
+                hyprcursor = {
+                  enabled = true;
+                };
 
-              #   mode = "rotate";
-              #   threshold = 1;
-              #   rotate = {
-              #     length = cursor.size;
-              #   };
+                mode = "rotate";
+                threshold = 1;
+                rotate = {
+                  length = cursor.size;
+                };
 
-              #   shake = {
-              #     enabled = true;
-              #     ipc = true;
+                shake = {
+                  enabled = true;
+                  ipc = true;
 
-              #     effects = true;
-              #   };
-              # }; # FIXME: Build Failure
+                  effects = true;
+                };
+              };
             };
           };
         };
@@ -3842,7 +3840,7 @@ in
           # gradle = {
           #   enable = true;
           #   package = pkgs.gradle;
-          # }; # flutter adds the compatible versions
+          # }; # flutter adds the compatible version
 
           matplotlib = {
             enable = true;
