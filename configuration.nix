@@ -778,7 +778,13 @@ in
   services = {
     upower = {
       enable = true;
-      package = pkgs.upower;
+      package = (
+        pkgs.upower.override {
+          withDocs = true;
+          withIntrospection = true;
+          withSystemd = true;
+        }
+      );
 
       allowRiskyCriticalPowerAction = false;
       criticalPowerAction = "PowerOff";
@@ -872,7 +878,7 @@ in
 
     udisks2 = {
       enable = true;
-      package = pkgs.udisks2;
+      package = pkgs.udisks;
 
       mountOnMedia = false;
     };
@@ -943,12 +949,12 @@ in
       enable = true;
       package = (
         pkgs.pipewire.override {
-          enableSystemd = true;
-          vulkanSupport = true;
           bluezSupport = true;
-          zeroconfSupport = true;
+          enableSystemd = true;
           raopSupport = true;
           rocSupport = true;
+          vulkanSupport = true;
+          zeroconfSupport = true;
         }
       );
 
@@ -1026,20 +1032,20 @@ in
     phpfpm = {
       phpPackage =
         (pkgs.php.override {
+          argon2Support = true;
           cgiSupport = true;
+          cgotoSupport = true;
           cliSupport = true;
           fpmSupport = true;
+          ipv6Support = true;
           pearSupport = true;
           pharSupport = true;
           phpdbgSupport = true;
-          argon2Support = true;
-          cgotoSupport = true;
           staticSupport = true;
-          ipv6Support = true;
-          zendSignalsSupport = true;
-          zendMaxExecutionTimersSupport = false;
           systemdSupport = true;
           valgrindSupport = true;
+          zendMaxExecutionTimersSupport = false;
+          zendSignalsSupport = true;
           ztsSupport = true;
         }).buildEnv
           {
@@ -1155,9 +1161,9 @@ in
       enable = true;
       package = (
         pkgs.openssh.override {
-          withPAM = true;
-          linkOpenssl = true;
           isNixos = true;
+          linkOpenssl = true;
+          withPAM = true;
         }
       );
 
@@ -1193,7 +1199,11 @@ in
 
     cockpit = {
       enable = true;
-      package = pkgs.cockpit;
+      package = (
+        pkgs.cockpit.override {
+          withBranding = true;
+        }
+      );
 
       port = 9090;
       allowed-origins = [
@@ -1282,7 +1292,12 @@ in
 
     bind = {
       enable = false;
-      package = pkgs.bind;
+      package = (
+        pkgs.bind.override {
+          enableGSSAPI = true;
+          enablePython = true;
+        }
+      );
 
       listenOn = [
         "any"
@@ -1313,7 +1328,21 @@ in
 
     postgresql = {
       enable = true;
-      package = pkgs.postgresql_18_jit;
+      package = (
+        pkgs.postgresql_18.override {
+          # bonjourSupport = true; # FIXME: Build Failure
+          # nlsSupport = true; # FIXME: Build Failure
+          curlSupport = true;
+          gssSupport = true;
+          jitSupport = true;
+          numaSupport = true;
+          pamSupport = true;
+          pythonSupport = true;
+          selinuxSupport = true;
+          systemdSupport = true;
+          uringSupport = true;
+        }
+      );
 
       enableTCPIP = true;
 
@@ -1341,7 +1370,14 @@ in
 
     mysql = {
       enable = true;
-      package = pkgs.mariadb_118;
+      package = (
+        pkgs.mariadb_118.override {
+          withEmbedded = true;
+          withNuma = true;
+          withStorageMroonga = true;
+          withStorageRocks = true;
+        }
+      );
 
       settings = {
         mysqld = {
@@ -1589,6 +1625,7 @@ in
       enableVPN = true;
 
       plugins = {
+        # prayerTimes.enable = true; # FIXME: Does Not Work
         calculator.enable = true;
         dankHooks.enable = true;
         dockerManager.enable = true;
@@ -1699,9 +1736,9 @@ in
     ssh = {
       package = (
         pkgs.openssh.override {
-          withPAM = true;
-          linkOpenssl = true;
           isNixos = true;
+          linkOpenssl = true;
+          withPAM = true;
         }
       );
 
@@ -1713,12 +1750,12 @@ in
       enable = true;
       package = (
         pkgs.gitFull.override {
-          svnSupport = true;
           guiSupport = true;
+          sendEmailSupport = true;
+          svnSupport = true;
+          withLibsecret = true;
           withManual = true;
           withpcre2 = true;
-          sendEmailSupport = true;
-          withLibsecret = true;
           withSsh = true;
         }
       );
@@ -1748,7 +1785,11 @@ in
 
     nano = {
       enable = true;
-      package = pkgs.nano;
+      package = (
+        pkgs.nano.override {
+          enableNls = true;
+        }
+      );
 
       syntaxHighlight = true;
 
@@ -1839,11 +1880,11 @@ in
       enable = true;
       package = (
         pkgs.obs-studio.override {
-          scriptingSupport = true;
           alsaSupport = true;
-          pulseaudioSupport = true;
           browserSupport = true;
           pipewireSupport = true;
+          pulseaudioSupport = true;
+          scriptingSupport = true;
           withFdk = true;
         }
       );
@@ -1879,7 +1920,11 @@ in
 
     wireshark = {
       enable = true;
-      package = pkgs.wireshark;
+      package = (
+        pkgs.wireshark.override {
+          withQt = true;
+        }
+      );
 
       dumpcap.enable = true;
       usbmon.enable = true;
@@ -2159,6 +2204,7 @@ in
         # bulk_extractor # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
+        # open-interpreter # FIXME: Build Failure
         # reiser4progs # Marked Broken
         # xfstests # FIXME: Build Failure
         aapt
@@ -2385,9 +2431,9 @@ in
         nixpkgs-review
         nmap
         ntfs3g
+        numactl
         nvme-cli
         onionshare-gui
-        open-interpreter
         openafs
         openai-whisper
         opendmarc
@@ -2413,7 +2459,6 @@ in
         raider
         rclone
         rclone-ui
-        reiserfsprogs
         rpi-imager
         rpmextract
         rpPPPoE
