@@ -659,34 +659,50 @@ in
   virtualisation = {
     libvirtd = {
       enable = true;
-      package = pkgs.libvirt;
+      package = (
+        pkgs.libvirt.override {
+          enableCeph = true;
+          enableGlusterfs = true;
+          enableIscsi = true;
+          enableXen = true;
+          enableZfs = true;
+        }
+      );
 
       qemu = {
         package = (
-          pkgs.qemu_kvm.override {
-            guestAgentSupport = true;
+          pkgs.qemu_full.override {
+            # canokeySupport = true; # FIXME: Marked Broken
             alsaSupport = true;
-            pulseSupport = true;
-            pipewireSupport = true;
-            sdlSupport = true;
-            jackSupport = true;
-            gtkSupport = true;
-            vncSupport = true;
-            smartcardSupport = true;
-            spiceSupport = true;
-            usbredirSupport = true;
-            glusterfsSupport = true;
-            openGLSupport = true;
-            rutabagaSupport = true;
-            virglSupport = true;
-            libiscsiSupport = true;
-            smbdSupport = true;
-            tpmSupport = true;
-            uringSupport = true;
-            pluginsSupport = true;
+            capstoneSupport = true;
+            cephSupport = true;
+            enableBlobs = true;
             enableDocs = true;
             enableTools = true;
-            enableBlobs = true;
+            glusterfsSupport = true;
+            gtkSupport = true;
+            guestAgentSupport = true;
+            jackSupport = true;
+            libiscsiSupport = true;
+            ncursesSupport = true;
+            numaSupport = true;
+            openGLSupport = true;
+            pipewireSupport = true;
+            pluginsSupport = true;
+            pulseSupport = true;
+            rutabagaSupport = true;
+            sdlSupport = true;
+            seccompSupport = true;
+            smartcardSupport = true;
+            smbdSupport = true;
+            spiceSupport = true;
+            tpmSupport = true;
+            uringSupport = true;
+            usbredirSupport = true;
+            valgrindSupport = true;
+            virglSupport = true;
+            vncSupport = true;
+            xenSupport = true;
           }
         );
 
@@ -705,16 +721,15 @@ in
     docker = {
       enable = true;
       package = (
-        pkgs.docker_29.override {
+        pkgs.docker.override {
           buildxSupport = true;
           composeSupport = true;
-          sbomSupport = true;
           initSupport = true;
-
-          withSystemd = true;
+          sbomSupport = true;
           withBtrfs = true;
           withLvm = true;
           withSeccomp = true;
+          withSystemd = true;
         }
       );
 
@@ -763,11 +778,17 @@ in
     services = {
       hardinfo2_custom = {
         description = "Hardinfo2 support for root access";
-        wantedBy = [ "basic.target" ];
+        wantedBy = [
+          "basic.target"
+        ];
 
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.hardinfo2}/bin/hwinfo2_fetch_sysdata"; # The ${pkgs.hardinfo2}/lib/systemd/system/hardinfo2.service file intends to run ${pkgs.hardinfo2}/bin/hwinfo2_fetch_sysdata oneshot which calls ${pkgs.hardinfo2}/bin/.hwinfo2_fetch_sysdata-wrapped
+          ExecStart = "${
+            (pkgs.hardinfo2.override {
+              printingSupport = true;
+            })
+          }/bin/hwinfo2_fetch_sysdata"; # The ${pkgs.hardinfo2}/lib/systemd/system/hardinfo2.service file intends to run ${pkgs.hardinfo2}/bin/hwinfo2_fetch_sysdata oneshot which calls ${pkgs.hardinfo2}/bin/.hwinfo2_fetch_sysdata-wrapped
         };
 
         enable = true;
@@ -930,7 +951,11 @@ in
 
       gcr-ssh-agent = {
         enable = true;
-        package = pkgs.gcr_4;
+        package = (
+          pkgs.gcr_4.override {
+            systemdSupport = true;
+          }
+        );
       };
 
       sushi.enable = true;
@@ -1595,11 +1620,17 @@ in
       enable = true;
       package = (
         pkgs.hyprland.override {
+          debug = false;
           enableXWayland = true;
+          withSystemd = true;
           wrapRuntimeDeps = true;
         }
       );
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+      portalPackage = (
+        pkgs.xdg-desktop-portal-hyprland.override {
+          debug = false;
+        }
+      );
 
       withUWSM = true;
       xwayland.enable = true;
@@ -1772,7 +1803,17 @@ in
       config = {
         init.defaultBranch = "main";
 
-        credential.helper = "${pkgs.gitFull}/bin/git-credential-libsecret";
+        credential.helper = "${
+          (pkgs.gitFull.override {
+            guiSupport = true;
+            sendEmailSupport = true;
+            svnSupport = true;
+            withLibsecret = true;
+            withManual = true;
+            withpcre2 = true;
+            withSsh = true;
+          })
+        }/bin/git-credential-libsecret";
 
         user = {
           name = "Abdullah As-Sadeed";
@@ -2432,6 +2473,7 @@ in
         nmap
         ntfs3g
         numactl
+        numatop
         nvme-cli
         onionshare-gui
         openafs
@@ -2498,7 +2540,6 @@ in
         trufflehog
         trustymail
         udftools
-        udiskie
         ugit
         undollar
         universal-android-debloater # uad-ng
@@ -2604,6 +2645,7 @@ in
             withFribidi = true;
             withGme = true;
             withGnutls = true;
+            withGrayscale = true;
             withGsm = true;
             withHarfbuzz = true;
             withIconv = true;
@@ -2618,7 +2660,9 @@ in
             withLzma = true;
             withModplug = true;
             withMp3lame = true;
+            withMultithread = true;
             withMysofa = true;
+            withNetwork = true;
             withOpenal = true;
             withOpencl = true;
             withOpencoreAmrnb = true;
@@ -2647,9 +2691,11 @@ in
             withSsh = true;
             withSvg = true;
             withSvtav1 = true;
+            withSwscaleAlpha = true;
             withTheora = true;
             withTwolame = true;
             withUavs3d = true;
+            withUnfree = false;
             withV4l2 = true;
             withV4l2M2m = true;
             withVaapi = true;
@@ -2674,13 +2720,6 @@ in
             withZlib = true;
             withZmq = true;
             withZvbi = true;
-
-            withUnfree = false;
-
-            withGrayscale = true;
-            withSwscaleAlpha = true;
-            withMultithread = true;
-            withNetwork = true;
           }).overrideAttrs
           (_: {
             doCheck = false;
@@ -2723,38 +2762,35 @@ in
         (sdrpp.override {
           airspy_source = true;
           airspyhf_source = true;
+          audio_sink = true;
           bladerf_source = true;
           file_source = true;
+          frequency_manager = true;
           hackrf_source = true;
           limesdr_source = true;
+          m17_decoder = true;
+          meteor_demodulator = true;
+          network_sink = true;
           plutosdr_source = true;
+          portaudio_sink = true;
+          recorder = true;
           rfspace_source = true;
+          rigctl_server = true;
           rtl_sdr_source = true;
           rtl_tcp_source = true;
+          scanner = true;
           soapy_source = true;
           spyserver_source = true;
           usrp_source = true;
-
-          audio_sink = true;
-          network_sink = true;
-          portaudio_sink = true;
-
-          m17_decoder = true;
-          meteor_demodulator = true;
-
-          frequency_manager = true;
-          recorder = true;
-          rigctl_server = true;
-          scanner = true;
         })
         (tor-browser.override {
-          libnotifySupport = true;
-          waylandSupport = true;
-          mediaSupport = true;
           audioSupport = true;
+          libnotifySupport = true;
+          libvaSupport = true;
+          mediaSupport = true;
           pipewireSupport = true;
           pulseaudioSupport = true;
-          libvaSupport = true;
+          waylandSupport = true;
         })
         (virt-viewer.override {
           spiceSupport = true;
@@ -2789,30 +2825,30 @@ in
           enableDocumentation = true;
         })
         (gst-plugins-bad.override {
-          enableZbar = true;
-          opencvSupport = true;
-          ldacbtSupport = true;
-          webrtcAudioProcessingSupport = true;
           ajaSupport = true;
-          openh264Support = true;
-          enableGplPlugins = true;
           bluezSupport = true;
-          microdnsSupport = true;
           enableDocumentation = true;
+          enableGplPlugins = true;
+          enableZbar = true;
           guiSupport = true;
+          ldacbtSupport = true;
+          microdnsSupport = true;
+          opencvSupport = true;
+          openh264Support = true;
+          webrtcAudioProcessingSupport = true;
         })
         (gst-plugins-base.override {
-          enableWayland = true;
           enableAlsa = true;
           enableCdparanoia = true;
           enableDocumentation = true;
+          enableWayland = true;
         })
         (gst-plugins-good.override {
-          gtkSupport = true;
-          qt6Support = true;
+          enableDocumentation = true;
           enableJack = true;
           enableWayland = true;
-          enableDocumentation = true;
+          gtkSupport = true;
+          qt6Support = true;
         })
         (gst-plugins-ugly.override {
           enableGplPlugins = true;
@@ -3295,6 +3331,7 @@ in
     nixos = {
       enable = true;
       includeAllModules = true;
+
       options.warningsAreErrors = false;
     };
   };
@@ -3307,7 +3344,11 @@ in
     enforceIdUniqueness = true;
     mutableUsers = true;
 
-    defaultUserShell = pkgs.bash;
+    defaultUserShell = (
+      pkgs.bash.override {
+        interactive = true;
+      }
+    );
 
     motd = "Welcome";
 
@@ -3403,7 +3444,9 @@ in
           enable = true;
           package = (
             pkgs.hyprland.override {
+              debug = false;
               enableXWayland = true;
+              withSystemd = true;
               wrapRuntimeDeps = true;
             }
           );
