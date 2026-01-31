@@ -241,7 +241,14 @@ in
 
     consoleLogLevel = 4; # 4 = KERN_WARNING
 
-    tmp.cleanOnBoot = true;
+    tmp = {
+      cleanOnBoot = true;
+
+      zramSettings = {
+        fs-type = "ext4";
+        compression-algorithm = "zstd";
+      };
+    };
 
     plymouth = {
       enable = true;
@@ -258,6 +265,13 @@ in
       '';
     };
   };
+
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+  };
+
+  # swapDevices = { };
 
   time = {
     timeZone = "Asia/Dhaka";
@@ -523,6 +537,7 @@ in
     enableRedistributableFirmware = true;
     firmware = with pkgs; [
       alsa-firmware
+      libreelec-dvb-firmware
       linux-firmware
       sof-firmware
     ];
@@ -797,6 +812,13 @@ in
   };
 
   services = {
+    zram-generator = {
+      enable = true;
+      package = pkgs.zram-generator;
+
+      # settings = { };
+    };
+
     upower = {
       enable = true;
       package = (
@@ -2247,6 +2269,7 @@ in
         # debase # FIXME: Build Failure
         # open-interpreter # FIXME: Build Failure
         # reiser4progs # Marked Broken
+        # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
         aapt
         above
@@ -2332,8 +2355,8 @@ in
         docker-init
         docker-language-server
         docker-sbom
-        dockerfile-language-server
         dosfstools
+        dvb-apps
         e2fsprogs
         easyeda2kicad
         efibootmgr
@@ -2429,6 +2452,7 @@ in
         letterpress
         libhsts
         libinput
+        libloragw-2g4
         libnotify
         libreoffice-fresh
         libsecret
@@ -2469,7 +2493,7 @@ in
         nix-info
         nixd
         nixfmt
-        nixpkgs-review
+        nixpkgs-reviewFull
         nmap
         ntfs3g
         numactl
@@ -2528,9 +2552,9 @@ in
         switcheroo
         symlinks
         systemd-lsp
+        systemdgenie
         szyszka
         telegraph
-        terminal-colors
         terminaltexteffects
         texliveFull
         time
@@ -2540,6 +2564,7 @@ in
         trufflehog
         trustymail
         udftools
+        uefi-firmware-parser
         ugit
         undollar
         universal-android-debloater # uad-ng
