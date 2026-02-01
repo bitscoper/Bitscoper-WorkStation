@@ -761,7 +761,7 @@ in
       };
 
       enableOnBoot = true;
-    };
+    }; # Unfree
 
     oci-containers.backend = "docker";
 
@@ -1975,11 +1975,11 @@ in
       ];
     };
 
-    # ghidra = {
-    #   enable = true;
-    #   package = pkgs.ghidra;
-    #   gdb = true;
-    # }; # FIXME: Build Failure
+    ghidra = {
+      enable = true;
+      package = pkgs.ghidra;
+      gdb = true;
+    };
 
     wireshark = {
       enable = true;
@@ -2276,7 +2276,6 @@ in
         acl
         acpica-tools
         acpidump-all
-        adb-sync
         addlicense
         agi # FIXME: Cannot find libswt
         aircrack-ng
@@ -2288,6 +2287,7 @@ in
         android-backup-extractor
         android-tools
         androidSDK # Custom
+        anydesk # Unfree
         apfsprogs
         apitrace
         apkeep
@@ -2352,10 +2352,10 @@ in
         docker-credential-gcr
         docker-credential-helpers
         docker-gc
-        docker-init
         docker-language-server
         docker-sbom
         dosfstools
+        dot2tex
         dvb-apps
         e2fsprogs
         easyeda2kicad
@@ -2389,7 +2389,6 @@ in
         git-filter-repo
         git-repo
         github-changelog-generator
-        gnirehtet
         gnome-characters
         gnome-clocks
         gnome-decoder
@@ -2408,6 +2407,7 @@ in
         gource
         gpredict
         gradle-completion
+        graphviz
         groovy
         guestfs-tools
         gzip
@@ -2439,6 +2439,7 @@ in
         jq
         kernel-hardening-checker
         kernelshark
+        kgraphviewer
         killall
         kmod
         kotlin
@@ -2529,6 +2530,7 @@ in
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
+        sbom2dot
         scrcpy
         screen
         sdrangel
@@ -2720,7 +2722,7 @@ in
             withTheora = true;
             withTwolame = true;
             withUavs3d = true;
-            withUnfree = false;
+            withUnfree = true; # Unfree
             withV4l2 = true;
             withV4l2M2m = true;
             withVaapi = true;
@@ -2833,18 +2835,18 @@ in
         config.services.phpfpm.phpPackage
       ]
       ++ config.boot.extraModulePackages
-      # ++ (with ghidra-extensions; [
-      #   findcrypt
-      #   ghidra-delinker-extension
-      #   ghidra-golanganalyzerextension
-      #   ghidraninja-ghidra-scripts
-      #   gnudisassembler
-      #   lightkeeper
-      #   machinelearning
-      #   ret-sync
-      #   sleighdevtools
-      #   wasm
-      # ]) # FIXME: Build Failure
+      ++ (with ghidra-extensions; [
+        # gnudisassembler # FIXME: Build Failure
+        findcrypt
+        ghidra-delinker-extension
+        ghidra-golanganalyzerextension
+        ghidraninja-ghidra-scripts
+        lightkeeper
+        machinelearning
+        ret-sync
+        sleighdevtools
+        wasm
+      ])
       ++ (with gst_all_1; [
         (gst-libav.override {
           enableDocumentation = true;
