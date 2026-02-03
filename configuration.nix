@@ -2377,6 +2377,7 @@ in
         filezilla
         flake-checker
         flare-floss
+        flowblade
         flutter
         fontfor
         freecad
@@ -2397,6 +2398,7 @@ in
         gnome-frog
         gnome-graphs
         gnome-logs
+        gnome-mahjongg
         gnome-nettool
         gnugrep
         gnumake
@@ -2548,6 +2550,7 @@ in
         soundconverter
         sox
         sslscan
+        steam-run-free
         stegseek
         subfinder
         subtitleedit
@@ -2616,13 +2619,6 @@ in
         zenmap
         zfs
         zip
-        (blender.override {
-          colladaSupport = true;
-          jackaudioSupport = true;
-          openUsdSupport = true;
-          spaceNavSupport = true;
-          waylandSupport = true;
-        })
         (coreutils-full.override {
           aclSupport = true;
           withOpenssl = true;
@@ -2887,6 +2883,24 @@ in
         (gstreamer.override {
           enableDocumentation = true;
         })
+      ])
+      ++ (with linphonePackages; [
+        bc-decaf
+        bc-ispell
+        bc-mbedtls
+        bc-soci
+        bctoolbox
+        bcunit
+        belcard
+        belle-sip
+        belr
+        bzrtp
+        liblinphone
+        lime
+        linphone-desktop
+        mediastreamer2
+        msopenh264
+        ortp
       ])
       ++ (with texlivePackages; [
         latexmk
