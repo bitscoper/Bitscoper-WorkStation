@@ -70,8 +70,8 @@ let
 
   cursor = {
     theme = {
-      name = "hyprcursor";
-      package = pkgs.hyprcursor;
+      name = "Bibata-Modern-Classic";
+      package = pkgs.bibata-cursors;
     };
 
     size = builtins.floor (design_factor * 1.50); # 24
@@ -1888,57 +1888,6 @@ in
       terminal = "foot";
     };
 
-    firefox = {
-      enable = true;
-      package = pkgs.firefox-devedition;
-      languagePacks = [
-        "bn"
-        "en-US"
-      ];
-
-      policies = {
-        Extensions = {
-          Install = [
-            "https://addons.mozilla.org/firefox/downloads/latest/decentraleyes/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/keepassxc-browser/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/languagetool/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/multi-account-containers/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/search_by_image/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/simple-mass-downloader/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/single-file/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/tab-disguiser/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
-            "https://addons.mozilla.org/firefox/downloads/latest/zjm-whatfont/latest.xpi"
-          ];
-
-          Locked = [
-            "@testpilot-containers" # "Firefox Multi-Account Containers"
-          ];
-        };
-      };
-
-      # autoConfig = '''';
-
-      preferences = {
-        "browser.contentblocking.category" = "strict";
-        "browser.search.region" = "BD";
-        "browser.search.suggest.enabled.private" = true;
-        "dom.security.https_only_mode" = true;
-        "privacy.globalprivacycontrol.enabled" = true;
-        "security.warn_submit_secure_to_insecure" = true;
-        # "privacy.fingerprintingProtection" = true;
-        # "privacy.trackingprotection.enabled" = true;
-      };
-      preferencesStatus = "locked";
-    };
-
-    thunderbird = {
-      enable = true;
-      package = pkgs.thunderbird-latest;
-
-      # preferences = { };
-    };
-
     obs-studio = {
       enable = true;
       package = (
@@ -2245,8 +2194,6 @@ in
     };
 
     shellAliases = {
-      firefox = "firefox-devedition";
-
       unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
       bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
 
@@ -2361,6 +2308,7 @@ in
         easyeda2kicad
         efibootmgr
         egypt
+        electron-mail
         elf-dissector
         eog
         esptool
@@ -3287,7 +3235,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "firefox-devedition.desktop";
+        "application/pdf" = "chromium-browser.desktop";
 
         "font/collection" = "org.gnome.font-viewer.desktop";
         "font/otf" = "org.gnome.font-viewer.desktop";
@@ -3306,10 +3254,10 @@ in
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
 
-        "x-scheme-handler/http" = "firefox-devedition.desktop";
-        "x-scheme-handler/https" = "firefox-devedition.desktop";
+        "x-scheme-handler/http" = "chromium-browser.desktop";
+        "x-scheme-handler/https" = "chromium-browser.desktop";
 
-        "x-scheme-handler/mailto" = "thunderbird.desktop";
+        "x-scheme-handler/mailto" = "electron-mail.desktop";
       };
     };
 
@@ -3462,11 +3410,6 @@ in
             package = cursor.theme.package;
             size = cursor.size;
 
-            hyprcursor = {
-              enable = true;
-              size = cursor.size;
-            };
-
             gtk.enable = true;
           };
 
@@ -3501,9 +3444,7 @@ in
             ];
           };
 
-          plugins = with pkgs.hyprlandPlugins; [
-            hypr-dynamic-cursors
-          ];
+          # plugins = with pkgs.hyprlandPlugins; [ ];
 
           xwayland.enable = true;
 
@@ -3604,11 +3545,11 @@ in
 
               "SUPER, U, exec, dms ipc call processlist open"
 
-              "SUPER, W, exec, uwsm app -- firefox-devedition"
-              "SUPER ALT, W, exec, uwsm app -- firefox-devedition --private-window"
+              "SUPER, W, exec, uwsm app -- chromium"
+              "SUPER ALT, W, exec, uwsm app -- chromium --incognito"
 
-              ", XF86Mail, exec, uwsm app -- thunderbird"
-              "SUPER, M, exec, uwsm app -- thunderbird"
+              ", XF86Mail, exec, uwsm app -- electron-mail"
+              "SUPER, M, exec, uwsm app -- electron-mail"
 
               "SUPER, E, exec, uwsm app -- codium"
 
@@ -3756,7 +3697,6 @@ in
             cursor = {
               no_hardware_cursors = false;
 
-              enable_hyprcursor = true;
               sync_gsettings_theme = true;
 
               persistent_warps = true;
@@ -3830,28 +3770,7 @@ in
               # Name, On/Off, Speed, Bezier
             };
 
-            plugin = {
-              dynamic-cursors = {
-                enabled = true;
-
-                hyprcursor = {
-                  enabled = true;
-                };
-
-                mode = "rotate";
-                threshold = 1;
-                rotate = {
-                  length = cursor.size;
-                };
-
-                shake = {
-                  enabled = true;
-                  ipc = true;
-
-                  effects = true;
-                };
-              };
-            };
+            # plugin = { };
           };
         };
 
@@ -4132,7 +4051,6 @@ in
                     ecmel.vscode-html-css
                     esbenp.prettier-vscode
                     fabiospampinato.vscode-open-in-github
-                    firefox-devtools.vscode-firefox-debug
                     formulahendry.auto-close-tag
                     formulahendry.auto-rename-tag
                     foxundermoon.shell-format
