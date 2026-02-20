@@ -168,7 +168,7 @@ in
   boot = {
     loader = {
       efi.canTouchEfiVariables = true;
-      timeout = 2;
+      timeout = 1;
 
       systemd-boot = {
         enable = true;
@@ -331,6 +331,10 @@ in
     config = {
       allowUnfree = true;
       androidSDK.accept_license = true;
+
+      permittedInsecurePackages = [
+        "opendkim-2.11.0-Beta2"
+      ];
     };
 
     # overlays = [ ];
@@ -687,7 +691,7 @@ in
       qemu = {
         package = (
           pkgs.qemu_full.override {
-            # canokeySupport = true; # FIXME: Marked Broken
+            # canokeySupport = true; # FIXME: Marked as Broken
             alsaSupport = true;
             capstoneSupport = true;
             cephSupport = true;
@@ -893,6 +897,8 @@ in
 
       implementation = "broker";
     };
+
+    accounts-daemon.enable = true;
 
     timesyncd = {
       enable = true;
@@ -1376,19 +1382,20 @@ in
     postgresql = {
       enable = true;
       package = (
-        pkgs.postgresql_18.override {
-          # bonjourSupport = true; # FIXME: Build Failure
-          # nlsSupport = true; # FIXME: Build Failure
-          curlSupport = true;
-          gssSupport = true;
-          jitSupport = true;
-          numaSupport = true;
-          pamSupport = true;
-          pythonSupport = true;
-          selinuxSupport = true;
-          systemdSupport = true;
-          uringSupport = true;
-        }
+        # pkgs.postgresql_18.override {
+        #   # bonjourSupport = true; # FIXME: Build Failure
+        #   # nlsSupport = true; # FIXME: Build Failure
+        #   curlSupport = true;
+        #   gssSupport = true;
+        #   jitSupport = true;
+        #   numaSupport = true;
+        #   pamSupport = true;
+        #   pythonSupport = true;
+        #   selinuxSupport = true;
+        #   systemdSupport = true;
+        #   uringSupport = true;
+        # }
+        pkgs.postgresql_18
       );
 
       enableTCPIP = true;
@@ -1471,7 +1478,7 @@ in
       selector = "default";
 
       # settings = { };
-    };
+    }; # Marked as Insecure
 
     dovecot2 = {
       enable = true;
@@ -2210,12 +2217,10 @@ in
     systemPackages =
       with pkgs;
       [
-        # armitage # FIXME: Build Failure
         # bulk_extractor # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
-        # open-interpreter # FIXME: Build Failure
-        # reiser4progs # Marked Broken
+        # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
         aapt
@@ -2242,6 +2247,7 @@ in
         arduino-cli
         arduino-ide
         arduino-language-server
+        armitage
         asciinema
         asciinema-agg
         asciinema-scenario
@@ -2278,6 +2284,7 @@ in
         crow-translate
         cryptsetup
         ctop
+        cups-pk-helper
         cups-printers
         curtail
         cve-bin-tool
@@ -2286,6 +2293,7 @@ in
         dbeaver-bin
         dconf-editor
         dconf2nix
+        dgop
         diffoci
         dig
         dive
@@ -2348,6 +2356,7 @@ in
         gnome-logs
         gnome-mahjongg
         gnome-nettool
+        gnome-tweaks
         gnugrep
         gnumake
         gnused
@@ -2355,6 +2364,7 @@ in
         gollama
         google-lighthouse
         gource
+        gparted-full
         gpredict
         gradle-completion
         graphviz
@@ -2387,9 +2397,11 @@ in
         john
         johnny
         jq
+        kdePackages.kimageformats
         kernel-hardening-checker
         kernelshark
         kgraphviewer
+        khal
         killall
         kmod
         kotlin
@@ -2425,6 +2437,7 @@ in
         macchanger
         mailcap
         massdns
+        matugen
         md-lsp
         meld
         mermaid-cli
@@ -2451,11 +2464,13 @@ in
         numatop
         nvme-cli
         onionshare-gui
+        open-interpreter
         openafs
         openai-whisper
         opendmarc
         openssl
         paper-clip
+        papirus-folders
         pciutils
         pdfarranger
         pg_top
@@ -2567,6 +2582,7 @@ in
         zenmap
         zfs
         zip
+        zoom-us # Unfree
         (coreutils-full.override {
           aclSupport = true;
           withOpenssl = true;
