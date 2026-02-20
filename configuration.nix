@@ -735,39 +735,37 @@ in
     };
     spiceUSBRedirection.enable = true;
 
-    containers.enable = true;
-
-    docker = {
+    podman = {
       enable = true;
-      package = (
-        pkgs.docker.override {
-          buildxSupport = true;
-          composeSupport = true;
-          initSupport = true;
-          sbomSupport = true;
-          withBtrfs = true;
-          withLvm = true;
-          withSeccomp = true;
-          withSystemd = true;
-        }
-      );
+      package = pkgs.podman;
 
-      logDriver = "journald";
-
-      listenOptions = [
-        "/run/docker.sock"
+      # extraPackages = with pkgs; [ ];
+      extraRuntimes = with pkgs; [
+        runc
       ];
 
-      daemon.settings = {
-        ipv6 = true;
+      dockerCompat = true;
+      dockerSocket.enable = true;
 
-        live-restore = true;
+      # networkSocket = {
+      #   enable = true;
+
+      #   server = "ghostunnel";
+
+      #   listenAddress = "0.0.0.0";
+      #   port = 2376;
+
+      #   tls = { };
+
+      #   openFirewall = true;
+      # }; # Requires a TLS Certificate
+
+      defaultNetwork.settings = {
+        dns_enabled = true;
       };
+    };
 
-      enableOnBoot = true;
-    }; # Unfree
-
-    oci-containers.backend = "docker";
+    oci-containers.backend = "podman";
 
     waydroid = {
       enable = true;
@@ -1257,11 +1255,19 @@ in
           withBranding = true;
         }
       );
+      plugins = with pkgs; [
+        cockpit-files
+        cockpit-machines
+        cockpit-podman
+        cockpit-zfs
+      ];
 
       port = 9090;
       allowed-origins = [
         "*"
       ];
+
+      showBanner = true;
 
       settings = {
         WebService = {
@@ -1382,20 +1388,19 @@ in
     postgresql = {
       enable = true;
       package = (
-        # pkgs.postgresql_18.override {
-        #   # bonjourSupport = true; # FIXME: Build Failure
-        #   # nlsSupport = true; # FIXME: Build Failure
-        #   curlSupport = true;
-        #   gssSupport = true;
-        #   jitSupport = true;
-        #   numaSupport = true;
-        #   pamSupport = true;
-        #   pythonSupport = true;
-        #   selinuxSupport = true;
-        #   systemdSupport = true;
-        #   uringSupport = true;
-        # }
-        pkgs.postgresql_18
+        pkgs.postgresql_18.override {
+          # bonjourSupport = true; # FIXME: Build Failure
+          # nlsSupport = true; # FIXME: Build Failure
+          curlSupport = true;
+          gssSupport = true;
+          jitSupport = true;
+          numaSupport = true;
+          pamSupport = true;
+          pythonSupport = true;
+          selinuxSupport = true;
+          systemdSupport = true;
+          uringSupport = true;
+        }
       );
 
       enableTCPIP = true;
@@ -2272,6 +2277,7 @@ in
         cdrkit
         celestia
         certbot-full
+        chart-testing
         clinfo
         cloc
         cmake
@@ -2280,6 +2286,7 @@ in
         codevis
         collision
         compose2nix
+        conmon
         cramfsprogs
         crow-translate
         cryptsetup
@@ -2300,15 +2307,9 @@ in
         dmg2img
         dmidecode
         dnsrecon
-        docker-buildx
-        docker-client
         docker-compose
         docker-compose-language-service
-        docker-credential-gcr
-        docker-credential-helpers
-        docker-gc
         docker-language-server
-        docker-sbom
         dosfstools
         dot2tex
         dvb-apps
@@ -2375,6 +2376,8 @@ in
         hashcat-utils
         hashes
         hdparm
+        helm-dashboard
+        helm-ls
         hfsprogs
         hieroglyphic
         host
@@ -2403,14 +2406,29 @@ in
         kgraphviewer
         khal
         killall
+        kind
         kmod
         kotlin
         kotlin-language-server
         kubectl
+        kubectl-ai
+        kubectl-convert
+        kubectl-doctor
+        kubectl-example
+        kubectl-explore
         kubectl-graph
+        kubectl-images
+        kubectl-klock
+        kubectl-neat
+        kubectl-node-shell
         kubectl-tree
+        kubectl-validate
+        kubectl-view-allocations
         kubectl-view-secret
+        kubernetes-code-generator
+        kubernetes-controller-tools
         kubernetes-helm
+        kubernetes-metrics-server
         kubeshark
         letterpress
         libhsts
@@ -2446,6 +2464,7 @@ in
         metasploit
         mfcuk
         mfoc
+        minikube
         mtools
         mtr-gui
         nautilus
@@ -2471,12 +2490,16 @@ in
         openssl
         paper-clip
         papirus-folders
+        parted
         pciutils
         pdfarranger
         pg_top
         pinta
         pkg-config
         platformio
+        podman-compose
+        podman-desktop
+        podman-tui
         postgres-language-server
         procps
         profile-cleaner
@@ -2495,6 +2518,7 @@ in
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
+        runc
         sbom2dot
         scrcpy
         screen
@@ -2847,6 +2871,12 @@ in
         (gstreamer.override {
           enableDocumentation = true;
         })
+      ])
+      ++ (with kubernetes-helmPlugins; [
+        helm-diff
+        helm-git
+        helm-schema
+        helm-secrets
       ])
       ++ (with linphonePackages; [
         bc-decaf
@@ -3372,7 +3402,6 @@ in
         "avahi"
         "cdrom"
         "dialout"
-        "docker"
         "floppy"
         "fwupd-refresh"
         "greeter"
@@ -3388,6 +3417,7 @@ in
         "nm-openvpn"
         "pipewire"
         "plugdev"
+        "podman"
         "qemu-libvirtd"
         "render"
         "scanner"
