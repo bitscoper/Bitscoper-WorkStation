@@ -56,6 +56,8 @@ let
   );
   androidSDKPath = "${androidSDK}/share/android-sdk";
 
+  design_factor = 16;
+
   fontPreferences = {
     package = pkgs.nerd-fonts.noto;
 
@@ -77,83 +79,6 @@ let
 
     size = builtins.floor (design_factor * 1.50); # 24
   };
-
-  nix-rice = builtins.fetchTarball "https://github.com/bertof/nix-rice/archive/refs/heads/main.tar.gz";
-  nix-rice-lib = import (nix-rice + "/lib.nix") {
-    lib = pkgs.lib;
-    kitty-themes-src = null;
-  };
-
-  convert_hex_color_code_to_rgba_color_code =
-    hex_color:
-    let
-      color_set = nix-rice-lib.color.hexToRgba hex_color;
-
-      red = builtins.floor color_set.r;
-      green = builtins.floor color_set.g;
-      blue = builtins.floor color_set.b;
-      alpha = builtins.floor (color_set.a / 255);
-    in
-    "rgba(${toString red}, ${toString green}, ${toString blue}, ${toString alpha})";
-
-  fetched_gtk_css_file = builtins.fetchurl {
-    url = "https://gitlab.gnome.org/GNOME/gtk/-/raw/gtk-3-24/gtk/theme/Adwaita/gtk-contained-dark.css";
-  };
-  gtk_css_file = builtins.readFile fetched_gtk_css_file;
-  gtk_css_lines = builtins.filter (x: builtins.isString x) (builtins.split "\n" gtk_css_file);
-
-  gtk_css_color_lines = builtins.filter (
-    line: builtins.match "^@define-color [^ ]+ [^;]+;" line != null
-  ) gtk_css_lines;
-  gtk_color_list = builtins.filter (x: x != null) (
-    builtins.map (
-      line:
-      let
-        mapping = builtins.match "@define-color ([^ ]+) ([^;]+);" line;
-      in
-      if mapping == null then
-        null
-      else
-        {
-          name = builtins.elemAt mapping 0;
-          value = builtins.elemAt mapping 1;
-        }
-    ) gtk_css_color_lines
-  );
-  gtk_color_attributes = builtins.listToAttrs gtk_color_list;
-
-  colors = {
-    hex = {
-      borders = gtk_color_attributes.borders;
-      unfocused_borders = gtk_color_attributes.unfocused_borders;
-
-      background = gtk_color_attributes.theme_bg_color;
-      base_background = gtk_color_attributes.theme_base_color;
-      selected_background = gtk_color_attributes.theme_selected_bg_color;
-      unfocused_background = gtk_color_attributes.theme_unfocused_bg_color;
-      unfocused_base_background = gtk_color_attributes.theme_unfocused_base_color;
-      unfocused_selected_background = gtk_color_attributes.theme_unfocused_selected_bg_color;
-      insensitive_background = gtk_color_attributes.insensitive_bg_color;
-      insensitive_base_background = gtk_color_attributes.insensitive_base_color;
-      content_view_background = gtk_color_attributes.content_view_bg;
-      text_view_background = gtk_color_attributes.text_view_bg;
-
-      foreground = gtk_color_attributes.theme_fg_color;
-      selected_foreground = gtk_color_attributes.theme_selected_fg_color;
-      insensitive_foreground = gtk_color_attributes.insensitive_fg_color;
-      text = gtk_color_attributes.theme_text_color;
-      unfocused_foreground = gtk_color_attributes.theme_unfocused_fg_color;
-      unfocused_selected_foreground = gtk_color_attributes.theme_unfocused_selected_fg_color;
-      unfocused_insensitive_color = gtk_color_attributes.unfocused_insensitive_color;
-      unfocused_text = gtk_color_attributes.theme_unfocused_text_color;
-
-      warning = gtk_color_attributes.warning_color;
-      error = gtk_color_attributes.error_color;
-      success = gtk_color_attributes.success_color;
-    };
-  };
-
-  design_factor = 16;
 
   secrets = import ./secrets.nix;
 in
@@ -569,6 +494,8 @@ in
       linux-firmware
       sof-firmware
     ];
+
+    firmwareCompression = "zstd";
 
     cpu = {
       intel = {
@@ -2209,8 +2136,6 @@ in
   };
 
   environment = {
-    enableDebugInfo = false;
-
     enableAllTerminfo = true;
 
     wordlist = {
@@ -2380,7 +2305,6 @@ in
         freecad
         fritzing
         fstl
-        gamescope
         gcc15
         gdb
         ghex
@@ -2436,8 +2360,6 @@ in
         inkscape-with-extensions
         inotify-tools
         input-leap
-        intel-gmmlib
-        intel-ocl
         iotop-c
         jfsutils
         jmol
@@ -2483,7 +2405,6 @@ in
         libsecret
         libsixel
         libva-utils
-        libvpl
         linux-exploit-suggester
         linuxConsoleTools
         logdy
@@ -2499,7 +2420,6 @@ in
         lyx
         macchanger
         mailcap
-        mangohud
         massdns
         matugen
         md-lsp
@@ -2530,7 +2450,6 @@ in
         nvme-cli
         onionshare-gui
         open-interpreter
-        openafs
         openai-whisper
         opendmarc
         openssl
@@ -2550,7 +2469,6 @@ in
         procps
         profile-cleaner
         progress
-        protontricks
         protonup-qt
         protonvpn-gui
         ps
@@ -2566,7 +2484,6 @@ in
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
-        runc
         sbom2dot
         scrcpy
         screen
@@ -2620,7 +2537,6 @@ in
         virt-top
         virt-v2v
         virtiofsd
-        vpl-gpu-rt
         vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
@@ -2638,8 +2554,6 @@ in
         which
         whois
         winboat
-        winetricks
-        wineWow64Packages.waylandFull
         wl-clipboard
         wl-kbptr
         wordbook
@@ -2791,9 +2705,6 @@ in
           enableRawUdp = true;
           enableOsmosdr = true;
         })
-        (hardinfo2.override {
-          printingSupport = true;
-        })
         (kicad-testing.override {
           addons = with pkgs.kicadAddons; [
             kikit
@@ -2869,7 +2780,31 @@ in
         })
         config.services.phpfpm.phpPackage
       ]
+      # ++ config.hardware.firmware
+      # ++ config.home-manager.users.root.programs.chromium.dictionaries
+      # ++ config.home-manager.users.root.programs.lutris.protonPackages
       ++ config.boot.extraModulePackages
+      ++ config.fonts.packages
+      ++ config.hardware.graphics.extraPackages
+      ++ config.hardware.graphics.extraPackages32
+      ++ config.hardware.sane.extraBackends
+      ++ config.home-manager.users.root.programs.chromium.nativeMessagingHosts
+      ++ config.home-manager.users.root.programs.gh.extensions
+      ++ config.home-manager.users.root.programs.lutris.extraPackages
+      ++ config.home-manager.users.root.programs.lutris.winePackages
+      ++ config.home-manager.users.root.wayland.windowManager.hyprland.plugins
+      ++ config.i18n.inputMethod.fcitx5.addons
+      ++ config.programs.bat.extraPackages
+      ++ config.programs.obs-studio.plugins
+      ++ config.services.cockpit.plugins
+      ++ config.services.pipewire.extraLv2Packages
+      ++ config.services.pipewire.wireplumber.extraLv2Packages
+      ++ config.services.printing.drivers
+      ++ config.services.udev.packages
+      ++ config.systemd.packages
+      ++ config.virtualisation.podman.extraPackages
+      ++ config.virtualisation.podman.extraRuntimes
+      ++ config.xdg.portal.extraPortals
       ++ (with ghidra-extensions; [
         # gnudisassembler # FIXME: Build Failure
         findcrypt
@@ -2968,6 +2903,8 @@ in
         write
         xxd
       ]);
+
+    enableDebugInfo = false;
   };
 
   xdg = {
@@ -3370,7 +3307,9 @@ in
       enable = true;
       extraPortals = with pkgs; [
         xdg-desktop-portal-gtk
-        xdg-desktop-portal-hyprland
+        (pkgs.xdg-desktop-portal-hyprland.override {
+          debug = false;
+        })
       ];
 
       xdgOpenUsePortal = false; # Opening Programs
@@ -3953,7 +3892,9 @@ in
               en-us
             ];
 
-            # nativeMessagingHosts = with pkgs; [ ];
+            nativeMessagingHosts = with pkgs; [
+              config.home-manager.users.root.programs.keepassxc.package
+            ];
 
             commandLineArgs = [
               "--password-store=gnome"
@@ -4041,19 +3982,6 @@ in
 
               # aliases = { };
             };
-          };
-
-          awscli = {
-            enable = true;
-            package = pkgs.awscli2;
-
-            settings = {
-              default = {
-                output = "json";
-              };
-            };
-
-            # credentials = { };
           };
 
           wofi = {
