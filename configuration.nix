@@ -2,9 +2,10 @@
 
 {
   config,
+  lib,
+  modulesPath,
   options,
   pkgs,
-  lib,
   ...
 }:
 let
@@ -228,6 +229,15 @@ in
       enable = true;
 
       kernelModules = config.boot.kernelModules;
+      availableKernelModules = [
+        "ahci"
+        "nvme"
+        "rtsx_usb_sdmmc"
+        "sd_mod"
+        "usb_storage"
+        "usbhid"
+        "xhci_pci"
+      ];
 
       systemd = {
         enable = true;
@@ -515,7 +525,21 @@ in
           useSystemd = true;
         }
       );
+
+      adminIdentities = [
+        "unix-group:wheel"
+      ];
+
+      extraConfig = ''
+
+      '';
+
+      debug = false;
     };
+    soteria = {
+      enable = true;
+      package = pkgs.soteria;
+    }; # DMS Polkit Agent Does Not Work
 
     rtkit.enable = true;
 
@@ -562,8 +586,15 @@ in
       enable32Bit = true;
 
       extraPackages = with pkgs; [
-        intel-media-driver
         intel-compute-runtime
+        intel-gmmlib
+        intel-media-driver
+        intel-ocl
+        libvpl
+        vpl-gpu-rt
+      ];
+      extraPackages32 = with pkgs.pkgsi686Linux; [
+        intel-media-driver
       ];
     };
 
@@ -2127,6 +2158,13 @@ in
         }
       ];
     };
+
+    gamemode = {
+      enable = true;
+
+      enableRenice = true;
+      # settings = { };
+    };
   };
 
   fonts = {
@@ -2186,7 +2224,7 @@ in
     stub-ld.enable = true;
 
     variables = {
-      androidSDK_ROOT = androidSDKPath;
+      ANDROID_SDK_ROOT = androidSDKPath; # FIXME: Check
       ANDROID_HOME = androidSDKPath;
 
       LD_LIBRARY_PATH = lib.mkForce "${
@@ -2199,6 +2237,8 @@ in
       }:$LD_LIBRARY_PATH";
 
       CHROME_EXECUTABLE = "chromium";
+
+      DMS_DISABLE_POLKIT = 1; # DMS Polkit Agent Does Not Work
     };
 
     sessionVariables = {
@@ -2340,6 +2380,7 @@ in
         freecad
         fritzing
         fstl
+        gamescope
         gcc15
         gdb
         ghex
@@ -2367,6 +2408,7 @@ in
         gource
         gparted-full
         gpredict
+        gpu-viewer
         gradle-completion
         graphviz
         groovy
@@ -2394,6 +2436,8 @@ in
         inkscape-with-extensions
         inotify-tools
         input-leap
+        intel-gmmlib
+        intel-ocl
         iotop-c
         jfsutils
         jmol
@@ -2439,6 +2483,7 @@ in
         libsecret
         libsixel
         libva-utils
+        libvpl
         linux-exploit-suggester
         linuxConsoleTools
         logdy
@@ -2454,6 +2499,7 @@ in
         lyx
         macchanger
         mailcap
+        mangohud
         massdns
         matugen
         md-lsp
@@ -2504,6 +2550,8 @@ in
         procps
         profile-cleaner
         progress
+        protontricks
+        protonup-qt
         protonvpn-gui
         ps
         psmisc
@@ -2572,6 +2620,7 @@ in
         virt-top
         virt-v2v
         virtiofsd
+        vpl-gpu-rt
         vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
@@ -2589,6 +2638,8 @@ in
         which
         whois
         winboat
+        winetricks
+        wineWow64Packages.waylandFull
         wl-clipboard
         wl-kbptr
         wordbook
@@ -3402,6 +3453,7 @@ in
         "avahi"
         "cdrom"
         "dialout"
+        "disk"
         "floppy"
         "fwupd-refresh"
         "greeter"
@@ -3509,6 +3561,7 @@ in
             ];
 
             exec-once = [
+              "uwsm app -- soteria" # DMS Polkit Agent Does Not Work and Soteria Does Not Autostart
               "adb start-server"
 
               "setfacl --modify user:jellyfin:--x ~"
@@ -4223,6 +4276,25 @@ in
               no-embed-thumbnail = true;
             };
           };
+
+          lutris = {
+            enable = true;
+            package = pkgs.lutris;
+
+            extraPackages = with pkgs; [
+              gamemode
+              gamescope
+              mangohud
+              protontricks
+              winetricks
+            ];
+            winePackages = with pkgs; [
+              wineWow64Packages.waylandFull
+            ];
+            protonPackages = with pkgs; [
+              proton-ge-bin
+            ];
+          }; # Unfree
         };
       }
     ];
