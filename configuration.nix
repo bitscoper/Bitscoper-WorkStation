@@ -9,9 +9,14 @@
   ...
 }:
 let
-  # stable = import (builtins.fetchTarball {
-  #   url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
-  # }) { };
+  stableNixPackages =
+    import
+      (builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
@@ -113,17 +118,17 @@ in
       };
     };
 
-    kernelPackages = pkgs.linuxKernel.packages.linux_6_18;
+    kernelPackages = pkgs.linuxKernel.packages.linux_6_19;
 
     extraModulePackages = with config.boot.kernelPackages; [
-      openafs
-      apfs
+      # apfs # FIXME: Build Failure
+      # zfs_unstable # FIXME: Build Failure
       cpupower
       mm-tools
+      openafs
       tmon
       turbostat
       usbip
-      zfs_unstable
     ];
 
     kernelModules = [
@@ -272,7 +277,11 @@ in
       ];
     };
 
-    # overlays = [ ];
+    overlays = [
+      (final: prev: {
+        khal = stableNixPackages.khal;
+      })
+    ];
   };
 
   appstream.enable = true;
@@ -513,10 +522,10 @@ in
       enable32Bit = true;
 
       extraPackages = with pkgs; [
+        # intel-ocl # FIXME: Build Failure
         intel-compute-runtime
         intel-gmmlib
         intel-media-driver
-        intel-ocl
         libvpl
         vpl-gpu-rt
       ];
@@ -638,7 +647,7 @@ in
       enable = true;
       package = (
         pkgs.libvirt.override {
-          enableCeph = true;
+          enableCeph = false; # FIXME: Build Failure
           enableGlusterfs = true;
           enableIscsi = true;
           enableXen = true;
@@ -647,41 +656,42 @@ in
       );
 
       qemu = {
-        package = (
-          pkgs.qemu_full.override {
-            # canokeySupport = true; # FIXME: Marked as Broken
-            alsaSupport = true;
-            capstoneSupport = true;
-            cephSupport = true;
-            enableBlobs = true;
-            enableDocs = true;
-            enableTools = true;
-            glusterfsSupport = true;
-            gtkSupport = true;
-            guestAgentSupport = true;
-            jackSupport = true;
-            libiscsiSupport = true;
-            ncursesSupport = true;
-            numaSupport = true;
-            openGLSupport = true;
-            pipewireSupport = true;
-            pluginsSupport = true;
-            pulseSupport = true;
-            rutabagaSupport = true;
-            sdlSupport = true;
-            seccompSupport = true;
-            smartcardSupport = true;
-            smbdSupport = true;
-            spiceSupport = true;
-            tpmSupport = true;
-            uringSupport = true;
-            usbredirSupport = true;
-            valgrindSupport = true;
-            virglSupport = true;
-            vncSupport = true;
-            xenSupport = true;
-          }
-        );
+        # package = (
+        #   pkgs.qemu_full.override {
+        #     alsaSupport = true;
+        #     canokeySupport = false; # Marked as Broken
+        #     capstoneSupport = true;
+        #     cephSupport = false; # FIXME: Build Failure
+        #     enableBlobs = true;
+        #     enableDocs = true;
+        #     enableTools = true;
+        #     glusterfsSupport = true;
+        #     gtkSupport = true;
+        #     guestAgentSupport = true;
+        #     jackSupport = true;
+        #     libiscsiSupport = true;
+        #     ncursesSupport = true;
+        #     numaSupport = true;
+        #     openGLSupport = true;
+        #     pipewireSupport = true;
+        #     pluginsSupport = true;
+        #     pulseSupport = true;
+        #     rutabagaSupport = true;
+        #     sdlSupport = true;
+        #     seccompSupport = true;
+        #     smartcardSupport = true;
+        #     smbdSupport = true;
+        #     spiceSupport = true;
+        #     tpmSupport = true;
+        #     uringSupport = true;
+        #     usbredirSupport = true;
+        #     valgrindSupport = true;
+        #     virglSupport = true;
+        #     vncSupport = true;
+        #     xenSupport = true;
+        #   }
+        # ); # FIXME: Missing Binaries
+        package = pkgs.qemu;
 
         swtpm = {
           enable = true;
@@ -1040,7 +1050,7 @@ in
 
     phpfpm = {
       phpPackage =
-        (pkgs.php.override {
+        (pkgs.php85.override {
           argon2Support = true;
           cgiSupport = true;
           cgotoSupport = true;
@@ -1084,7 +1094,6 @@ in
                 memcached
                 mysqli
                 mysqlnd
-                opcache
                 openssl
                 pcntl
                 pdo
@@ -1347,11 +1356,11 @@ in
       enable = true;
       package = (
         pkgs.postgresql_18.override {
-          # bonjourSupport = true; # FIXME: Build Failure
-          # nlsSupport = true; # FIXME: Build Failure
+          bonjourSupport = false; # FIXME: Build Failure
           curlSupport = true;
           gssSupport = true;
           jitSupport = true;
+          nlsSupport = false; # FIXME: Build Failure
           numaSupport = true;
           pamSupport = true;
           pythonSupport = true;
@@ -1528,6 +1537,23 @@ in
     kubernetes = {
       package = pkgs.kubernetes;
     };
+
+    aria2 =
+      let
+        rpcSecretFile = pkgs.writeText "aria2-rpc-token.txt" secrets.password_1_of_bitscoper;
+      in
+      {
+        enable = true;
+
+        settings = {
+          enable-rpc = true;
+          rpc-listen-port = 6800;
+        };
+
+        rpcSecretFile = rpcSecretFile;
+
+        openPorts = true;
+      };
 
     logrotate = {
       enable = true;
@@ -2187,9 +2213,15 @@ in
     systemPackages =
       with pkgs;
       [
-        # bulk_extractor # FIXME: Build Failure
+        # alpaca # FIXME: Build Failure
+        # apkleaks # FIXME: Build Failure
+        # certbot-full # FIXME: Build Failure
+        # cve-bin-tool # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
+        # freecad # FIXME: Build Failure
+        # gource # FIXME: Build Failure
+        # open-interpreter # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
@@ -2201,7 +2233,6 @@ in
         addlicense
         agi # FIXME: Cannot find libswt
         aircrack-ng
-        alpaca
         alsa-plugins
         alsa-tools
         alsa-utils
@@ -2213,10 +2244,10 @@ in
         apfsprogs
         apitrace
         apkeep
-        apkleaks
         arduino-cli
         arduino-ide
         arduino-language-server
+        ariang
         armitage
         asciinema
         asciinema-agg
@@ -2235,13 +2266,14 @@ in
         bluez-tools
         btrfs-assistant
         btrfs-progs
+        bulk_extractor
         bustle
         butt
         cameractrls-gtk4
         cava
         cdrkit
         celestia
-        certbot-full
+        certbot
         chart-testing
         clinfo
         cloc
@@ -2259,7 +2291,6 @@ in
         cups-pk-helper
         cups-printers
         curtail
-        cve-bin-tool
         d-spy
         darktable
         dbeaver-bin
@@ -2302,7 +2333,6 @@ in
         flowblade
         flutter
         fontfor
-        freecad
         fritzing
         fstl
         gcc15
@@ -2329,7 +2359,6 @@ in
         gnutar
         gollama
         google-lighthouse
-        gource
         gparted-full
         gpredict
         gpu-viewer
@@ -2434,6 +2463,7 @@ in
         mtools
         mtr-gui
         nautilus
+        nemu
         nethogs
         nikto
         nilfs-utils
@@ -2447,9 +2477,9 @@ in
         ntfs3g
         numactl
         numatop
+        nurl
         nvme-cli
         onionshare-gui
-        open-interpreter
         openai-whisper
         opendmarc
         openssl
@@ -2474,6 +2504,7 @@ in
         ps
         psmisc
         qalculate-gtk
+        qemu-user
         qemu-utils
         qr-backup
         radare2
@@ -2484,6 +2515,7 @@ in
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
+        rustc
         sbom2dot
         scrcpy
         screen
@@ -2501,6 +2533,7 @@ in
         sound-theme-freedesktop
         soundconverter
         sox
+        spytrap-adb
         sslscan
         steam-run-free
         stegseek
@@ -2515,7 +2548,12 @@ in
         terminaltexteffects
         texliveFull
         time
+        tpm2-abrmd
+        tpm2-openssl
+        tpm2-pkcs11-abrmd
         tpm2-tools
+        tpm2-totp-with-plymouth
+        tpm2-tss
         traitor
         tree
         trufflehog
@@ -2533,6 +2571,7 @@ in
         usbutils
         util-linux
         valgrind
+        varia
         video2x
         virt-top
         virt-v2v
@@ -2542,6 +2581,9 @@ in
         vulkan-tools
         wafw00f
         wakeonlan
+        wayback_machine_downloader
+        wayback-machine-archiver
+        waybackurls # Not Unfree
         waycheck
         waydroid-helper
         wayland-utils
@@ -2567,15 +2609,12 @@ in
         xoscope
         yaml-language-server
         yara-x
+        ytdownloader
         zenity
         zenmap
         zfs
         zip
         zoom-us # Unfree
-        (coreutils-full.override {
-          aclSupport = true;
-          withOpenssl = true;
-        })
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -2701,14 +2740,14 @@ in
             doCheck = false;
           })
         )
-        (gnss-sdr.override {
-          enableRawUdp = true;
-          enableOsmosdr = true;
-        })
+        # (gnss-sdr.override {
+        #   enableRawUdp = true;
+        #   enableOsmosdr = false; # FIXME: Build Failure
+        # }) # FIXME: Build Failure
         (kicad-testing.override {
           addons = with pkgs.kicadAddons; [
-            kikit
-            kikit-library
+            # kikit # FIXME: Build Failure
+            # kikit-library # FIXME: Build Failure
           ];
           withNgspice = true;
           withScripting = true;
@@ -2778,11 +2817,13 @@ in
           withLibpsl = true;
           withOpenssl = true;
         })
+        config.hardware.firmware
+        config.home-manager.users.root.programs.dircolors.package
         config.services.phpfpm.phpPackage
       ]
-      # ++ config.hardware.firmware
       # ++ config.home-manager.users.root.programs.chromium.dictionaries
       # ++ config.home-manager.users.root.programs.lutris.protonPackages
+      # ++ config.services.pipewire.wireplumber.extraLv2Packages # Duplicate
       ++ config.boot.extraModulePackages
       ++ config.fonts.packages
       ++ config.hardware.graphics.extraPackages
@@ -2798,7 +2839,6 @@ in
       ++ config.programs.obs-studio.plugins
       ++ config.services.cockpit.plugins
       ++ config.services.pipewire.extraLv2Packages
-      ++ config.services.pipewire.wireplumber.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
       ++ config.systemd.packages
@@ -3338,6 +3378,7 @@ in
 
   documentation = {
     enable = true;
+
     dev.enable = true;
     doc.enable = true;
     info.enable = true;
@@ -3350,12 +3391,14 @@ in
         package = pkgs.man-db;
       };
 
-      generateCaches = true;
+      cache.enable = true;
     };
 
     nixos = {
       enable = true;
+
       includeAllModules = true;
+      checkRedirects = true;
 
       options.warningsAreErrors = false;
     };
@@ -3388,6 +3431,7 @@ in
       extraGroups = [
         "adbusers" # Not in builtins.attrNames config.users.groups
         "adm"
+        "aria2"
         "audio"
         "avahi"
         "cdrom"
