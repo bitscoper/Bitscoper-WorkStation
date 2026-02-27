@@ -2263,6 +2263,7 @@ in
         binutils
         binwalk
         bleachbit
+        bluetuith
         bluez-tools
         btrfs-assistant
         btrfs-progs
@@ -2299,6 +2300,7 @@ in
         dgop
         diffoci
         dig
+        disktui
         dive
         dmg2img
         dmidecode
@@ -2308,6 +2310,7 @@ in
         docker-language-server
         dosfstools
         dot2tex
+        dtui
         dvb-apps
         e2fsprogs
         easyeda2kicad
@@ -2360,6 +2363,7 @@ in
         gollama
         google-lighthouse
         gparted-full
+        gpg-tui
         gpredict
         gpu-viewer
         gradle-completion
@@ -2395,6 +2399,7 @@ in
         john
         johnny
         jq
+        json-tui
         kdePackages.kimageformats
         kernel-hardening-checker
         kernelshark
@@ -2425,6 +2430,7 @@ in
         kubernetes-helm
         kubernetes-metrics-server
         kubeshark
+        kubetui
         letterpress
         libhsts
         libinput
@@ -2511,12 +2517,14 @@ in
         raider
         rclone
         rclone-ui
+        regex-tui
         rpi-imager
         rpmextract
         rpPPPoE
         rtl-sdr-librtlsdr
         rustc
         sbom2dot
+        scope-tui
         scrcpy
         screen
         sdrangel
@@ -2541,6 +2549,7 @@ in
         subtitleedit
         switcheroo
         symlinks
+        systemctl-tui
         systemd-lsp
         systemdgenie
         szyszka
@@ -2558,6 +2567,7 @@ in
         tree
         trufflehog
         trustymail
+        tuicam
         udftools
         uefi-firmware-parser
         ugit
@@ -3544,11 +3554,10 @@ in
             ];
 
             exec-once = [
+              "setfacl --modify user:jellyfin:--x ~"
+
               "uwsm app -- soteria" # DMS Polkit Agent Does Not Work and Soteria Does Not Autostart
               "adb start-server"
-
-              "setfacl --modify user:jellyfin:--x ~"
-              "rm -rf ~/.local/share/applications/waydroid.*"
             ];
 
             bind = [
