@@ -2175,7 +2175,7 @@ in
     stub-ld.enable = true;
 
     variables = {
-      ANDROID_SDK_ROOT = androidSDKPath; # FIXME: Check
+      ANDROID_SDK_ROOT = androidSDKPath;
       ANDROID_HOME = androidSDKPath;
 
       LD_LIBRARY_PATH = lib.mkForce "${
@@ -2187,7 +2187,7 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      CHROME_EXECUTABLE = "chromium";
+      CHROME_EXECUTABLE = "brave";
 
       DMS_DISABLE_POLKIT = 1; # DMS Polkit Agent Does Not Work
     };
@@ -2265,6 +2265,7 @@ in
         bleachbit
         bluetuith
         bluez-tools
+        brave
         btrfs-assistant
         btrfs-progs
         bulk_extractor
@@ -2831,7 +2832,7 @@ in
         config.home-manager.users.root.programs.dircolors.package
         config.services.phpfpm.phpPackage
       ]
-      # ++ config.home-manager.users.root.programs.chromium.dictionaries
+      # ++ config.home-manager.users.root.programs.brave.nativeMessagingHosts # Duplicate
       # ++ config.home-manager.users.root.programs.lutris.protonPackages
       # ++ config.services.pipewire.wireplumber.extraLv2Packages # Duplicate
       ++ config.boot.extraModulePackages
@@ -2839,7 +2840,6 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
-      ++ config.home-manager.users.root.programs.chromium.nativeMessagingHosts
       ++ config.home-manager.users.root.programs.gh.extensions
       ++ config.home-manager.users.root.programs.lutris.extraPackages
       ++ config.home-manager.users.root.programs.lutris.winePackages
@@ -3319,7 +3319,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "chromium-browser.desktop";
+        "application/pdf" = "com.brave.Browser.desktop";
 
         "font/collection" = "org.gnome.font-viewer.desktop";
         "font/otf" = "org.gnome.font-viewer.desktop";
@@ -3338,8 +3338,8 @@ in
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
 
-        "x-scheme-handler/http" = "chromium-browser.desktop";
-        "x-scheme-handler/https" = "chromium-browser.desktop";
+        "x-scheme-handler/http" = "com.brave.Browser.desktop";
+        "x-scheme-handler/https" = "com.brave.Browser.desktop";
 
         "x-scheme-handler/mailto" = "electron-mail.desktop";
       };
@@ -3636,8 +3636,8 @@ in
 
               "SUPER, U, exec, dms ipc call processlist open"
 
-              "SUPER, W, exec, uwsm app -- chromium"
-              "SUPER ALT, W, exec, uwsm app -- chromium --incognito"
+              "SUPER, W, exec, uwsm app -- brave"
+              "SUPER ALT, W, exec, uwsm app -- brave --incognito"
 
               ", XF86Mail, exec, uwsm app -- electron-mail"
               "SUPER, M, exec, uwsm app -- electron-mail"
@@ -3936,23 +3936,9 @@ in
         };
 
         programs = {
-          chromium = {
-            enable = true;
-            package = pkgs.ungoogled-chromium;
-
-            dictionaries = with pkgs.hunspellDictsChromium; [
-              en_US
-              en-us
-            ];
-
-            nativeMessagingHosts = with pkgs; [
-              config.home-manager.users.root.programs.keepassxc.package
-            ];
-
-            commandLineArgs = [
-              "--password-store=gnome"
-            ];
-          };
+          brave.nativeMessagingHosts = with pkgs; [
+            config.home-manager.users.root.programs.keepassxc.package
+          ];
 
           dircolors = {
             enable = true;
