@@ -9,14 +9,14 @@
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (builtins.fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
   homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
@@ -122,7 +122,7 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [
       # apfs # FIXME: Build Failure
-      # zfs_unstable # FIXME: Build Failure
+      # zfs_unstable # Marked Broken
       cpupower
       mm-tools
       openafs
@@ -161,6 +161,7 @@ in
       kernelModules = config.boot.kernelModules;
       availableKernelModules = [
         "ahci"
+        "iwlwifi"
         "nvme"
         "rtsx_usb_sdmmc"
         "sd_mod"
@@ -174,7 +175,7 @@ in
         package = config.systemd.package;
       };
 
-      network.ssh.enable = true;
+      network.enable = true;
 
       verbose = true;
     };
@@ -278,9 +279,9 @@ in
     };
 
     overlays = [
-      (final: prev: {
-        khal = stableNixPackages.khal;
-      })
+      # (final: prev: {
+      #   khal = stableNixPackages.khal;
+      # })
     ];
   };
 
@@ -323,6 +324,7 @@ in
 
   networking = {
     enableIPv6 = true;
+    useDHCP = lib.mkForce true;
 
     domain = "local";
     hostName = "Bitscoper-WorkStation";
@@ -2213,14 +2215,9 @@ in
     systemPackages =
       with pkgs;
       [
-        # alpaca # FIXME: Build Failure
-        # apkleaks # FIXME: Build Failure
         # certbot-full # FIXME: Build Failure
-        # cve-bin-tool # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
-        # freecad # FIXME: Build Failure
-        # gource # FIXME: Build Failure
         # open-interpreter # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
@@ -2233,6 +2230,7 @@ in
         addlicense
         agi # FIXME: Cannot find libswt
         aircrack-ng
+        alpaca
         alsa-plugins
         alsa-tools
         alsa-utils
@@ -2244,6 +2242,7 @@ in
         apfsprogs
         apitrace
         apkeep
+        apkleaks
         arduino-cli
         arduino-ide
         arduino-language-server
@@ -2265,7 +2264,6 @@ in
         bleachbit
         bluetuith
         bluez-tools
-        brave
         btrfs-assistant
         btrfs-progs
         bulk_extractor
@@ -2275,7 +2273,6 @@ in
         cava
         cdrkit
         celestia
-        certbot
         chart-testing
         clinfo
         cloc
@@ -2293,6 +2290,7 @@ in
         cups-pk-helper
         cups-printers
         curtail
+        cve-bin-tool
         d-spy
         darktable
         dbeaver-bin
@@ -2337,6 +2335,7 @@ in
         flowblade
         flutter
         fontfor
+        freecad
         fritzing
         fstl
         gcc15
@@ -2363,6 +2362,7 @@ in
         gnutar
         gollama
         google-lighthouse
+        gource
         gparted-full
         gpg-tui
         gpredict
@@ -2519,9 +2519,9 @@ in
         rclone
         rclone-ui
         regex-tui
+        rp-pppoe
         rpi-imager
         rpmextract
-        rpPPPoE
         rtl-sdr-librtlsdr
         rustc
         sbom2dot
@@ -2546,6 +2546,7 @@ in
         sslscan
         steam-run-free
         stegseek
+        streamlit
         subfinder
         subtitleedit
         switcheroo
@@ -2626,6 +2627,14 @@ in
         zfs
         zip
         zoom-us # Unfree
+        (brave.override {
+          # commandLineArgs = "";
+          enableVideoAcceleration = true;
+          enableVulkan = false; # Breaks VA-API
+          libvaSupport = true;
+          pulseSupport = true;
+          vulkanSupport = false; # Breaks VA-API
+        })
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -2757,8 +2766,8 @@ in
         # }) # FIXME: Build Failure
         (kicad-testing.override {
           addons = with pkgs.kicadAddons; [
-            # kikit # FIXME: Build Failure
-            # kikit-library # FIXME: Build Failure
+            kikit
+            kikit-library
           ];
           withNgspice = true;
           withScripting = true;
@@ -4092,23 +4101,12 @@ in
                     alefragnani.bookmarks
                     alexisvt.flutter-snippets
                     anweber.vscode-httpyac
-                    bierner.color-info
-                    bierner.docs-view
-                    bierner.emojisense
-                    bierner.github-markdown-preview
-                    bierner.markdown-checkbox
-                    bierner.markdown-emoji
-                    bierner.markdown-footnotes
-                    bierner.markdown-mermaid
-                    bierner.markdown-preview-github-styles
                     bradgashler.htmltagwrap
                     budparr.language-hugo-vscode
                     chanhx.crabviz
                     codezombiech.gitignore
                     coolbear.systemd-unit-file
                     cweijan.vscode-database-client2
-                    dart-code.dart-code
-                    dart-code.flutter
                     davidanson.vscode-markdownlint
                     dbaeumer.vscode-eslint
                     dendron.adjust-heading-level
@@ -4117,11 +4115,7 @@ in
                     ecmel.vscode-html-css
                     esbenp.prettier-vscode
                     fabiospampinato.vscode-open-in-github
-                    formulahendry.auto-close-tag
-                    formulahendry.auto-rename-tag
                     foxundermoon.shell-format
-                    github.vscode-github-actions
-                    github.vscode-pull-request-github
                     grapecity.gc-excelviewer
                     gruntfuggly.todo-tree
                     hars.cppsnippets
@@ -4142,22 +4136,10 @@ in
                     mkhl.direnv
                     moshfeu.compare-folders
                     ms-kubernetes-tools.vscode-kubernetes-tools
-                    ms-python.black-formatter
-                    ms-python.debugpy
-                    ms-python.isort
-                    ms-python.python
-                    ms-vscode.cmake-tools
-                    ms-vscode.cpptools # Unfree
-                    ms-vscode.hexeditor
-                    ms-vscode.live-server
-                    ms-vscode.makefile-tools
-                    ms-vscode.test-adapter-converter
                     njpwerner.autodocstring
                     oderwat.indent-rainbow
                     platformio.platformio-vscode-ide
                     quicktype.quicktype
-                    redhat.vscode-xml
-                    redhat.vscode-yaml
                     rioj7.commandonallfiles
                     rubymaniac.vscode-paste-and-indent
                     ryu1kn.partial-diff
@@ -4175,6 +4157,51 @@ in
                     xdebug.php-debug
                     zainchen.json
                   ]
+                  ++ (with pkgs.vscode-extensions.bierner; [
+                    color-info
+                    docs-view
+                    emojisense
+                    github-markdown-preview
+                    markdown-checkbox
+                    markdown-emoji
+                    markdown-footnotes
+                    markdown-mermaid
+                    markdown-preview-github-styles
+                  ])
+                  ++ (with pkgs.vscode-extensions.dart-code; [
+                    dart-code
+                    flutter
+                  ])
+                  ++ (with pkgs.vscode-extensions.formulahendry; [
+                    auto-close-tag
+                    auto-rename-tag
+                  ])
+                  ++ (with pkgs.vscode-extensions.github; [
+                    vscode-github-actions
+                    vscode-pull-request-github
+                  ])
+                  ++ (with pkgs.vscode-extensions.ms-python; [
+                    black-formatter
+                    debugpy
+                    flake8
+                    isort
+                    mypy-type-checker
+                    pylint
+                    python
+                    vscode-pylance
+                  ])
+                  ++ (with pkgs.vscode-extensions.ms-vscode; [
+                    cmake-tools
+                    cpptools # Unfree
+                    hexeditor
+                    live-server
+                    makefile-tools
+                    test-adapter-converter
+                  ])
+                  ++ (with pkgs.vscode-extensions.redhat; [
+                    vscode-xml
+                    vscode-yaml
+                  ])
                   ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
                     {
                       name = "unique-lines";
