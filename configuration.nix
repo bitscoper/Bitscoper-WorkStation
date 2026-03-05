@@ -161,7 +161,6 @@ in
       kernelModules = config.boot.kernelModules;
       availableKernelModules = [
         "ahci"
-        "iwlwifi"
         "nvme"
         "rtsx_usb_sdmmc"
         "sd_mod"
