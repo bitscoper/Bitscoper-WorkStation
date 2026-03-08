@@ -232,7 +232,11 @@ in
       nixos-version.enable = true;
     };
 
-    # activationScripts = { };
+    activationScripts = {
+      script_1 = ''
+        ln -sfn /run/current-system/sw/bin/sh /usr/bin/sh
+      '';
+    };
 
     # userActivationScripts = { };
 
@@ -1565,139 +1569,6 @@ in
   };
 
   programs = {
-    foot = {
-      enable = true;
-      package = pkgs.foot;
-
-      enableBashIntegration = true;
-
-      settings = {
-        main = {
-          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
-        };
-
-        security.osc52 = "enabled";
-
-        bell = {
-          system = "yes";
-        };
-      };
-    };
-
-    command-not-found.enable = true;
-
-    nix-ld = {
-      enable = true;
-      package = pkgs.nix-ld;
-
-      libraries =
-        options.programs.nix-ld.libraries.default
-        ++ (with pkgs; [
-          glib.out
-          llvmPackages.stdenv.cc.cc.lib
-          stdenv.cc.cc.lib
-        ]);
-    };
-
-    java = {
-      enable = true;
-      package = (
-        pkgs.jdk.override {
-          enableGtk = true;
-        }
-      );
-
-      binfmt = true;
-    };
-
-    appimage = {
-      enable = true;
-      package = (
-        pkgs.appimage-run.override {
-          extraPkgs =
-            pkgs: with pkgs; [
-              libepoxy
-            ];
-        }
-      );
-
-      binfmt = true;
-    };
-
-    uwsm = {
-      enable = true;
-      package = (
-        pkgs.uwsm.override {
-          fumonSupport = true;
-          uuctlSupport = true;
-          uwsmAppSupport = true;
-        }
-      );
-    };
-
-    hyprland = {
-      enable = true;
-      package = (
-        pkgs.hyprland.override {
-          debug = false;
-          enableXWayland = true;
-          withSystemd = true;
-          wrapRuntimeDeps = true;
-        }
-      );
-      portalPackage = (
-        pkgs.xdg-desktop-portal-hyprland.override {
-          debug = false;
-        }
-      );
-
-      withUWSM = true;
-      xwayland.enable = true;
-    };
-
-    dms-shell = {
-      enable = true;
-      package = pkgs.dms-shell;
-
-      # quickshell.package = pkgs.quickshell;
-      quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
-
-      systemd = {
-        enable = true;
-        restartIfChanged = true;
-      };
-
-      enableAudioWavelength = true;
-      enableCalendarEvents = true;
-      enableClipboardPaste = true;
-      enableDynamicTheming = true;
-      enableSystemMonitoring = true;
-      enableVPN = true;
-
-      plugins = {
-        # prayerTimes.enable = true; # FIXME: Does Not Work
-        calculator.enable = true;
-        dankHooks.enable = true;
-        dockerManager.enable = true;
-        emojiLauncher.enable = true;
-        hyprlandSubmap.enable = true;
-        kubernetes.enable = true;
-        nixMonitor.enable = true;
-        tailscale.enable = true;
-      }; # From dankmaterialshellPluginRegistryFlake
-    };
-
-    dsearch = {
-      enable = true;
-      package = pkgs.dsearch;
-
-      systemd = {
-        enable = true;
-      };
-    };
-
-    xwayland.enable = true;
-
     bash = {
       vteIntegration = true;
 
@@ -1725,6 +1596,46 @@ in
       '';
     };
 
+    command-not-found.enable = true;
+
+    nix-ld = {
+      enable = true;
+      package = pkgs.nix-ld;
+
+      libraries =
+        options.programs.nix-ld.libraries.default
+        ++ (with pkgs; [
+          glib.out
+          llvmPackages.stdenv.cc.cc.lib
+          stdenv.cc.cc.lib
+        ]);
+    };
+
+    appimage = {
+      enable = true;
+      package = (
+        pkgs.appimage-run.override {
+          extraPkgs =
+            pkgs: with pkgs; [
+              libepoxy
+            ];
+        }
+      );
+
+      binfmt = true;
+    };
+
+    java = {
+      enable = true;
+      package = (
+        pkgs.jdk.override {
+          enableGtk = true;
+        }
+      );
+
+      binfmt = true;
+    };
+
     zoxide = {
       enable = true;
       package = (
@@ -1750,12 +1661,6 @@ in
       enableBashIntegration = true;
 
       silent = false;
-    };
-
-    nix-index = {
-      package = pkgs.nix-index;
-
-      enableBashIntegration = true;
     };
 
     gnupg = {
@@ -1841,6 +1746,12 @@ in
       };
     };
 
+    nix-index = {
+      package = pkgs.nix-index;
+
+      enableBashIntegration = true;
+    };
+
     usbtop.enable = true;
 
     nano = {
@@ -1874,85 +1785,78 @@ in
       ];
     };
 
-    gnome-disks.enable = true;
-
-    system-config-printer.enable = true;
-
-    seahorse.enable = true;
-
-    nautilus-open-any-terminal = {
-      enable = true;
-      terminal = "foot";
-    };
-
-    obs-studio = {
+    uwsm = {
       enable = true;
       package = (
-        pkgs.obs-studio.override {
-          alsaSupport = true;
-          browserSupport = true;
-          pipewireSupport = true;
-          pulseaudioSupport = true;
-          scriptingSupport = true;
-          withFdk = true;
+        pkgs.uwsm.override {
+          fumonSupport = true;
+          uuctlSupport = true;
+          uwsmAppSupport = true;
+        }
+      );
+    };
+
+    xwayland.enable = true;
+
+    hyprland = {
+      enable = true;
+      package = (
+        pkgs.hyprland.override {
+          debug = false;
+          enableXWayland = true;
+          withSystemd = true;
+          wrapRuntimeDeps = true;
+        }
+      );
+      portalPackage = (
+        pkgs.xdg-desktop-portal-hyprland.override {
+          debug = false;
         }
       );
 
-      enableVirtualCamera = true;
-
-      plugins = with pkgs.obs-studio-plugins; [
-        obs-3d-effect
-        obs-backgroundremoval
-        obs-composite-blur
-        obs-gradient-source
-        obs-gstreamer
-        obs-move-transition
-        obs-multi-rtmp
-        obs-mute-filter
-        obs-pipewire-audio-capture
-        obs-scale-to-sound
-        obs-source-clone
-        obs-source-record
-        obs-source-switcher
-        obs-text-pthread
-        obs-transition-table
-        obs-vaapi
-        obs-vkcapture
-      ];
+      withUWSM = true;
+      xwayland.enable = true;
     };
 
-    ghidra = {
+    dms-shell = {
       enable = true;
-      package = pkgs.ghidra;
-      gdb = true;
+      package = pkgs.dms-shell;
+
+      # quickshell.package = pkgs.quickshell;
+      quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+
+      systemd = {
+        enable = true;
+        restartIfChanged = true;
+      };
+
+      enableAudioWavelength = true;
+      enableCalendarEvents = true;
+      enableClipboardPaste = true;
+      enableDynamicTheming = true;
+      enableSystemMonitoring = true;
+      enableVPN = true;
+
+      plugins = {
+        # prayerTimes.enable = true; # FIXME: Does Not Work
+        calculator.enable = true;
+        dankHooks.enable = true;
+        dockerManager.enable = true;
+        emojiLauncher.enable = true;
+        hyprlandSubmap.enable = true;
+        kubernetes.enable = true;
+        nixMonitor.enable = true;
+        tailscale.enable = true;
+      }; # From dankmaterialshellPluginRegistryFlake
     };
 
-    wireshark = {
+    dsearch = {
       enable = true;
-      package = (
-        pkgs.wireshark.override {
-          withQt = true;
-        }
-      );
+      package = pkgs.dsearch;
 
-      dumpcap.enable = true;
-      usbmon.enable = true;
-    };
-
-    localsend = {
-      enable = true;
-      package = pkgs.localsend;
-
-      openFirewall = true;
-    };
-
-    virt-manager = {
-      enable = true;
-      package = (
-        pkgs.virt-manager.override {
-          spiceSupport = true;
-        }
-      );
+      systemd = {
+        enable = true;
+      };
     };
 
     dconf = {
@@ -2113,11 +2017,111 @@ in
       ];
     };
 
+    foot = {
+      enable = true;
+      package = pkgs.foot;
+
+      enableBashIntegration = true;
+
+      settings = {
+        main = {
+          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
+        };
+
+        security.osc52 = "enabled";
+
+        bell = {
+          system = "yes";
+        };
+      };
+    };
+
+    nautilus-open-any-terminal = {
+      enable = true;
+      terminal = "foot";
+    };
+
+    gnome-disks.enable = true;
+
+    system-config-printer.enable = true;
+
+    seahorse.enable = true;
+
+    virt-manager = {
+      enable = true;
+      package = (
+        pkgs.virt-manager.override {
+          spiceSupport = true;
+        }
+      );
+    };
+
     gamemode = {
       enable = true;
 
       enableRenice = true;
       # settings = { };
+    };
+
+    obs-studio = {
+      enable = true;
+      package = (
+        pkgs.obs-studio.override {
+          alsaSupport = true;
+          browserSupport = true;
+          pipewireSupport = true;
+          pulseaudioSupport = true;
+          scriptingSupport = true;
+          withFdk = true;
+        }
+      );
+
+      enableVirtualCamera = true;
+
+      plugins = with pkgs.obs-studio-plugins; [
+        obs-3d-effect
+        obs-backgroundremoval
+        obs-composite-blur
+        obs-gradient-source
+        obs-gstreamer
+        obs-move-transition
+        obs-multi-rtmp
+        obs-mute-filter
+        obs-pipewire-audio-capture
+        obs-scale-to-sound
+        obs-source-clone
+        obs-source-record
+        obs-source-switcher
+        obs-text-pthread
+        obs-transition-table
+        obs-vaapi
+        obs-vkcapture
+      ];
+    };
+
+    ghidra = {
+      enable = true;
+      package = pkgs.ghidra;
+      gdb = true;
+    };
+
+    wireshark = {
+      enable = true;
+      package = (
+        pkgs.wireshark.override {
+          withQt = true;
+        }
+      );
+
+      dumpcap.enable = true;
+      usbmon.enable = true;
+    };
+
+    localsend = {
+      enable = true;
+      package = pkgs.localsend;
+
+      openFirewall = true;
     };
   };
 
@@ -3944,9 +3948,20 @@ in
         };
 
         programs = {
-          brave.nativeMessagingHosts = with pkgs; [
-            config.home-manager.users.root.programs.keepassxc.package
-          ];
+          # gradle = {
+          #   enable = true;
+          #   package = pkgs.gradle;
+          # }; # flutter adds the compatible version
+
+          matplotlib = {
+            enable = true;
+
+            config = {
+              axes = {
+                grid = true;
+              };
+            };
+          };
 
           dircolors = {
             enable = true;
@@ -3970,38 +3985,6 @@ in
               kubectl = pkgs.lib.getExe pkgs.kubectl;
               preset = "dark";
             };
-          };
-
-          # gradle = {
-          #   enable = true;
-          #   package = pkgs.gradle;
-          # }; # flutter adds the compatible version
-
-          matplotlib = {
-            enable = true;
-
-            config = {
-              axes = {
-                grid = true;
-              };
-            };
-          };
-
-          keepassxc = {
-            enable = true;
-            package = (
-              pkgs.keepassxc.override {
-                withKeePassBrowser = true;
-                withKeePassBrowserPasskeys = true;
-                withKeePassFDOSecrets = true;
-                withKeePassKeeShare = true;
-                withKeePassNetworking = true;
-                withKeePassSSHAgent = true;
-                withKeePassYubiKey = true;
-              }
-            );
-
-            # settings = { };
           };
 
           gh = {
@@ -4031,58 +4014,42 @@ in
             };
           };
 
-          wofi = {
+          yt-dlp = {
             enable = true;
-            package = pkgs.wofi;
+            package = (
+              pkgs.yt-dlp.override {
+                atomicparsleySupport = true;
+                ffmpegSupport = true;
+                rtmpSupport = true;
+                withAlias = true;
+              }
+            );
 
             settings = {
-              normal_window = false;
-              layer = "overlay";
-              location = "center";
-
-              gtk_dark = true;
-              columns = 2;
-              dynamic_lines = false;
-              height = "50%";
-              hide_scroll = false;
-
-              hide_search = false;
-              prompt = "Search";
-              show_all = true;
-              allow_markup = true;
-              allow_images = true;
-              image_size = 32;
-              no_actions = true;
-
-              insensitive = true;
-
-              single_click = true;
-              term = "foot";
+              no-embed-thumbnail = true;
             };
-
-            style = ''
-              window {
-                border-radius: ${toString design_factor}px;
-              }
-
-              #outer-box {
-                padding: 16px;
-              }
-
-              #inner-box {
-                margin-top: 16px;
-              }
-
-              #entry {
-                margin-top: 4px;
-                margin-bottom: 4px;
-              }
-
-              #img {
-                margin-right: 4px;
-              }
-            '';
           };
+
+          keepassxc = {
+            enable = true;
+            package = (
+              pkgs.keepassxc.override {
+                withKeePassBrowser = true;
+                withKeePassBrowserPasskeys = true;
+                withKeePassFDOSecrets = true;
+                withKeePassKeeShare = true;
+                withKeePassNetworking = true;
+                withKeePassSSHAgent = true;
+                withKeePassYubiKey = true;
+              }
+            );
+
+            # settings = { };
+          };
+
+          brave.nativeMessagingHosts = with pkgs; [
+            config.home-manager.users.root.programs.keepassxc.package
+          ];
 
           vscode = {
             enable = true;
@@ -4254,22 +4221,6 @@ in
             };
           };
 
-          yt-dlp = {
-            enable = true;
-            package = (
-              pkgs.yt-dlp.override {
-                atomicparsleySupport = true;
-                ffmpegSupport = true;
-                rtmpSupport = true;
-                withAlias = true;
-              }
-            );
-
-            settings = {
-              no-embed-thumbnail = true;
-            };
-          };
-
           lutris = {
             enable = true;
             package = pkgs.lutris;
@@ -4288,6 +4239,59 @@ in
               proton-ge-bin
             ];
           }; # Unfree
+
+          wofi = {
+            enable = true;
+            package = pkgs.wofi;
+
+            settings = {
+              normal_window = false;
+              layer = "overlay";
+              location = "center";
+
+              gtk_dark = true;
+              columns = 2;
+              dynamic_lines = false;
+              height = "50%";
+              hide_scroll = false;
+
+              hide_search = false;
+              prompt = "Search";
+              show_all = true;
+              allow_markup = true;
+              allow_images = true;
+              image_size = 32;
+              no_actions = true;
+
+              insensitive = true;
+
+              single_click = true;
+              term = "foot";
+            };
+
+            style = ''
+              window {
+                border-radius: ${toString design_factor}px;
+              }
+
+              #outer-box {
+                padding: 16px;
+              }
+
+              #inner-box {
+                margin-top: 16px;
+              }
+
+              #entry {
+                margin-top: 4px;
+                margin-bottom: 4px;
+              }
+
+              #img {
+                margin-right: 4px;
+              }
+            '';
+          };
         };
       }
     ];
