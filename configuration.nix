@@ -215,7 +215,7 @@ in
 
   time = {
     timeZone = "Asia/Dhaka";
-    hardwareClockInLocalTime = true;
+    hardwareClockInLocalTime = false;
   };
 
   system = {
@@ -872,7 +872,7 @@ in
     accounts-daemon.enable = true;
 
     timesyncd = {
-      enable = true;
+      enable = false;
 
       servers = config.networking.timeServers;
       fallbackServers = config.networking.timeServers;
@@ -2246,6 +2246,7 @@ in
         apitrace
         apkeep
         apkleaks
+        ardour
         arduino-cli
         arduino-ide
         arduino-language-server
@@ -2254,7 +2255,6 @@ in
         asciinema
         asciinema-agg
         asciinema-scenario
-        audacity
         autopsy
         avrdude
         banner
@@ -2322,6 +2322,7 @@ in
         elf-dissector
         eog
         esptool
+        etherape
         evtest-qt
         exfatprogs
         f2fs-tools
@@ -2472,6 +2473,8 @@ in
         minikube
         mtools
         mtr-gui
+        muse-sounds-manager
+        musescore
         nautilus
         nemu
         nethogs
@@ -2549,6 +2552,7 @@ in
         sslscan
         steam-run-free
         stegseek
+        stellarium
         streamlit
         subfinder
         subtitleedit
@@ -2624,6 +2628,7 @@ in
         xoscope
         yaml-language-server
         yara-x
+        yoshimi
         ytdownloader
         zenity
         zenmap
