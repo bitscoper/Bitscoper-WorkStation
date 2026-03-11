@@ -85,6 +85,22 @@ let
     size = builtins.floor (design_factor * 1.50); # 24
   };
 
+  tlsCertificateFiles =
+    pkgs.runCommand "tlsCertificate"
+      {
+        CN = config.networking.fqdn;
+      }
+      ''
+        mkdir -p $out
+        ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/server.key
+        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/server.key -out $out/server.crt -days 36500 \
+          -subj "/CN=$CN"
+        cp $out/server.crt $out/ca.crt
+      '';
+  tlsCertificatePrivateKey = "${tlsCertificateFiles}/server.key";
+  tlsCertificate = "${tlsCertificateFiles}/server.crt";
+  tlsCACertificate = "${tlsCertificateFiles}/ca.crt";
+
   secrets = import ./secrets.nix;
 in
 {
@@ -724,18 +740,23 @@ in
       dockerCompat = true;
       dockerSocket.enable = true;
 
-      # networkSocket = {
-      #   enable = true;
+      networkSocket = {
+        enable = true;
 
-      #   server = "ghostunnel";
+        server = "ghostunnel";
 
-      #   listenAddress = "0.0.0.0";
-      #   port = 2376;
+        listenAddress = "0.0.0.0";
+        port = 2376;
 
-      #   tls = { };
+        tls = {
+          cert = tlsCertificate;
+          key = tlsCertificatePrivateKey;
 
-      #   openFirewall = true;
-      # }; # Requires a TLS Certificate
+          cacert = tlsCACertificate;
+        };
+
+        openFirewall = true;
+      };
 
       defaultNetwork.settings = {
         dns_enabled = true;
@@ -746,7 +767,11 @@ in
 
     waydroid = {
       enable = true;
-      package = pkgs.waydroid;
+      package = (
+        pkgs.waydroid-nftables.override {
+          withNftables = true;
+        }
+      );
     };
   };
 
@@ -814,6 +839,21 @@ in
       ignoreLid = true;
     };
 
+    acpid = {
+      enable = true;
+
+      # powerEventCommands = '''';
+      # acEventCommands = '''';
+      # lidEventCommands = '''';
+
+      logEvents = false;
+    };
+
+    power-profiles-daemon = {
+      enable = true;
+      package = pkgs.power-profiles-daemon;
+    };
+
     thermald = {
       enable = true;
       package = pkgs.thermald;
@@ -823,19 +863,17 @@ in
       debug = false;
     };
 
-    power-profiles-daemon = {
-      enable = true;
-      package = pkgs.power-profiles-daemon;
-    };
-
-    acpid = {
+    smartd = {
       enable = true;
 
-      # powerEventCommands = '''';
-      # acEventCommands = '''';
-      # lidEventCommands = '''';
+      autodetect = true;
 
-      logEvents = false;
+      notifications = {
+        mail.enable = false;
+        systembus-notify.enable = false;
+        test = false;
+        wall.enable = true;
+      };
     };
 
     logind = {
@@ -2421,6 +2459,7 @@ in
         gcc15
         gdb
         ghex
+        ghostunnel
         gimp3-with-plugins
         git-filter-repo
         git-repo
