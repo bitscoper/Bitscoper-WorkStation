@@ -113,6 +113,8 @@ in
   ];
 
   boot = {
+    isContainer = false;
+
     loader = {
       efi.canTouchEfiVariables = true;
       timeout = 1;
@@ -146,6 +148,8 @@ in
       turbostat
       usbip
     ];
+
+    hardwareScan = true;
 
     kernelModules = [
       "at24"
@@ -195,7 +199,7 @@ in
       verbose = true;
     };
 
-    consoleLogLevel = 4; # 4 = KERN_WARNING
+    growPartition = true;
 
     tmp = {
       cleanOnBoot = true;
@@ -205,6 +209,21 @@ in
         compression-algorithm = "zstd";
       };
     };
+
+    kexec.enable = true;
+
+    crashDump = {
+      enable = true;
+
+      kernelParams = [
+        "1" # 1 = runlevel 1 / Single-User Mode
+        "boot.shell_on_fail"
+      ];
+
+      reservedMemory = "128M";
+    };
+
+    consoleLogLevel = 4; # 4 = KERN_WARNING
 
     plymouth = {
       enable = true;
@@ -350,6 +369,7 @@ in
     wireless = {
       dbusControlled = true;
       userControlled = true;
+      enableHardening = true;
     };
 
     networkmanager = {
@@ -406,6 +426,7 @@ in
 
   security = {
     allowSimultaneousMultithreading = true;
+    forcePageTableIsolation = true;
 
     tpm2.enable = true;
 
@@ -787,6 +808,14 @@ in
         withPolkit = true;
       }
     );
+
+    coredump = {
+      enable = true;
+
+      extraConfig = ''
+        Storage=journal
+      '';
+    };
 
     packages = with pkgs; [
       (hardinfo2.override {
@@ -1293,7 +1322,7 @@ in
       };
 
       openFirewall = true;
-    }; # FIXME: Login
+    };
 
     printing = {
       enable = true;
@@ -2489,6 +2518,7 @@ in
         gradle-completion
         graphviz
         groovy
+        gsmartcontrol
         guestfs-tools
         gzip
         hashcat
@@ -2523,6 +2553,7 @@ in
         kdePackages.kimageformats
         kernel-hardening-checker
         kernelshark
+        kexec-tools
         kgraphviewer
         khal
         killall
