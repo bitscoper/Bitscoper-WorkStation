@@ -9,14 +9,14 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (builtins.fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
@@ -234,7 +234,7 @@ in
 
     activationScripts = {
       script_1 = ''
-        ln -sfn /run/current-system/sw/bin/sh /usr/bin/sh
+        chown -R qemu-libvirtd /var/lib/libvirt/qemu/
       '';
     };
 
@@ -270,8 +270,6 @@ in
   };
 
   nixpkgs = {
-    hostPlatform = "x86_64-linux";
-
     config = {
       allowUnfree = true;
       androidSDK.accept_license = true;
@@ -282,9 +280,9 @@ in
     };
 
     overlays = [
-      # (final: prev: {
-      #   khal = stableNixPackages.khal;
-      # })
+      (final: prev: {
+        libvirt = stableNixPackages.libvirt;
+      })
     ];
   };
 
@@ -370,6 +368,10 @@ in
       ];
       allowedUDPPorts = [
         5900 # VNC
+      ];
+
+      trustedInterfaces = [
+        "virbr0"
       ];
     };
 
@@ -469,9 +471,7 @@ in
         "unix-group:wheel"
       ];
 
-      extraConfig = ''
-
-      '';
+      # extraConfig = '''';
 
       debug = false;
     };
@@ -697,6 +697,10 @@ in
         #   }
         # ); # FIXME: Missing Binaries
         package = pkgs.qemu;
+
+        vhostUserPackages = with pkgs; [
+          virtiofsd
+        ];
 
         swtpm = {
           enable = true;
@@ -1350,11 +1354,25 @@ in
 
     memcached = {
       enable = true;
+
+      enableUnixSocket = true;
       listen = "*";
       port = 11211;
-      enableUnixSocket = false;
+
       maxMemory = 64; # Megabytes
       maxConnections = 256;
+    };
+
+    redis = {
+      package = (
+        pkgs.valkey.override {
+          tlsSupport = false; # Marked Broken
+          useSystemJemalloc = true;
+          withSystemd = true;
+        }
+      );
+
+      vmOverCommit = true;
     };
 
     postgresql = {
@@ -2306,6 +2324,7 @@ in
         dive
         dmg2img
         dmidecode
+        dnsmasq
         dnsrecon
         docker-compose
         docker-compose-language-service
@@ -2464,6 +2483,7 @@ in
         matugen
         md-lsp
         meld
+        memtier-benchmark
         mermaid-cli
         mesa-demos
         metadata-cleaner
@@ -2524,6 +2544,7 @@ in
         raider
         rclone
         rclone-ui
+        redisinsight
         regex-tui
         rp-pppoe
         rpi-imager
@@ -2566,6 +2587,7 @@ in
         terminaltexteffects
         texliveFull
         time
+        tiny-rdm
         tpm2-abrmd
         tpm2-openssl
         tpm2-pkcs11-abrmd
@@ -2594,7 +2616,6 @@ in
         video2x
         virt-top
         virt-v2v
-        virtiofsd
         vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
@@ -2869,6 +2890,7 @@ in
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
       ++ config.systemd.packages
+      ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
       ++ config.virtualisation.podman.extraPackages
       ++ config.virtualisation.podman.extraRuntimes
       ++ config.xdg.portal.extraPortals
