@@ -1255,7 +1255,7 @@ in
       };
 
       openFirewall = true;
-    };
+    }; # FIXME: Login
 
     printing = {
       enable = true;
@@ -1412,7 +1412,7 @@ in
 
       checkConfig = true;
 
-      initialScript = pkgs.writeText "initScript" ''
+      initialScript = pkgs.writeText "postgresqlInitialScript.sql" ''
         ALTER USER postgres WITH PASSWORD '${secrets.password_1_of_bitscoper}';
       '';
     };
@@ -1437,12 +1437,37 @@ in
         };
       };
 
-      initialScript = pkgs.writeText "initScript" ''
-        grant all privileges on *.* to 'root'@'%' identified by password '${secrets.hashed_password_1_of_bitscoper}' with grant option;
-        DELETE FROM mysql.user WHERE `Host`='localhost' AND `User`='root';
-        flush privileges;
+      initialScript = pkgs.writeText "mariadbInitialScript.sql" ''
+        CREATE USER IF NOT EXISTS 'root'@'localhost';
+        CREATE USER IF NOT EXISTS 'root'@'%';
+        ALTER USER 'root'@'localhost' IDENTIFIED BY '${secrets.password_1_of_bitscoper}';
+        ALTER USER 'root'@'%' IDENTIFIED BY '${secrets.password_1_of_bitscoper}';
+        GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+        GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+        FLUSH PRIVILEGES;
       '';
     };
+
+    meilisearch =
+      let
+        masterKeyFile = pkgs.writeText "meilisearchMasterKey.txt" "${secrets.password_1_of_bitscoper}${secrets.password_1_of_bitscoper}"; # Duplicated to meet the minimum 16-byte requirement
+      in
+      {
+        enable = true;
+        package = pkgs.meilisearch;
+
+        listenAddress = "0.0.0.0";
+        listenPort = 7700;
+
+        masterKeyFile = masterKeyFile;
+
+        settings = {
+          env = "production";
+          experimental_enable_metrics = true;
+
+          log_level = "WARN";
+        };
+      };
 
     postfix = {
       enable = true;
@@ -1531,6 +1556,38 @@ in
       ''; # <loglevel>2</loglevel> = Warn
     };
 
+    sharkey =
+      let
+        environmentFile = pkgs.writeText "sharkey.env" "";
+      in
+      {
+        enable = true;
+        package = pkgs.sharkey;
+
+        setupPostgresql = true;
+        setupRedis = false; # FIXME: Conflicts
+        setupMeilisearch = true;
+
+        settings = {
+          id = "ulid";
+
+          fulltextSearch.provider = "meilisearch";
+
+          mediaDirectory = "/var/lib/sharkey/";
+
+          url = "http://${config.networking.fqdn}/";
+          socket = "/run/sharkey/sharkey.sock";
+          address = "0.0.0.0";
+          port = 3000;
+        };
+
+        environmentFiles = [
+          environmentFile
+        ];
+
+        openFirewall = true;
+      }; # FIXME: Fails to Start
+
     jellyfin = {
       enable = true;
       package = pkgs.jellyfin;
@@ -1563,7 +1620,7 @@ in
 
     aria2 =
       let
-        rpcSecretFile = pkgs.writeText "aria2-rpc-token.txt" secrets.password_1_of_bitscoper;
+        rpcSecretFile = pkgs.writeText "aria2Secret.txt" secrets.password_1_of_bitscoper;
       in
       {
         enable = true;
@@ -4317,7 +4374,7 @@ in
               #img {
                 margin-right: 4px;
               }
-            '';
+            ''; # FIXME: Window > Border Radius > Transperant Background
           };
         };
       }
@@ -4331,7 +4388,4 @@ in
 }
 
 # FIXME: 05ac-033e-Gamepad > Rumble
-# FIXME: Cockpit > Login
 # FIXME: ELAN7001 SPI Fingerprint Sensor
-# FIXME: MariaDB > Login
-# FIXME: Wofi > Window > Border Radius > Transperant Background
