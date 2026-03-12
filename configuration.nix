@@ -92,14 +92,16 @@ let
       }
       ''
         mkdir -p $out
-        ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/server.key
-        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/server.key -out $out/server.crt -days 36500 \
+        ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/private.key
+        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/private.key -out $out/certificate.crt -days 36500 \
           -subj "/CN=$CN"
-        cp $out/server.crt $out/ca.crt
+        cat $out/private.key $out/certificate.crt > $out/concatenated.pem
+        cp $out/certificate.crt $out/ca.crt
       '';
-  tlsCertificatePrivateKey = "${tlsCertificateFiles}/server.key";
-  tlsCertificate = "${tlsCertificateFiles}/server.crt";
-  tlsCACertificate = "${tlsCertificateFiles}/ca.crt";
+  tlsCertificatePrivateKeyFile = "${tlsCertificateFiles}/private.key";
+  tlsCertificateFile = "${tlsCertificateFiles}/certificate.crt";
+  tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
+  tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
 
   secrets = import ./secrets.nix;
 in
@@ -770,10 +772,10 @@ in
         port = 2376;
 
         tls = {
-          cert = tlsCertificate;
-          key = tlsCertificatePrivateKey;
+          cert = tlsCertificateFile;
+          key = tlsCertificatePrivateKeyFile;
 
-          cacert = tlsCACertificate;
+          cacert = tlsCACertificateFile;
         };
 
         openFirewall = true;
@@ -999,6 +1001,10 @@ in
               monitor=, highres, auto, 1, transform, 0
               monitor=eDP-1, highres, auto, 1, transform, 0
               monitor=HDMI-A-1, highres, auto, 1, transform, 1
+
+              disable_hyprland_logo = true;
+              force_default_wallpaper = 1;
+              disable_splash_rendering = true;
             '';
           in
           {
@@ -1261,6 +1267,8 @@ in
         }
       );
 
+      allowSFTP = true;
+
       listenAddresses = [
         {
           addr = "0.0.0.0";
@@ -1272,7 +1280,6 @@ in
       ports = [
         22
       ];
-      allowSFTP = true;
 
       banner = config.networking.fqdn;
 
@@ -1379,9 +1386,7 @@ in
     ipp-usb.enable = true;
     system-config-printer.enable = true;
 
-    saned = {
-      enable = true;
-    };
+    saned.enable = true;
 
     gpsd = {
       enable = true;
@@ -1390,6 +1395,8 @@ in
 
       listenany = true;
       port = 2947;
+
+      debugLevel = 0; # 0 = No Debugging
     };
 
     bind = {
@@ -1408,6 +1415,8 @@ in
       listenOnIpv6 = [
         "any"
       ];
+      listenOnPort = 53;
+      listenOnIpv6Port = config.services.bind.listenOnPort;
 
       cacheNetworks = [
         "127.0.0.0/24"
@@ -1461,11 +1470,16 @@ in
       );
 
       enableTCPIP = true;
+      enableJIT = false; # FIXME: Build Failure
 
       settings = pkgs.lib.mkForce {
+        jit = true;
+
         listen_addresses = "*";
         port = 5432;
-        jit = true;
+
+        logging_collector = true;
+        log_destination = "syslog";
       };
 
       authentication = pkgs.lib.mkOverride 10 ''
@@ -1554,6 +1568,14 @@ in
           mydomain = config.networking.fqdn;
           myhostname = config.networking.fqdn;
           myorigin = config.networking.fqdn;
+
+          smtpd_tls_security_level = "encrypt";
+          smtp_tls_security_level = "encrypt";
+
+          smtpd_tls_chain_files = [
+            tlsCertificateConcatenatedFile
+          ];
+          smtp_tls_CAfile = tlsCACertificateFile;
         };
       };
     };
@@ -1577,16 +1599,17 @@ in
         "imap"
         "lmtp"
       ];
-
       enableQuota = true;
       quotaPort = "12340";
 
       enableDHE = true;
-
-      createMailUser = true;
+      sslServerCert = tlsCertificateFile;
+      sslServerKey = tlsCertificatePrivateKeyFile;
+      sslCACert = tlsCACertificateFile;
 
       enablePAM = true;
       showPAMFailure = true;
+      createMailUser = true;
 
       # pluginSettings = {};
     };
@@ -1616,6 +1639,9 @@ in
           <yp-url-timeout>15</yp-url-timeout>
           <yp-url>http://dir.xiph.org/cgi-bin/yp-cgi</yp-url>
         </directory>
+        <paths>
+        <ssl-certificate>${tlsCertificateConcatenatedFile}</ssl-certificate>
+        </paths>
         <logging>
           <loglevel>2</loglevel>
         </logging>
@@ -1658,6 +1684,8 @@ in
     jellyfin = {
       enable = true;
       package = pkgs.jellyfin;
+
+      transcoding.enableSubtitleExtraction = true;
 
       openFirewall = true;
     };
@@ -1705,8 +1733,8 @@ in
     logrotate = {
       enable = true;
 
-      checkConfig = true;
       allowNetworking = true;
+      checkConfig = true;
     };
   };
 
