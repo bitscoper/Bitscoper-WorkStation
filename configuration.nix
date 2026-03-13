@@ -2446,6 +2446,7 @@ in
         cava
         cdrkit
         celestia
+        certdump
         chart-testing
         clinfo
         cloc
@@ -2496,6 +2497,7 @@ in
         etherape
         evtest-qt
         exfatprogs
+        exiftool
         f2fs-tools
         fastfetch
         fdroidcl
@@ -2611,6 +2613,7 @@ in
         kubeshark
         kubetui
         letterpress
+        libarchive
         libhsts
         libinput
         libloragw-2g4
@@ -2671,11 +2674,14 @@ in
         openai-whisper
         opendmarc
         openssl
+        p7zip
         paper-clip
         papirus-folders
         parted
         pciutils
         pdfarranger
+        pe-bear
+        pev
         pg_top
         pinta
         pkg-config
@@ -3163,6 +3169,104 @@ in
       defaultApplications = {
         "inode/directory" = "nautilus.desktop";
 
+        "text/1d-interleaved-parityfec" = "codium.desktop";
+        "text/cache-manifest" = "codium.desktop";
+        "text/calendar" = "codium.desktop";
+        "text/cql" = "codium.desktop";
+        "text/cql-expression" = "codium.desktop";
+        "text/cql-identifier" = "codium.desktop";
+        "text/css" = "codium.desktop";
+        "text/csv" = "codium.desktop";
+        "text/csv-schema" = "codium.desktop";
+        "text/directory" = "codium.desktop";
+        "text/dns" = "codium.desktop";
+        "text/ecmascript" = "codium.desktop";
+        "text/encaprtp" = "codium.desktop";
+        "text/enriched" = "codium.desktop";
+        "text/fhirpath" = "codium.desktop";
+        "text/flexfec" = "codium.desktop";
+        "text/fwdred" = "codium.desktop";
+        "text/gff3" = "codium.desktop";
+        "text/grammar-ref-list" = "codium.desktop";
+        "text/hl7v2" = "codium.desktop";
+        "text/html" = "codium.desktop";
+        "text/javascript" = "codium.desktop";
+        "text/jcr-cnd" = "codium.desktop";
+        "text/markdown" = "codium.desktop";
+        "text/mizar" = "codium.desktop";
+        "text/n3" = "codium.desktop";
+        "text/org" = "codium.desktop";
+        "text/parameters" = "codium.desktop";
+        "text/parityfec" = "codium.desktop";
+        "text/plain" = "codium.desktop";
+        "text/provenance-notation" = "codium.desktop";
+        "text/prs.fallenstein.rst" = "codium.desktop";
+        "text/prs.lines.tag" = "codium.desktop";
+        "text/prs.prop.logic" = "codium.desktop";
+        "text/prs.texi" = "codium.desktop";
+        "text/raptorfec" = "codium.desktop";
+        "text/RED" = "codium.desktop";
+        "text/rfc822-headers" = "codium.desktop";
+        "text/richtext" = "codium.desktop";
+        "text/rtf" = "codium.desktop";
+        "text/rtp-enc-aescm128" = "codium.desktop";
+        "text/rtploopback" = "codium.desktop";
+        "text/rtx" = "codium.desktop";
+        "text/SGML" = "codium.desktop";
+        "text/shaclc" = "codium.desktop";
+        "text/shex" = "codium.desktop";
+        "text/spdx" = "codium.desktop";
+        "text/strings" = "codium.desktop";
+        "text/t140" = "codium.desktop";
+        "text/tab-separated-values" = "codium.desktop";
+        "text/troff" = "codium.desktop";
+        "text/turtle" = "codium.desktop";
+        "text/ulpfec" = "codium.desktop";
+        "text/uri-list" = "codium.desktop";
+        "text/vcard" = "codium.desktop";
+        "text/vnd.a" = "codium.desktop";
+        "text/vnd.abc" = "codium.desktop";
+        "text/vnd.ascii-art" = "codium.desktop";
+        "text/vnd.curl" = "codium.desktop";
+        "text/vnd.debian.copyright" = "codium.desktop";
+        "text/vnd.DMClientScript" = "codium.desktop";
+        "text/vnd.dvb.subtitle" = "codium.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "codium.desktop";
+        "text/vnd.exchangeable" = "codium.desktop";
+        "text/vnd.familysearch.gedcom" = "codium.desktop";
+        "text/vnd.ficlab.flt" = "codium.desktop";
+        "text/vnd.fly" = "codium.desktop";
+        "text/vnd.fmi.flexstor" = "codium.desktop";
+        "text/vnd.gml" = "codium.desktop";
+        "text/vnd.graphviz" = "codium.desktop";
+        "text/vnd.hans" = "codium.desktop";
+        "text/vnd.hgl" = "codium.desktop";
+        "text/vnd.in3d.3dml" = "codium.desktop";
+        "text/vnd.in3d.spot" = "codium.desktop";
+        "text/vnd.IPTC.NewsML" = "codium.desktop";
+        "text/vnd.IPTC.NITF" = "codium.desktop";
+        "text/vnd.latex-z" = "codium.desktop";
+        "text/vnd.motorola.reflex" = "codium.desktop";
+        "text/vnd.ms-mediapackage" = "codium.desktop";
+        "text/vnd.net2phone.commcenter.command" = "codium.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "codium.desktop";
+        "text/vnd.senx.warpscript" = "codium.desktop";
+        "text/vnd.si.uricatalogue" = "codium.desktop";
+        "text/vnd.sosi" = "codium.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "codium.desktop";
+        "text/vnd.trolltech.linguist" = "codium.desktop";
+        "text/vnd.typst" = "codium.desktop";
+        "text/vnd.vcf" = "codium.desktop";
+        "text/vnd.wap.si" = "codium.desktop";
+        "text/vnd.wap.sl" = "codium.desktop";
+        "text/vnd.wap.wml" = "codium.desktop";
+        "text/vnd.wap.wmlscript" = "codium.desktop";
+        "text/vnd.zoo.kcl" = "codium.desktop";
+        "text/vtt" = "codium.desktop";
+        "text/wgsl" = "codium.desktop";
+        "text/xml" = "codium.desktop";
+        "text/xml-external-parsed-entity" = "codium.desktop";
+
         "image/aces" = "org.gnome.eog.desktop";
         "image/apng" = "org.gnome.eog.desktop";
         "image/avci" = "org.gnome.eog.desktop";
@@ -3214,6 +3318,8 @@ in
         "image/tiff" = "org.gnome.eog.desktop";
         "image/vnd.adobe.photoshop" = "org.gnome.eog.desktop";
         "image/vnd.airzip.accelerator.azv" = "org.gnome.eog.desktop";
+        "image/vnd.blockfact.facti" = "org.gnome.eog.desktop";
+        "image/vnd.clip" = "org.gnome.eog.desktop";
         "image/vnd.cns.inf2" = "org.gnome.eog.desktop";
         "image/vnd.dece.graphic" = "org.gnome.eog.desktop";
         "image/vnd.djvu" = "org.gnome.eog.desktop";
@@ -3244,6 +3350,8 @@ in
         "image/vnd.zbrush.pcx" = "org.gnome.eog.desktop";
         "image/webp" = "org.gnome.eog.desktop";
         "image/wmf" = "org.gnome.eog.desktop";
+        "image/x-emf" = "org.gnome.eog.desktop";
+        "image/x-wmf" = "org.gnome.eog.desktop";
 
         "audio/1d-interleaved-parityfec" = "vlc.desktop";
         "audio/32kadpcm" = "vlc.desktop";
@@ -3349,6 +3457,7 @@ in
         "audio/SMV" = "vlc.desktop";
         "audio/SMV0" = "vlc.desktop";
         "audio/sofa" = "vlc.desktop";
+        "audio/soundfont" = "vlc.desktop";
         "audio/sp-midi" = "vlc.desktop";
         "audio/speex" = "vlc.desktop";
         "audio/t140c" = "vlc.desktop";
@@ -3366,6 +3475,7 @@ in
         "audio/vnd.3gpp.iufp" = "vlc.desktop";
         "audio/vnd.4SB" = "vlc.desktop";
         "audio/vnd.audiokoz" = "vlc.desktop";
+        "audio/vnd.blockfact.facta" = "vlc.desktop";
         "audio/vnd.CELP" = "vlc.desktop";
         "audio/vnd.cisco.nse" = "vlc.desktop";
         "audio/vnd.cmles.radio-events" = "vlc.desktop";
@@ -3398,6 +3508,7 @@ in
         "audio/vnd.nuera.ecelp9600" = "vlc.desktop";
         "audio/vnd.octel.sbc" = "vlc.desktop";
         "audio/vnd.presonus.multitrack" = "vlc.desktop";
+        "audio/vnd.qcelp" = "vlc.desktop";
         "audio/vnd.rhetorex.32kadpcm" = "vlc.desktop";
         "audio/vnd.rip" = "vlc.desktop";
         "audio/vnd.sealedmedia.softseal.mpeg" = "vlc.desktop";
@@ -3429,8 +3540,10 @@ in
         "video/H266" = "vlc.desktop";
         "video/iso.segment" = "vlc.desktop";
         "video/JPEG" = "vlc.desktop";
+        "video/jpeg2000-scl" = "vlc.desktop";
         "video/jpeg2000" = "vlc.desktop";
         "video/jxsv" = "vlc.desktop";
+        "video/lottie+json" = "vlc.desktop";
         "video/matroska-3d" = "vlc.desktop";
         "video/matroska" = "vlc.desktop";
         "video/mj2" = "vlc.desktop";
@@ -3458,6 +3571,7 @@ in
         "video/ulpfec" = "vlc.desktop";
         "video/vc1" = "vlc.desktop";
         "video/vc2" = "vlc.desktop";
+        "video/vnd.blockfact.factv" = "vlc.desktop";
         "video/vnd.CCTV" = "vlc.desktop";
         "video/vnd.dece.hd" = "vlc.desktop";
         "video/vnd.dece.mobile" = "vlc.desktop";
@@ -3485,6 +3599,7 @@ in
         "video/vnd.nokia.mp4vr" = "vlc.desktop";
         "video/vnd.nokia.videovoip" = "vlc.desktop";
         "video/vnd.objectvideo" = "vlc.desktop";
+        "video/vnd.planar" = "vlc.desktop";
         "video/vnd.radgamettools.bink" = "vlc.desktop";
         "video/vnd.radgamettools.smacker" = "vlc.desktop";
         "video/vnd.sealed.mpeg1" = "vlc.desktop";
@@ -3531,6 +3646,8 @@ in
         "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More common than "application/vnd.rar"
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
+
+        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
 
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
