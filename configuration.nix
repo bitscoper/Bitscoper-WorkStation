@@ -24,42 +24,69 @@ let
 
   quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
 
-  androidNixPackages =
-    pkgs.callPackage
-      (import (
-        builtins.fetchGit {
-          url = "https://github.com/tadfisher/android-nixpkgs.git";
-        }
-      ))
-      {
-        channel = "canary";
-      };
-  androidSDK = androidNixPackages.sdk (
-    sdkPkgs: with sdkPkgs; [
-      build-tools-35-0-0
-      build-tools-36-1-0
-      cmake-3-22-1
-      cmake-4-1-2
-      cmdline-tools-latest
-      emulator
-      ndk-28-2-13676358
-      ndk-29-0-14206865
-      platform-tools
-      platforms-android-28
-      platforms-android-29
-      platforms-android-30
-      platforms-android-31
-      platforms-android-32
-      platforms-android-33
-      platforms-android-34
-      platforms-android-35
-      platforms-android-36
-      platforms-android-36-1
-      system-images-android-36-1-google-apis-playstore-x86-64
-      tools
-    ] # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
-  );
-  androidSDKPath = "${androidSDK}/share/android-sdk";
+  # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
+  androidComposition = pkgs.androidenv.composeAndroidPackages {
+    numLatestPlatformVersions = 1;
+    platformVersions = [
+      "latest"
+      "28"
+      "29"
+      "30"
+      "31"
+      "32"
+      "33"
+      "34"
+      "35"
+      "36"
+      "36.1"
+    ];
+    useGoogleAPIs = false;
+    useGoogleTVAddOns = false;
+
+    platformToolsVersion = "latest";
+    buildToolsVersions = [
+      "latest"
+      "35.0.0"
+      "36.1.0"
+    ];
+
+    includeNDK = true;
+    ndkVersions = [
+      "latest"
+      "28.2.13676358"
+      "29.0.14206865"
+    ];
+
+    cmdLineToolsVersion = "latest";
+    toolsVersion = "latest";
+
+    includeCmake = true;
+    cmakeVersions = [
+      "latest"
+      "3.22.1"
+      "4.1.2"
+    ];
+
+    includeExtras = [
+      "extras;google;auto"
+      "extras;google;simulators"
+    ];
+
+    includeEmulator = true;
+    emulatorVersion = "latest";
+
+    includeSystemImages = true;
+    systemImageTypes = [
+      "default" # Vanilla
+    ];
+    abiVersions = [
+      "arm64-v8a"
+      "armeabi-v7a"
+      "x86_64"
+    ];
+
+    includeSources = false;
+  };
 
   design_factor = 16;
 
@@ -309,7 +336,7 @@ in
   nixpkgs = {
     config = {
       allowUnfree = true;
-      androidSDK.accept_license = true;
+      android_sdk.accept_license = true;
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
@@ -355,6 +382,7 @@ in
         addons = with pkgs; [
           fcitx5-gtk
           fcitx5-openbangla-keyboard
+          fcitx5-table-other
         ];
       };
     };
@@ -2350,8 +2378,9 @@ in
     stub-ld.enable = true;
 
     variables = {
-      ANDROID_SDK_ROOT = androidSDKPath;
-      ANDROID_HOME = androidSDKPath;
+      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
 
       LD_LIBRARY_PATH = lib.mkForce "${
         pkgs.lib.makeLibraryPath (
@@ -2369,6 +2398,10 @@ in
 
     sessionVariables = {
       NIXOS_OZONE_WL = "1";
+
+      GTK_IM_MODULE = "fcitx";
+      QT_IM_MODULE = "wayland;fcitx";
+      XMODIFIERS = "@im=fcitx";
     };
 
     shellAliases = {
@@ -2410,7 +2443,7 @@ in
         alsa-utils-nhlt
         android-backup-extractor
         android-tools
-        androidSDK # Custom
+        androidComposition.androidsdk # Custom Composition
         anydesk # Unfree
         apfsprogs
         apitrace
@@ -2773,7 +2806,6 @@ in
         usbutils
         util-linux
         valgrind
-        varia
         video2x
         virt-top
         virt-v2v
@@ -3029,6 +3061,7 @@ in
         })
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
+        config.home-manager.users.root.services.udiskie.package
         config.services.phpfpm.phpPackage
       ]
       # ++ config.home-manager.users.root.programs.brave.nativeMessagingHosts # Duplicate
@@ -4242,7 +4275,14 @@ in
             tray = "always";
             notify = true;
 
-            # settings = { };
+            settings = {
+              terminal = "${pkgs.foot}/bin/foot -D";
+              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
+
+              menu = "nested";
+
+              password_cache = 5; # 5 Minutes
+            };
           };
         };
 
