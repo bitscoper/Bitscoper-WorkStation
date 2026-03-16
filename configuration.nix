@@ -1737,6 +1737,11 @@ in
       openFirewall = true;
     };
 
+    cloudflared = {
+      enable = true;
+      package = pkgs.cloudflared;
+    };
+
     kubernetes = {
       package = pkgs.kubernetes;
     };
@@ -1757,6 +1762,20 @@ in
 
         openPorts = true;
       };
+
+    sunshine = {
+      enable = true;
+      package = pkgs.sunshine;
+
+      capSysAdmin = true;
+      autoStart = true;
+
+      settings = {
+        port = 47989; # Base
+      };
+
+      openFirewall = true;
+    };
 
     logrotate = {
       enable = true;
@@ -2055,6 +2074,11 @@ in
       systemd = {
         enable = true;
       };
+    };
+
+    wayvnc = {
+      enable = true;
+      package = pkgs.wayvnc;
     };
 
     dconf = {
@@ -2582,6 +2606,7 @@ in
         graphviz
         groovy
         gsmartcontrol
+        gtk-vnc
         guestfs-tools
         gzip
         hashcat
@@ -2606,6 +2631,7 @@ in
         inkscape-with-extensions
         inotify-tools
         input-leap
+        interception-tools
         iotop-c
         jfsutils
         jmol
@@ -2682,6 +2708,7 @@ in
         mfcuk
         mfoc
         minikube
+        moonlight-qt
         mtools
         mtr-gui
         muse-sounds-manager
@@ -2821,7 +2848,6 @@ in
         waydroid-helper
         wayland-utils
         waylevel
-        wayvnc
         webfontkitgenerator
         websocat
         wev
@@ -3036,6 +3062,9 @@ in
           soapy_source = true;
           spyserver_source = true;
           usrp_source = true;
+        })
+        (pkgs.spice-gtk.override {
+          withPolkit = true;
         })
         (tor-browser.override {
           audioSupport = true;
@@ -3700,7 +3729,6 @@ in
     portal = {
       enable = true;
       extraPortals = with pkgs; [
-        xdg-desktop-portal-gtk
         (pkgs.xdg-desktop-portal-hyprland.override {
           debug = false;
         })
