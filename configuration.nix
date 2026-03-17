@@ -20,9 +20,9 @@ let
 
   homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
-  dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
-
   quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
+
+  dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -87,6 +87,8 @@ let
 
     includeSources = false;
   };
+
+  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
   design_factor = 16;
 
@@ -347,6 +349,8 @@ in
       (final: prev: {
         libvirt = stableNixPackages.libvirt;
       })
+      quickshellFlake.overlays.default
+      freesmLauncherFlake.overlays.default
     ];
   };
 
@@ -1021,7 +1025,6 @@ in
         package = pkgs.dms-shell;
 
         quickshell.package = pkgs.quickshell;
-        # quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
 
         compositor =
           let
@@ -2039,8 +2042,7 @@ in
       enable = true;
       package = pkgs.dms-shell;
 
-      # quickshell.package = pkgs.quickshell;
-      quickshell.package = quickshellFlake.packages.${pkgs.stdenv.hostPlatform.system}.quickshell;
+      quickshell.package = pkgs.quickshell;
 
       systemd = {
         enable = true;
@@ -2570,6 +2572,7 @@ in
         flutter
         fontfor
         freecad
+        freesmlauncher # Overlay from Flake
         fritzing
         fstl
         gcc15
@@ -2634,6 +2637,7 @@ in
         interception-tools
         iotop-c
         jfsutils
+        jmc2obj
         jmol
         john
         johnny
@@ -2698,6 +2702,7 @@ in
         mailcap
         massdns
         matugen
+        mcaselector
         md-lsp
         meld
         memtier-benchmark
@@ -2858,6 +2863,7 @@ in
         wl-clipboard
         wl-kbptr
         wordbook
+        worldpainter
         wpprobe
         wvkbd # wvkbd-mobintl
         x2goclient
