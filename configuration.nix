@@ -429,16 +429,15 @@ in
     };
 
     firewall = {
-      enable = false;
+      enable = true;
 
       allowPing = true;
 
       allowedTCPPorts = [
         5900 # VNC
+        config.home-manager.users.root.programs.mpv.scriptOpts.webui.port
       ];
-      allowedUDPPorts = [
-        5900 # VNC
-      ];
+      allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
         "virbr0"
@@ -977,7 +976,7 @@ in
     accounts-daemon.enable = true;
 
     timesyncd = {
-      enable = false;
+      enable = false; # Disabled due to Misbehavior
 
       servers = config.networking.timeServers;
       fallbackServers = config.networking.timeServers;
@@ -1972,6 +1971,11 @@ in
       enableBashIntegration = true;
     };
 
+    nh = {
+      enable = true;
+      package = pkgs.nh;
+    };
+
     usbtop.enable = true;
 
     nano = {
@@ -2436,7 +2440,7 @@ in
 
       fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
       upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
-      clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
+      clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nh clean all && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
     };
 
     # extraInit = '''';
@@ -2636,6 +2640,8 @@ in
         input-leap
         interception-tools
         iotop-c
+        jellyfin-desktop
+        jellyfin-mpv-shim
         jfsutils
         jmc2obj
         jmol
@@ -3084,12 +3090,6 @@ in
         (virt-viewer.override {
           spiceSupport = true;
         })
-        (vlc.override {
-          chromecastSupport = true;
-          jackSupport = true;
-          skins2Support = true;
-          waylandSupport = true;
-        })
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -3421,265 +3421,265 @@ in
         "image/x-emf" = "org.gnome.eog.desktop";
         "image/x-wmf" = "org.gnome.eog.desktop";
 
-        "audio/1d-interleaved-parityfec" = "vlc.desktop";
-        "audio/32kadpcm" = "vlc.desktop";
-        "audio/3gpp" = "vlc.desktop";
-        "audio/3gpp2" = "vlc.desktop";
-        "audio/aac" = "vlc.desktop";
-        "audio/ac3" = "vlc.desktop";
-        "audio/AMR-WB" = "vlc.desktop";
-        "audio/amr-wb+" = "vlc.desktop";
-        "audio/AMR" = "vlc.desktop";
-        "audio/aptx" = "vlc.desktop";
-        "audio/asc" = "vlc.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "vlc.desktop";
-        "audio/ATRAC-X" = "vlc.desktop";
-        "audio/ATRAC3" = "vlc.desktop";
-        "audio/basic" = "vlc.desktop";
-        "audio/BV16" = "vlc.desktop";
-        "audio/BV32" = "vlc.desktop";
-        "audio/clearmode" = "vlc.desktop";
-        "audio/CN" = "vlc.desktop";
-        "audio/DAT12" = "vlc.desktop";
-        "audio/dls" = "vlc.desktop";
-        "audio/dsr-es201108" = "vlc.desktop";
-        "audio/dsr-es202050" = "vlc.desktop";
-        "audio/dsr-es202211" = "vlc.desktop";
-        "audio/dsr-es202212" = "vlc.desktop";
-        "audio/DV" = "vlc.desktop";
-        "audio/DVI4" = "vlc.desktop";
-        "audio/eac3" = "vlc.desktop";
-        "audio/encaprtp" = "vlc.desktop";
-        "audio/EVRC-QCP" = "vlc.desktop";
-        "audio/EVRC" = "vlc.desktop";
-        "audio/EVRC0" = "vlc.desktop";
-        "audio/EVRC1" = "vlc.desktop";
-        "audio/EVRCB" = "vlc.desktop";
-        "audio/EVRCB0" = "vlc.desktop";
-        "audio/EVRCB1" = "vlc.desktop";
-        "audio/EVRCNW" = "vlc.desktop";
-        "audio/EVRCNW0" = "vlc.desktop";
-        "audio/EVRCNW1" = "vlc.desktop";
-        "audio/EVRCWB" = "vlc.desktop";
-        "audio/EVRCWB0" = "vlc.desktop";
-        "audio/EVRCWB1" = "vlc.desktop";
-        "audio/EVS" = "vlc.desktop";
-        "audio/flac" = "vlc.desktop";
-        "audio/flexfec" = "vlc.desktop";
-        "audio/fwdred" = "vlc.desktop";
-        "audio/G711-0" = "vlc.desktop";
-        "audio/G719" = "vlc.desktop";
-        "audio/G722" = "vlc.desktop";
-        "audio/G7221" = "vlc.desktop";
-        "audio/G723" = "vlc.desktop";
-        "audio/G726-16" = "vlc.desktop";
-        "audio/G726-24" = "vlc.desktop";
-        "audio/G726-32" = "vlc.desktop";
-        "audio/G726-40" = "vlc.desktop";
-        "audio/G728" = "vlc.desktop";
-        "audio/G729" = "vlc.desktop";
-        "audio/G7291" = "vlc.desktop";
-        "audio/G729D" = "vlc.desktop";
-        "audio/G729E" = "vlc.desktop";
-        "audio/GSM-EFR" = "vlc.desktop";
-        "audio/GSM-HR-08" = "vlc.desktop";
-        "audio/GSM" = "vlc.desktop";
-        "audio/iLBC" = "vlc.desktop";
-        "audio/ip-mr_v2.5" = "vlc.desktop";
-        "audio/L16" = "vlc.desktop";
-        "audio/L20" = "vlc.desktop";
-        "audio/L24" = "vlc.desktop";
-        "audio/L8" = "vlc.desktop";
-        "audio/LPC" = "vlc.desktop";
-        "audio/matroska" = "vlc.desktop";
-        "audio/MELP" = "vlc.desktop";
-        "audio/MELP1200" = "vlc.desktop";
-        "audio/MELP2400" = "vlc.desktop";
-        "audio/MELP600" = "vlc.desktop";
-        "audio/mhas" = "vlc.desktop";
-        "audio/midi-clip" = "vlc.desktop";
-        "audio/mobile-xmf" = "vlc.desktop";
-        "audio/mp4" = "vlc.desktop";
-        "audio/MP4A-LATM" = "vlc.desktop";
-        "audio/mpa-robust" = "vlc.desktop";
-        "audio/MPA" = "vlc.desktop";
-        "audio/mpeg" = "vlc.desktop";
-        "audio/mpeg4-generic" = "vlc.desktop";
-        "audio/ogg" = "vlc.desktop";
-        "audio/opus" = "vlc.desktop";
-        "audio/parityfec" = "vlc.desktop";
-        "audio/PCMA-WB" = "vlc.desktop";
-        "audio/PCMA" = "vlc.desktop";
-        "audio/PCMU-WB" = "vlc.desktop";
-        "audio/PCMU" = "vlc.desktop";
-        "audio/prs.sid" = "vlc.desktop";
-        "audio/QCELP" = "vlc.desktop";
-        "audio/raptorfec" = "vlc.desktop";
-        "audio/RED" = "vlc.desktop";
-        "audio/rtp-enc-aescm128" = "vlc.desktop";
-        "audio/rtp-midi" = "vlc.desktop";
-        "audio/rtploopback" = "vlc.desktop";
-        "audio/rtx" = "vlc.desktop";
-        "audio/scip" = "vlc.desktop";
-        "audio/SMV-QCP" = "vlc.desktop";
-        "audio/SMV" = "vlc.desktop";
-        "audio/SMV0" = "vlc.desktop";
-        "audio/sofa" = "vlc.desktop";
-        "audio/soundfont" = "vlc.desktop";
-        "audio/sp-midi" = "vlc.desktop";
-        "audio/speex" = "vlc.desktop";
-        "audio/t140c" = "vlc.desktop";
-        "audio/t38" = "vlc.desktop";
-        "audio/telephone-event" = "vlc.desktop";
-        "audio/TETRA_ACELP_BB" = "vlc.desktop";
-        "audio/TETRA_ACELP" = "vlc.desktop";
-        "audio/tone" = "vlc.desktop";
-        "audio/TSVCIS" = "vlc.desktop";
-        "audio/UEMCLIP" = "vlc.desktop";
-        "audio/ulpfec" = "vlc.desktop";
-        "audio/usac" = "vlc.desktop";
-        "audio/VDVI" = "vlc.desktop";
-        "audio/VMR-WB" = "vlc.desktop";
-        "audio/vnd.3gpp.iufp" = "vlc.desktop";
-        "audio/vnd.4SB" = "vlc.desktop";
-        "audio/vnd.audiokoz" = "vlc.desktop";
-        "audio/vnd.blockfact.facta" = "vlc.desktop";
-        "audio/vnd.CELP" = "vlc.desktop";
-        "audio/vnd.cisco.nse" = "vlc.desktop";
-        "audio/vnd.cmles.radio-events" = "vlc.desktop";
-        "audio/vnd.cns.anp1" = "vlc.desktop";
-        "audio/vnd.cns.inf1" = "vlc.desktop";
-        "audio/vnd.dece.audio" = "vlc.desktop";
-        "audio/vnd.digital-winds" = "vlc.desktop";
-        "audio/vnd.dlna.adts" = "vlc.desktop";
-        "audio/vnd.dolby.heaac.1" = "vlc.desktop";
-        "audio/vnd.dolby.heaac.2" = "vlc.desktop";
-        "audio/vnd.dolby.mlp" = "vlc.desktop";
-        "audio/vnd.dolby.mps" = "vlc.desktop";
-        "audio/vnd.dolby.pl2" = "vlc.desktop";
-        "audio/vnd.dolby.pl2x" = "vlc.desktop";
-        "audio/vnd.dolby.pl2z" = "vlc.desktop";
-        "audio/vnd.dolby.pulse.1" = "vlc.desktop";
-        "audio/vnd.dra" = "vlc.desktop";
-        "audio/vnd.dts.hd" = "vlc.desktop";
-        "audio/vnd.dts.uhd" = "vlc.desktop";
-        "audio/vnd.dts" = "vlc.desktop";
-        "audio/vnd.dvb.file" = "vlc.desktop";
-        "audio/vnd.everad.plj" = "vlc.desktop";
-        "audio/vnd.hns.audio" = "vlc.desktop";
-        "audio/vnd.lucent.voice" = "vlc.desktop";
-        "audio/vnd.ms-playready.media.pya" = "vlc.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "vlc.desktop";
-        "audio/vnd.nortel.vbk" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp4800" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp7470" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp9600" = "vlc.desktop";
-        "audio/vnd.octel.sbc" = "vlc.desktop";
-        "audio/vnd.presonus.multitrack" = "vlc.desktop";
-        "audio/vnd.qcelp" = "vlc.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "vlc.desktop";
-        "audio/vnd.rip" = "vlc.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "vlc.desktop";
-        "audio/vnd.vmx.cvsd" = "vlc.desktop";
-        "audio/vorbis-config" = "vlc.desktop";
-        "audio/vorbis" = "vlc.desktop";
+        "audio/1d-interleaved-parityfec" = "mpv.desktop";
+        "audio/32kadpcm" = "mpv.desktop";
+        "audio/3gpp" = "mpv.desktop";
+        "audio/3gpp2" = "mpv.desktop";
+        "audio/aac" = "mpv.desktop";
+        "audio/ac3" = "mpv.desktop";
+        "audio/AMR-WB" = "mpv.desktop";
+        "audio/amr-wb+" = "mpv.desktop";
+        "audio/AMR" = "mpv.desktop";
+        "audio/aptx" = "mpv.desktop";
+        "audio/asc" = "mpv.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "mpv.desktop";
+        "audio/ATRAC-X" = "mpv.desktop";
+        "audio/ATRAC3" = "mpv.desktop";
+        "audio/basic" = "mpv.desktop";
+        "audio/BV16" = "mpv.desktop";
+        "audio/BV32" = "mpv.desktop";
+        "audio/clearmode" = "mpv.desktop";
+        "audio/CN" = "mpv.desktop";
+        "audio/DAT12" = "mpv.desktop";
+        "audio/dls" = "mpv.desktop";
+        "audio/dsr-es201108" = "mpv.desktop";
+        "audio/dsr-es202050" = "mpv.desktop";
+        "audio/dsr-es202211" = "mpv.desktop";
+        "audio/dsr-es202212" = "mpv.desktop";
+        "audio/DV" = "mpv.desktop";
+        "audio/DVI4" = "mpv.desktop";
+        "audio/eac3" = "mpv.desktop";
+        "audio/encaprtp" = "mpv.desktop";
+        "audio/EVRC-QCP" = "mpv.desktop";
+        "audio/EVRC" = "mpv.desktop";
+        "audio/EVRC0" = "mpv.desktop";
+        "audio/EVRC1" = "mpv.desktop";
+        "audio/EVRCB" = "mpv.desktop";
+        "audio/EVRCB0" = "mpv.desktop";
+        "audio/EVRCB1" = "mpv.desktop";
+        "audio/EVRCNW" = "mpv.desktop";
+        "audio/EVRCNW0" = "mpv.desktop";
+        "audio/EVRCNW1" = "mpv.desktop";
+        "audio/EVRCWB" = "mpv.desktop";
+        "audio/EVRCWB0" = "mpv.desktop";
+        "audio/EVRCWB1" = "mpv.desktop";
+        "audio/EVS" = "mpv.desktop";
+        "audio/flac" = "mpv.desktop";
+        "audio/flexfec" = "mpv.desktop";
+        "audio/fwdred" = "mpv.desktop";
+        "audio/G711-0" = "mpv.desktop";
+        "audio/G719" = "mpv.desktop";
+        "audio/G722" = "mpv.desktop";
+        "audio/G7221" = "mpv.desktop";
+        "audio/G723" = "mpv.desktop";
+        "audio/G726-16" = "mpv.desktop";
+        "audio/G726-24" = "mpv.desktop";
+        "audio/G726-32" = "mpv.desktop";
+        "audio/G726-40" = "mpv.desktop";
+        "audio/G728" = "mpv.desktop";
+        "audio/G729" = "mpv.desktop";
+        "audio/G7291" = "mpv.desktop";
+        "audio/G729D" = "mpv.desktop";
+        "audio/G729E" = "mpv.desktop";
+        "audio/GSM-EFR" = "mpv.desktop";
+        "audio/GSM-HR-08" = "mpv.desktop";
+        "audio/GSM" = "mpv.desktop";
+        "audio/iLBC" = "mpv.desktop";
+        "audio/ip-mr_v2.5" = "mpv.desktop";
+        "audio/L16" = "mpv.desktop";
+        "audio/L20" = "mpv.desktop";
+        "audio/L24" = "mpv.desktop";
+        "audio/L8" = "mpv.desktop";
+        "audio/LPC" = "mpv.desktop";
+        "audio/matroska" = "mpv.desktop";
+        "audio/MELP" = "mpv.desktop";
+        "audio/MELP1200" = "mpv.desktop";
+        "audio/MELP2400" = "mpv.desktop";
+        "audio/MELP600" = "mpv.desktop";
+        "audio/mhas" = "mpv.desktop";
+        "audio/midi-clip" = "mpv.desktop";
+        "audio/mobile-xmf" = "mpv.desktop";
+        "audio/mp4" = "mpv.desktop";
+        "audio/MP4A-LATM" = "mpv.desktop";
+        "audio/mpa-robust" = "mpv.desktop";
+        "audio/MPA" = "mpv.desktop";
+        "audio/mpeg" = "mpv.desktop";
+        "audio/mpeg4-generic" = "mpv.desktop";
+        "audio/ogg" = "mpv.desktop";
+        "audio/opus" = "mpv.desktop";
+        "audio/parityfec" = "mpv.desktop";
+        "audio/PCMA-WB" = "mpv.desktop";
+        "audio/PCMA" = "mpv.desktop";
+        "audio/PCMU-WB" = "mpv.desktop";
+        "audio/PCMU" = "mpv.desktop";
+        "audio/prs.sid" = "mpv.desktop";
+        "audio/QCELP" = "mpv.desktop";
+        "audio/raptorfec" = "mpv.desktop";
+        "audio/RED" = "mpv.desktop";
+        "audio/rtp-enc-aescm128" = "mpv.desktop";
+        "audio/rtp-midi" = "mpv.desktop";
+        "audio/rtploopback" = "mpv.desktop";
+        "audio/rtx" = "mpv.desktop";
+        "audio/scip" = "mpv.desktop";
+        "audio/SMV-QCP" = "mpv.desktop";
+        "audio/SMV" = "mpv.desktop";
+        "audio/SMV0" = "mpv.desktop";
+        "audio/sofa" = "mpv.desktop";
+        "audio/soundfont" = "mpv.desktop";
+        "audio/sp-midi" = "mpv.desktop";
+        "audio/speex" = "mpv.desktop";
+        "audio/t140c" = "mpv.desktop";
+        "audio/t38" = "mpv.desktop";
+        "audio/telephone-event" = "mpv.desktop";
+        "audio/TETRA_ACELP_BB" = "mpv.desktop";
+        "audio/TETRA_ACELP" = "mpv.desktop";
+        "audio/tone" = "mpv.desktop";
+        "audio/TSVCIS" = "mpv.desktop";
+        "audio/UEMCLIP" = "mpv.desktop";
+        "audio/ulpfec" = "mpv.desktop";
+        "audio/usac" = "mpv.desktop";
+        "audio/VDVI" = "mpv.desktop";
+        "audio/VMR-WB" = "mpv.desktop";
+        "audio/vnd.3gpp.iufp" = "mpv.desktop";
+        "audio/vnd.4SB" = "mpv.desktop";
+        "audio/vnd.audiokoz" = "mpv.desktop";
+        "audio/vnd.blockfact.facta" = "mpv.desktop";
+        "audio/vnd.CELP" = "mpv.desktop";
+        "audio/vnd.cisco.nse" = "mpv.desktop";
+        "audio/vnd.cmles.radio-events" = "mpv.desktop";
+        "audio/vnd.cns.anp1" = "mpv.desktop";
+        "audio/vnd.cns.inf1" = "mpv.desktop";
+        "audio/vnd.dece.audio" = "mpv.desktop";
+        "audio/vnd.digital-winds" = "mpv.desktop";
+        "audio/vnd.dlna.adts" = "mpv.desktop";
+        "audio/vnd.dolby.heaac.1" = "mpv.desktop";
+        "audio/vnd.dolby.heaac.2" = "mpv.desktop";
+        "audio/vnd.dolby.mlp" = "mpv.desktop";
+        "audio/vnd.dolby.mps" = "mpv.desktop";
+        "audio/vnd.dolby.pl2" = "mpv.desktop";
+        "audio/vnd.dolby.pl2x" = "mpv.desktop";
+        "audio/vnd.dolby.pl2z" = "mpv.desktop";
+        "audio/vnd.dolby.pulse.1" = "mpv.desktop";
+        "audio/vnd.dra" = "mpv.desktop";
+        "audio/vnd.dts.hd" = "mpv.desktop";
+        "audio/vnd.dts.uhd" = "mpv.desktop";
+        "audio/vnd.dts" = "mpv.desktop";
+        "audio/vnd.dvb.file" = "mpv.desktop";
+        "audio/vnd.everad.plj" = "mpv.desktop";
+        "audio/vnd.hns.audio" = "mpv.desktop";
+        "audio/vnd.lucent.voice" = "mpv.desktop";
+        "audio/vnd.ms-playready.media.pya" = "mpv.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "mpv.desktop";
+        "audio/vnd.nortel.vbk" = "mpv.desktop";
+        "audio/vnd.nuera.ecelp4800" = "mpv.desktop";
+        "audio/vnd.nuera.ecelp7470" = "mpv.desktop";
+        "audio/vnd.nuera.ecelp9600" = "mpv.desktop";
+        "audio/vnd.octel.sbc" = "mpv.desktop";
+        "audio/vnd.presonus.multitrack" = "mpv.desktop";
+        "audio/vnd.qcelp" = "mpv.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "mpv.desktop";
+        "audio/vnd.rip" = "mpv.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "mpv.desktop";
+        "audio/vnd.vmx.cvsd" = "mpv.desktop";
+        "audio/vorbis-config" = "mpv.desktop";
+        "audio/vorbis" = "mpv.desktop";
 
-        "video/1d-interleaved-parityfec" = "vlc.desktop";
-        "video/3gpp-tt" = "vlc.desktop";
-        "video/3gpp" = "vlc.desktop";
-        "video/3gpp2" = "vlc.desktop";
-        "video/AV1" = "vlc.desktop";
-        "video/BMPEG" = "vlc.desktop";
-        "video/BT656" = "vlc.desktop";
-        "video/CelB" = "vlc.desktop";
-        "video/DV" = "vlc.desktop";
-        "video/encaprtp" = "vlc.desktop";
-        "video/evc" = "vlc.desktop";
-        "video/FFV1" = "vlc.desktop";
-        "video/flexfec" = "vlc.desktop";
-        "video/H261" = "vlc.desktop";
-        "video/H263-1998" = "vlc.desktop";
-        "video/H263-2000" = "vlc.desktop";
-        "video/H263" = "vlc.desktop";
-        "video/H264-RCDO" = "vlc.desktop";
-        "video/H264-SVC" = "vlc.desktop";
-        "video/H264" = "vlc.desktop";
-        "video/H265" = "vlc.desktop";
-        "video/H266" = "vlc.desktop";
-        "video/iso.segment" = "vlc.desktop";
-        "video/JPEG" = "vlc.desktop";
-        "video/jpeg2000-scl" = "vlc.desktop";
-        "video/jpeg2000" = "vlc.desktop";
-        "video/jxsv" = "vlc.desktop";
-        "video/lottie+json" = "vlc.desktop";
-        "video/matroska-3d" = "vlc.desktop";
-        "video/matroska" = "vlc.desktop";
-        "video/mj2" = "vlc.desktop";
-        "video/MP1S" = "vlc.desktop";
-        "video/MP2P" = "vlc.desktop";
-        "video/MP2T" = "vlc.desktop";
-        "video/mp4" = "vlc.desktop";
-        "video/MP4V-ES" = "vlc.desktop";
-        "video/mpeg" = "vlc.desktop";
-        "video/mpeg4-generic" = "vlc.desktop";
-        "video/MPV" = "vlc.desktop";
-        "video/nv" = "vlc.desktop";
-        "video/ogg" = "vlc.desktop";
-        "video/parityfec" = "vlc.desktop";
-        "video/pointer" = "vlc.desktop";
-        "video/quicktime" = "vlc.desktop";
-        "video/raptorfec" = "vlc.desktop";
-        "video/raw" = "vlc.desktop";
-        "video/rtp-enc-aescm128" = "vlc.desktop";
-        "video/rtploopback" = "vlc.desktop";
-        "video/rtx" = "vlc.desktop";
-        "video/scip" = "vlc.desktop";
-        "video/smpte291" = "vlc.desktop";
-        "video/SMPTE292M" = "vlc.desktop";
-        "video/ulpfec" = "vlc.desktop";
-        "video/vc1" = "vlc.desktop";
-        "video/vc2" = "vlc.desktop";
-        "video/vnd.blockfact.factv" = "vlc.desktop";
-        "video/vnd.CCTV" = "vlc.desktop";
-        "video/vnd.dece.hd" = "vlc.desktop";
-        "video/vnd.dece.mobile" = "vlc.desktop";
-        "video/vnd.dece.mp4" = "vlc.desktop";
-        "video/vnd.dece.pd" = "vlc.desktop";
-        "video/vnd.dece.sd" = "vlc.desktop";
-        "video/vnd.dece.video" = "vlc.desktop";
-        "video/vnd.directv.mpeg-tts" = "vlc.desktop";
-        "video/vnd.directv.mpeg" = "vlc.desktop";
-        "video/vnd.dlna.mpeg-tts" = "vlc.desktop";
-        "video/vnd.dvb.file" = "vlc.desktop";
-        "video/vnd.fvt" = "vlc.desktop";
-        "video/vnd.hns.video" = "vlc.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "vlc.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "vlc.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "vlc.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "vlc.desktop";
-        "video/vnd.iptvforum.ttsavc" = "vlc.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "vlc.desktop";
-        "video/vnd.motorola.video" = "vlc.desktop";
-        "video/vnd.motorola.videop" = "vlc.desktop";
-        "video/vnd.mpegurl" = "vlc.desktop";
-        "video/vnd.ms-playready.media.pyv" = "vlc.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "vlc.desktop";
-        "video/vnd.nokia.mp4vr" = "vlc.desktop";
-        "video/vnd.nokia.videovoip" = "vlc.desktop";
-        "video/vnd.objectvideo" = "vlc.desktop";
-        "video/vnd.planar" = "vlc.desktop";
-        "video/vnd.radgamettools.bink" = "vlc.desktop";
-        "video/vnd.radgamettools.smacker" = "vlc.desktop";
-        "video/vnd.sealed.mpeg1" = "vlc.desktop";
-        "video/vnd.sealed.mpeg4" = "vlc.desktop";
-        "video/vnd.sealed.swf" = "vlc.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "vlc.desktop";
-        "video/vnd.uvvu.mp4" = "vlc.desktop";
-        "video/vnd.vivo" = "vlc.desktop";
-        "video/vnd.youtube.yt" = "vlc.desktop";
-        "video/VP8" = "vlc.desktop";
-        "video/VP9" = "vlc.desktop";
-        "video/x-matroska" = "vlc.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "mpv.desktop";
+        "video/3gpp-tt" = "mpv.desktop";
+        "video/3gpp" = "mpv.desktop";
+        "video/3gpp2" = "mpv.desktop";
+        "video/AV1" = "mpv.desktop";
+        "video/BMPEG" = "mpv.desktop";
+        "video/BT656" = "mpv.desktop";
+        "video/CelB" = "mpv.desktop";
+        "video/DV" = "mpv.desktop";
+        "video/encaprtp" = "mpv.desktop";
+        "video/evc" = "mpv.desktop";
+        "video/FFV1" = "mpv.desktop";
+        "video/flexfec" = "mpv.desktop";
+        "video/H261" = "mpv.desktop";
+        "video/H263-1998" = "mpv.desktop";
+        "video/H263-2000" = "mpv.desktop";
+        "video/H263" = "mpv.desktop";
+        "video/H264-RCDO" = "mpv.desktop";
+        "video/H264-SVC" = "mpv.desktop";
+        "video/H264" = "mpv.desktop";
+        "video/H265" = "mpv.desktop";
+        "video/H266" = "mpv.desktop";
+        "video/iso.segment" = "mpv.desktop";
+        "video/JPEG" = "mpv.desktop";
+        "video/jpeg2000-scl" = "mpv.desktop";
+        "video/jpeg2000" = "mpv.desktop";
+        "video/jxsv" = "mpv.desktop";
+        "video/lottie+json" = "mpv.desktop";
+        "video/matroska-3d" = "mpv.desktop";
+        "video/matroska" = "mpv.desktop";
+        "video/mj2" = "mpv.desktop";
+        "video/MP1S" = "mpv.desktop";
+        "video/MP2P" = "mpv.desktop";
+        "video/MP2T" = "mpv.desktop";
+        "video/mp4" = "mpv.desktop";
+        "video/MP4V-ES" = "mpv.desktop";
+        "video/mpeg" = "mpv.desktop";
+        "video/mpeg4-generic" = "mpv.desktop";
+        "video/MPV" = "mpv.desktop";
+        "video/nv" = "mpv.desktop";
+        "video/ogg" = "mpv.desktop";
+        "video/parityfec" = "mpv.desktop";
+        "video/pointer" = "mpv.desktop";
+        "video/quicktime" = "mpv.desktop";
+        "video/raptorfec" = "mpv.desktop";
+        "video/raw" = "mpv.desktop";
+        "video/rtp-enc-aescm128" = "mpv.desktop";
+        "video/rtploopback" = "mpv.desktop";
+        "video/rtx" = "mpv.desktop";
+        "video/scip" = "mpv.desktop";
+        "video/smpte291" = "mpv.desktop";
+        "video/SMPTE292M" = "mpv.desktop";
+        "video/ulpfec" = "mpv.desktop";
+        "video/vc1" = "mpv.desktop";
+        "video/vc2" = "mpv.desktop";
+        "video/vnd.blockfact.factv" = "mpv.desktop";
+        "video/vnd.CCTV" = "mpv.desktop";
+        "video/vnd.dece.hd" = "mpv.desktop";
+        "video/vnd.dece.mobile" = "mpv.desktop";
+        "video/vnd.dece.mp4" = "mpv.desktop";
+        "video/vnd.dece.pd" = "mpv.desktop";
+        "video/vnd.dece.sd" = "mpv.desktop";
+        "video/vnd.dece.video" = "mpv.desktop";
+        "video/vnd.directv.mpeg-tts" = "mpv.desktop";
+        "video/vnd.directv.mpeg" = "mpv.desktop";
+        "video/vnd.dlna.mpeg-tts" = "mpv.desktop";
+        "video/vnd.dvb.file" = "mpv.desktop";
+        "video/vnd.fvt" = "mpv.desktop";
+        "video/vnd.hns.video" = "mpv.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "mpv.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "mpv.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "mpv.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "mpv.desktop";
+        "video/vnd.iptvforum.ttsavc" = "mpv.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "mpv.desktop";
+        "video/vnd.motorola.video" = "mpv.desktop";
+        "video/vnd.motorola.videop" = "mpv.desktop";
+        "video/vnd.mpegurl" = "mpv.desktop";
+        "video/vnd.ms-playready.media.pyv" = "mpv.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "mpv.desktop";
+        "video/vnd.nokia.mp4vr" = "mpv.desktop";
+        "video/vnd.nokia.videovoip" = "mpv.desktop";
+        "video/vnd.objectvideo" = "mpv.desktop";
+        "video/vnd.planar" = "mpv.desktop";
+        "video/vnd.radgamettools.bink" = "mpv.desktop";
+        "video/vnd.radgamettools.smacker" = "mpv.desktop";
+        "video/vnd.sealed.mpeg1" = "mpv.desktop";
+        "video/vnd.sealed.mpeg4" = "mpv.desktop";
+        "video/vnd.sealed.swf" = "mpv.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "mpv.desktop";
+        "video/vnd.uvvu.mp4" = "mpv.desktop";
+        "video/vnd.vivo" = "mpv.desktop";
+        "video/vnd.youtube.yt" = "mpv.desktop";
+        "video/VP8" = "mpv.desktop";
+        "video/VP9" = "mpv.desktop";
+        "video/x-matroska" = "mpv.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -4025,8 +4025,6 @@ in
               "SUPER, D, exec, uwsm app -- dbeaver"
 
               "SUPER, P, exec, uwsm app -- scrcpy --render-driver=opengl"
-
-              "SUPER, V, exec, uwsm app -- vlc"
             ];
 
             bindm = [
@@ -4402,6 +4400,83 @@ in
               no-embed-thumbnail = true;
             };
           };
+
+          mpv =
+            let
+              mpvAuthenticationFile = pkgs.writeText "mpv_htpasswd.txt" ''
+                bitscoper:${secrets.password_1_of_bitscoper}
+              '';
+            in
+            {
+              enable = true;
+              package = (
+                pkgs.mpv.override {
+                  youtubeSupport = true;
+                  mpv-unwrapped = pkgs.mpv-unwrapped.override {
+                    alsaSupport = true;
+                    archiveSupport = true;
+                    bluraySupport = true;
+                    bs2bSupport = true;
+                    cacaSupport = true;
+                    cddaSupport = true;
+                    cmsSupport = true;
+                    drmSupport = true;
+                    dvbinSupport = true;
+                    dvdnavSupport = true;
+                    jackaudioSupport = true;
+                    javascriptSupport = true;
+                    openalSupport = true;
+                    pipewireSupport = true;
+                    pulseSupport = true;
+                    rubberbandSupport = true;
+                    sdl2Support = true;
+                    sixelSupport = true;
+                    vaapiSupport = true;
+                    vapoursynthSupport = true;
+                    vdpauSupport = true;
+                    vulkanSupport = true;
+                    waylandSupport = true;
+                    x11Support = true;
+                    zimgSupport = true;
+                  };
+                  scripts =
+                    (with pkgs.mpvScripts.builtins; [
+                      autocrop
+                      autodeint
+                      autoload
+                    ])
+                    ++ (with pkgs.mpvScripts; [
+                      autosub
+                      autosubsync-mpv
+                      convert
+                      cutter
+                      modernz
+                      mpris
+                      mpv-notify-send
+                      mpv-subtitle-lines
+                      quality-menu
+                      reload
+                      simple-mpv-webui
+                      sponsorblock
+                      visualizer
+                      webtorrent-mpv-hook
+                      youtube-upnext
+                    ]);
+                }
+              );
+
+              scriptOpts = {
+                webui = {
+                  disable = "no";
+
+                  ipv4 = "yes";
+                  ipv6 = "yes";
+                  port = 8080;
+
+                  htpasswd_path = "${mpvAuthenticationFile}";
+                };
+              };
+            };
 
           keepassxc = {
             enable = true;
