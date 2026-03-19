@@ -1748,23 +1748,6 @@ in
       package = pkgs.kubernetes;
     };
 
-    aria2 =
-      let
-        rpcSecretFile = pkgs.writeText "aria2Secret.txt" secrets.password_1_of_bitscoper;
-      in
-      {
-        enable = true;
-
-        settings = {
-          enable-rpc = true;
-          rpc-listen-port = 6800;
-        };
-
-        rpcSecretFile = rpcSecretFile;
-
-        openPorts = true;
-      };
-
     sunshine = {
       enable = true;
       package = pkgs.sunshine;
@@ -2472,19 +2455,17 @@ in
         alsa-utils
         alsa-utils-nhlt
         android-backup-extractor
-        android-tools
         androidComposition.androidsdk # Custom Composition
         anydesk # Unfree
         apfsprogs
         apitrace
         apkeep
         apkleaks
-        ardour
         arduino-cli
         arduino-ide
         arduino-language-server
-        ariang
         armitage
+        asciicam
         asciinema
         asciinema-agg
         asciinema-scenario
@@ -2511,6 +2492,7 @@ in
         celestia
         certdump
         chart-testing
+        cheese
         clinfo
         cloc
         cmake
@@ -2521,7 +2503,6 @@ in
         compose2nix
         conmon
         cramfsprogs
-        crow-translate
         cryptsetup
         ctop
         cups-pk-helper
@@ -2533,6 +2514,7 @@ in
         dbeaver-bin
         dconf-editor
         dconf2nix
+        deluge-gtk
         dgop
         diffoci
         dig
@@ -2550,6 +2532,7 @@ in
         dtui
         dvb-apps
         e2fsprogs
+        eartag
         easyeda2kicad
         efibootmgr
         egypt
@@ -2558,6 +2541,7 @@ in
         eog
         esptool
         etherape
+        evtest
         evtest-qt
         exfatprogs
         exiftool
@@ -2720,6 +2704,7 @@ in
         mfoc
         minikube
         moonlight-qt
+        motion
         mtools
         mtr-gui
         muse-sounds-manager
@@ -2775,7 +2760,7 @@ in
         radare2
         raider
         rclone
-        rclone-ui
+        rclone-browser
         redisinsight
         regex-tui
         rp-pppoe
@@ -2833,8 +2818,12 @@ in
         tuicam
         udftools
         uefi-firmware-parser
+        uget
+        uget-integrator
         ugit
         undollar
+        unhide
+        unhide-gui
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
@@ -2859,6 +2848,7 @@ in
         waydroid-helper
         wayland-utils
         waylevel
+        webcamize
         webfontkitgenerator
         websocat
         wev
@@ -2887,6 +2877,10 @@ in
         zfs
         zip
         zoom-us # Unfree
+        (ardour.override {
+          optimize = true;
+          videoSupport = true;
+        })
         (brave.override {
           # commandLineArgs = "";
           enableVideoAcceleration = true;
@@ -3045,11 +3039,6 @@ in
           withOpenssl = true;
           withReadline = true;
           withSqlite = true;
-        })
-        (qbittorrent.override {
-          guiSupport = true;
-          trackerSearch = true;
-          webuiSupport = false;
         })
         (sdrpp.override {
           airspy_source = true;
@@ -3715,7 +3704,8 @@ in
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
 
-        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
+        "application/x-bittorrent" = "deluge.desktop";
+        "x-scheme-handler/magnet" = "deluge.desktop";
 
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
@@ -3745,7 +3735,6 @@ in
       config = {
         common = {
           default = [
-            "gtk"
             "hyprland"
           ];
 
@@ -3819,7 +3808,6 @@ in
       extraGroups = [
         "adbusers" # Not in builtins.attrNames config.users.groups
         "adm"
-        "aria2"
         "audio"
         "avahi"
         "cdrom"
