@@ -20,10 +20,6 @@ let
 
   homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
 
-  quickshellFlake = builtins.getFlake "git+https://git.outfoxxed.me/quickshell/quickshell";
-
-  dankmaterialshellPluginRegistryFlake = builtins.getFlake "github:AvengeMedia/dms-plugin-registry";
-
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
     numLatestPlatformVersions = 1;
@@ -107,8 +103,8 @@ let
 
   cursor = {
     theme = {
-      name = "Bibata-Modern-Classic";
-      package = pkgs.bibata-cursors;
+      name = "Adwaita";
+      package = pkgs.adwaita-icon-theme;
     };
 
     size = builtins.floor (design_factor * 1.50); # 24
@@ -137,8 +133,6 @@ in
 {
   imports = [
     (import "${homeManager}/nixos")
-
-    dankmaterialshellPluginRegistryFlake.modules.default
 
     ./hardware-configuration.nix
   ];
@@ -341,6 +335,7 @@ in
       android_sdk.accept_license = true;
 
       permittedInsecurePackages = [
+        "libsoup-2.74.3"
         "opendkim-2.11.0-Beta2"
       ];
     };
@@ -349,7 +344,6 @@ in
       (final: prev: {
         libvirt = stableNixPackages.libvirt;
       })
-      quickshellFlake.overlays.default
       freesmLauncherFlake.overlays.default
     ];
   };
@@ -378,17 +372,20 @@ in
 
     inputMethod = {
       enable = true;
-      type = "fcitx5";
 
-      fcitx5 = {
-        waylandFrontend = true;
-
-        addons = with pkgs; [
-          fcitx5-gtk
-          fcitx5-openbangla-keyboard
-          fcitx5-table-other
+      type = "ibus";
+      ibus = {
+        engines = with pkgs.ibus-engines; [
+          (openbangla-keyboard.override {
+            withIbusSupport = true;
+          })
         ];
+
+        waylandFrontend = true;
       };
+
+      enableGtk3 = true;
+      enableGtk2 = true;
     };
   };
 
@@ -434,7 +431,6 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
-        5900 # VNC
         config.home-manager.users.root.programs.mpv.scriptOpts.webui.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
@@ -484,7 +480,7 @@ in
           unixAuth = true;
           nodelay = false;
 
-          fprintAuth = true;
+          fprintAuth = false; # FIXME: Conflicts
 
           logFailures = true;
 
@@ -545,10 +541,6 @@ in
 
       debug = false;
     };
-    soteria = {
-      enable = true;
-      package = pkgs.soteria;
-    }; # DMS Polkit Agent Does Not Work
 
     rtkit.enable = true;
 
@@ -971,6 +963,10 @@ in
       );
 
       implementation = "broker";
+
+      packages = with pkgs; [
+        gnome2.GConf
+      ];
     };
 
     accounts-daemon.enable = true;
@@ -1019,42 +1015,34 @@ in
     displayManager = {
       enable = true;
 
-      dms-greeter = {
+      gdm = {
         enable = true;
-        package = pkgs.dms-shell;
 
-        quickshell.package = pkgs.quickshell;
+        wayland = true;
+        banner = config.networking.fqdn;
+        autoSuspend = false;
 
-        compositor =
-          let
-            hyprlandConfigurationFile = pkgs.writeText "hyprland.conf" ''
-              monitor=, highres, auto, 1, transform, 0
-              monitor=eDP-1, highres, auto, 1, transform, 0
-              monitor=HDMI-A-1, highres, auto, 1, transform, 1
-
-              disable_hyprland_logo = true;
-              force_default_wallpaper = 1;
-              disable_splash_rendering = true;
-            '';
-          in
-          {
-            name = "hyprland";
-            customConfig = builtins.readFile hyprlandConfigurationFile;
-          };
-
-        configHome = "/home/bitscoper";
-
-        logs = {
-          save = true;
-        };
+        debug = false;
       };
+
+      autoLogin.enable = false;
 
       logToJournal = true;
     };
 
-    gnome = {
-      gnome-keyring.enable = true;
+    desktopManager.gnome = {
+      enable = true;
+      debug = false;
+    };
 
+    gnome = {
+      glib-networking.enable = true;
+
+      core-os-services.enable = true;
+      core-shell.enable = true;
+      gnome-settings-daemon.enable = true;
+
+      gnome-keyring.enable = true;
       gcr-ssh-agent = {
         enable = true;
         package = (
@@ -1063,14 +1051,43 @@ in
           }
         );
       };
+      gnome-online-accounts.enable = true;
 
+      gnome-user-share.enable = true;
+      rygel = {
+        enable = true;
+        package = pkgs.rygel;
+      };
+
+      gnome-remote-desktop.enable = true;
+
+      at-spi2-core.enable = true;
+      tinysparql.enable = true;
+      localsearch.enable = true;
+
+      evolution-data-server = {
+        enable = true;
+        plugins = with pkgs; [
+          evolution-ews
+        ];
+      };
+
+      core-apps.enable = true;
       sushi.enable = true;
+      gnome-browser-connector.enable = true;
+
+      gnome-initial-setup.enable = false;
+      gnome-software.enable = false;
+      core-developer-tools.enable = false;
+      games.enable = false;
     };
 
     gvfs = {
       enable = true;
       package = (
-        pkgs.gvfs.override {
+        pkgs.gnome.gvfs.override {
+          gnomeSupport = true;
+          googleSupport = true;
           udevSupport = true;
         }
       );
@@ -1748,19 +1765,7 @@ in
       package = pkgs.kubernetes;
     };
 
-    sunshine = {
-      enable = true;
-      package = pkgs.sunshine;
-
-      capSysAdmin = true;
-      autoStart = true;
-
-      settings = {
-        port = 47989; # Base
-      };
-
-      openFirewall = true;
-    };
+    sysprof.enable = true;
 
     logrotate = {
       enable = true;
@@ -1881,7 +1886,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-gtk2.override {
+          pkgs.pinentry-gnome3.override {
             withLibsecret = true;
           }
         );
@@ -1992,83 +1997,7 @@ in
       ];
     };
 
-    uwsm = {
-      enable = true;
-      package = (
-        pkgs.uwsm.override {
-          fumonSupport = true;
-          uuctlSupport = true;
-          uwsmAppSupport = true;
-        }
-      );
-    };
-
     xwayland.enable = true;
-
-    hyprland = {
-      enable = true;
-      package = (
-        pkgs.hyprland.override {
-          debug = false;
-          enableXWayland = true;
-          withSystemd = true;
-          wrapRuntimeDeps = true;
-        }
-      );
-      portalPackage = (
-        pkgs.xdg-desktop-portal-hyprland.override {
-          debug = false;
-        }
-      );
-
-      withUWSM = true;
-      xwayland.enable = true;
-    };
-
-    dms-shell = {
-      enable = true;
-      package = pkgs.dms-shell;
-
-      quickshell.package = pkgs.quickshell;
-
-      systemd = {
-        enable = true;
-        restartIfChanged = true;
-      };
-
-      enableAudioWavelength = true;
-      enableCalendarEvents = true;
-      enableClipboardPaste = true;
-      enableDynamicTheming = true;
-      enableSystemMonitoring = true;
-      enableVPN = true;
-
-      plugins = {
-        # prayerTimes.enable = true; # FIXME: Does Not Work
-        calculator.enable = true;
-        dankHooks.enable = true;
-        dockerManager.enable = true;
-        emojiLauncher.enable = true;
-        hyprlandSubmap.enable = true;
-        kubernetes.enable = true;
-        nixMonitor.enable = true;
-        tailscale.enable = true;
-      }; # From dankmaterialshellPluginRegistryFlake
-    };
-
-    dsearch = {
-      enable = true;
-      package = pkgs.dsearch;
-
-      systemd = {
-        enable = true;
-      };
-    };
-
-    wayvnc = {
-      enable = true;
-      package = pkgs.wayvnc;
-    };
 
     dconf = {
       enable = true;
@@ -2077,15 +2006,6 @@ in
           lockAll = true;
 
           settings = {
-            "org/gnome/desktop/interface" = {
-              color-scheme = "prefer-dark";
-            };
-
-            "com/saivert/pwvucontrol" = {
-              beep-on-volume-changes = true;
-              enable-overamplification = true;
-            };
-
             "org/gnome/desktop/privacy" = {
               remember-app-usage = false;
               remember-recent-files = false;
@@ -2120,33 +2040,6 @@ in
 
             "org/gnome/file-roller/ui" = {
               view-sidebar = true;
-            };
-
-            "org/gnome/eog/plugins" = {
-              active-plugins = [
-                "fullscreen"
-                "reload"
-                "statusbar-date"
-              ];
-            };
-
-            "org/gnome/eog/ui" = {
-              image-gallery = false;
-              sidebar = true;
-              statusbar = true;
-            };
-
-            "org/gnome/eog/view" = {
-              autorotate = true;
-              extrapolate = true;
-              interpolate = true;
-              transparency = "checked";
-              use-background-color = false;
-            };
-
-            "org/gnome/eog/fullscreen" = {
-              loop = false;
-              upscale = false;
             };
 
             "com/github/huluti/Curtail" = {
@@ -2228,35 +2121,12 @@ in
       ];
     };
 
-    foot = {
-      enable = true;
-      package = pkgs.foot;
-
-      enableBashIntegration = true;
-
-      settings = {
-        main = {
-          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
-        };
-
-        security.osc52 = "enabled";
-
-        bell = {
-          system = "yes";
-        };
-      };
-    };
-
-    nautilus-open-any-terminal = {
-      enable = true;
-      terminal = "foot";
-    };
-
     gnome-disks.enable = true;
 
     system-config-printer.enable = true;
 
     seahorse.enable = true;
+    calls.enable = true;
 
     virt-manager = {
       enable = true;
@@ -2328,11 +2198,9 @@ in
       usbmon.enable = true;
     };
 
-    localsend = {
+    kdeconnect = {
       enable = true;
-      package = pkgs.localsend;
-
-      openFirewall = true;
+      package = pkgs.gnomeExtensions.gsconnect;
     };
   };
 
@@ -2378,12 +2246,11 @@ in
   };
 
   environment = {
-    enableAllTerminfo = true;
+    shells = [
+      config.users.defaultUserShell
+    ];
 
-    wordlist = {
-      enable = true;
-      # lists = ;
-    };
+    enableAllTerminfo = true;
 
     homeBinInPath = true;
     localBinInPath = true;
@@ -2405,16 +2272,14 @@ in
       }:$LD_LIBRARY_PATH";
 
       CHROME_EXECUTABLE = "brave";
-
-      DMS_DISABLE_POLKIT = 1; # DMS Polkit Agent Does Not Work
     };
 
     sessionVariables = {
       NIXOS_OZONE_WL = "1";
 
-      GTK_IM_MODULE = "fcitx";
-      QT_IM_MODULE = "wayland;fcitx";
-      XMODIFIERS = "@im=fcitx";
+      GTK_IM_MODULE = "ibus";
+      QT_IM_MODULE = "wayland;ibus";
+      XMODIFIERS = "@im=ibus";
     };
 
     shellAliases = {
@@ -2430,6 +2295,11 @@ in
     # loginShellInit = '''';
     # shellInit = '''';
     # interactiveShellInit = '''';
+
+    wordlist = {
+      enable = true;
+      # lists = ;
+    };
 
     systemPackages =
       with pkgs;
@@ -2478,9 +2348,11 @@ in
         binary
         binutils
         binwalk
+        blanket
         bleachbit
         bluetuith
         bluez-tools
+        btop
         btrfs-assistant
         btrfs-progs
         bulk_extractor
@@ -2492,7 +2364,7 @@ in
         celestia
         certdump
         chart-testing
-        cheese
+        citations
         clinfo
         cloc
         cmake
@@ -2502,7 +2374,9 @@ in
         collision
         compose2nix
         conmon
+        constrict
         cramfsprogs
+        cron
         cryptsetup
         ctop
         cups-pk-helper
@@ -2514,8 +2388,7 @@ in
         dbeaver-bin
         dconf-editor
         dconf2nix
-        deluge-gtk
-        dgop
+        dialect
         diffoci
         dig
         disktui
@@ -2538,13 +2411,14 @@ in
         egypt
         electron-mail
         elf-dissector
-        eog
+        emblem
         esptool
         etherape
         evtest
         evtest-qt
         exfatprogs
         exiftool
+        eyedropper
         f2fs-tools
         fastfetch
         fdroidcl
@@ -2559,6 +2433,7 @@ in
         flowblade
         flutter
         fontfor
+        fragments
         freecad
         freesmlauncher # Overlay from Flake
         fritzing
@@ -2571,17 +2446,39 @@ in
         git-filter-repo
         git-repo
         github-changelog-generator
+        gnome-autoar
+        gnome-bluetooth
+        gnome-calculator
+        gnome-calendar
         gnome-characters
         gnome-clocks
+        gnome-color-manager
+        gnome-connections
+        gnome-console
+        gnome-contacts
+        gnome-control-center
         gnome-decoder
+        gnome-epub-thumbnailer
         gnome-firmware
         gnome-font-viewer
         gnome-frog
         gnome-graphs
+        gnome-keysign
+        gnome-kra-ora-thumbnailer
         gnome-logs
         gnome-mahjongg
+        gnome-multi-writer
         gnome-nettool
+        gnome-network-displays
+        gnome-power-manager
+        gnome-secrets
+        gnome-session-ctl
+        gnome-sound-recorder
+        gnome-system-monitor
+        gnome-tecla
         gnome-tweaks
+        gnome-video-effects
+        gnome-weather
         gnugrep
         gnumake
         gnused
@@ -2613,11 +2510,10 @@ in
         hugo
         hw-probe
         hydra-check
-        hyprls
-        hyprpwcenter
         i2c-tools
         iaito
         iftop
+        impression
         indent
         inkscape-with-extensions
         inotify-tools
@@ -2638,7 +2534,6 @@ in
         kernelshark
         kexec-tools
         kgraphviewer
-        khal
         killall
         kind
         kmod
@@ -2679,6 +2574,8 @@ in
         linuxConsoleTools
         logdy
         logtop
+        lorem
+        loupe
         lsb-release
         lshw
         lsof
@@ -2703,15 +2600,17 @@ in
         mfcuk
         mfoc
         minikube
-        moonlight-qt
         motion
+        mousai
         mtools
         mtr-gui
         muse-sounds-manager
         musescore
         nautilus
+        nautilus-python
         nemu
         nethogs
+        newsflash
         nikto
         nilfs-utils
         ninja
@@ -2732,6 +2631,7 @@ in
         openssl
         p7zip
         paper-clip
+        papers
         papirus-folders
         parted
         pciutils
@@ -2745,6 +2645,7 @@ in
         podman-compose
         podman-desktop
         podman-tui
+        polari
         postgres-language-server
         procps
         profile-cleaner
@@ -2753,7 +2654,6 @@ in
         protonvpn-gui
         ps
         psmisc
-        qalculate-gtk
         qemu-user
         qemu-utils
         qr-backup
@@ -2762,6 +2662,7 @@ in
         rclone
         rclone-browser
         redisinsight
+        refine
         regex-tui
         rp-pppoe
         rpi-imager
@@ -2781,8 +2682,8 @@ in
         sipvicious
         sleuthkit
         smartmontools
+        snapshot
         sof-tools
-        songrec
         sound-theme-freedesktop
         soundconverter
         sox
@@ -2796,6 +2697,7 @@ in
         subtitleedit
         switcheroo
         symlinks
+        sysprof
         systemctl-tui
         systemd-lsp
         systemdgenie
@@ -2803,6 +2705,7 @@ in
         telegraph
         terminaltexteffects
         texliveFull
+        textpieces
         time
         tiny-rdm
         tpm2-abrmd
@@ -2833,6 +2736,7 @@ in
         usbutils
         util-linux
         valgrind
+        valuta
         video2x
         virt-top
         virt-v2v
@@ -3085,7 +2989,6 @@ in
         })
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
-        config.home-manager.users.root.services.udiskie.package
         config.services.phpfpm.phpPackage
       ]
       # ++ config.home-manager.users.root.programs.brave.nativeMessagingHosts # Duplicate
@@ -3099,11 +3002,11 @@ in
       ++ config.home-manager.users.root.programs.gh.extensions
       ++ config.home-manager.users.root.programs.lutris.extraPackages
       ++ config.home-manager.users.root.programs.lutris.winePackages
-      ++ config.home-manager.users.root.wayland.windowManager.hyprland.plugins
-      ++ config.i18n.inputMethod.fcitx5.addons
+      ++ config.i18n.inputMethod.ibus.engines
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
       ++ config.services.cockpit.plugins
+      ++ config.services.gnome.evolution-data-server.plugins
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
@@ -3210,6 +3113,16 @@ in
         write
         xxd
       ]);
+
+    gnome.excludePackages = with pkgs; [
+      decibels
+      epiphany
+      gnome-music
+      gnome-text-editor
+      gnome-tour
+      showtime
+      yelp
+    ];
 
     enableDebugInfo = false;
   };
@@ -3324,91 +3237,91 @@ in
         "text/xml" = "codium.desktop";
         "text/xml-external-parsed-entity" = "codium.desktop";
 
-        "image/aces" = "org.gnome.eog.desktop";
-        "image/apng" = "org.gnome.eog.desktop";
-        "image/avci" = "org.gnome.eog.desktop";
-        "image/avcs" = "org.gnome.eog.desktop";
-        "image/avif" = "org.gnome.eog.desktop";
-        "image/bmp" = "org.gnome.eog.desktop";
-        "image/cgm" = "org.gnome.eog.desktop";
-        "image/dicom-rle" = "org.gnome.eog.desktop";
-        "image/dpx" = "org.gnome.eog.desktop";
-        "image/emf" = "org.gnome.eog.desktop";
-        "image/fits" = "org.gnome.eog.desktop";
-        "image/g3fax" = "org.gnome.eog.desktop";
-        "image/gif" = "org.gnome.eog.desktop";
-        "image/heic-sequence" = "org.gnome.eog.desktop";
-        "image/heic" = "org.gnome.eog.desktop";
-        "image/heif-sequence" = "org.gnome.eog.desktop";
-        "image/heif" = "org.gnome.eog.desktop";
-        "image/hej2k" = "org.gnome.eog.desktop";
-        "image/hsj2" = "org.gnome.eog.desktop";
-        "image/ief" = "org.gnome.eog.desktop";
-        "image/j2c" = "org.gnome.eog.desktop";
-        "image/jaii" = "org.gnome.eog.desktop";
-        "image/jais" = "org.gnome.eog.desktop";
-        "image/jls" = "org.gnome.eog.desktop";
-        "image/jp2" = "org.gnome.eog.desktop";
-        "image/jpeg" = "org.gnome.eog.desktop";
-        "image/jph" = "org.gnome.eog.desktop";
-        "image/jphc" = "org.gnome.eog.desktop";
-        "image/jpm" = "org.gnome.eog.desktop";
-        "image/jpx" = "org.gnome.eog.desktop";
-        "image/jxl" = "org.gnome.eog.desktop";
-        "image/jxr" = "org.gnome.eog.desktop";
-        "image/jxrA" = "org.gnome.eog.desktop";
-        "image/jxrS" = "org.gnome.eog.desktop";
-        "image/jxs" = "org.gnome.eog.desktop";
-        "image/jxsc" = "org.gnome.eog.desktop";
-        "image/jxsi" = "org.gnome.eog.desktop";
-        "image/jxss" = "org.gnome.eog.desktop";
-        "image/ktx" = "org.gnome.eog.desktop";
-        "image/ktx2" = "org.gnome.eog.desktop";
-        "image/naplps" = "org.gnome.eog.desktop";
-        "image/png" = "org.gnome.eog.desktop";
-        "image/prs.btif" = "org.gnome.eog.desktop";
-        "image/prs.pti" = "org.gnome.eog.desktop";
-        "image/pwg-raster" = "org.gnome.eog.desktop";
-        "image/svg+xml" = "org.gnome.eog.desktop";
-        "image/t38" = "org.gnome.eog.desktop";
-        "image/tiff-fx" = "org.gnome.eog.desktop";
-        "image/tiff" = "org.gnome.eog.desktop";
-        "image/vnd.adobe.photoshop" = "org.gnome.eog.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.gnome.eog.desktop";
-        "image/vnd.blockfact.facti" = "org.gnome.eog.desktop";
-        "image/vnd.clip" = "org.gnome.eog.desktop";
-        "image/vnd.cns.inf2" = "org.gnome.eog.desktop";
-        "image/vnd.dece.graphic" = "org.gnome.eog.desktop";
-        "image/vnd.djvu" = "org.gnome.eog.desktop";
-        "image/vnd.dvb.subtitle" = "org.gnome.eog.desktop";
-        "image/vnd.dwg" = "org.gnome.eog.desktop";
-        "image/vnd.dxf" = "org.gnome.eog.desktop";
-        "image/vnd.fastbidsheet" = "org.gnome.eog.desktop";
-        "image/vnd.fpx" = "org.gnome.eog.desktop";
-        "image/vnd.fst" = "org.gnome.eog.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.eog.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.eog.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.gnome.eog.desktop";
-        "image/vnd.microsoft.icon" = "org.gnome.eog.desktop";
-        "image/vnd.mix" = "org.gnome.eog.desktop";
-        "image/vnd.mozilla.apng" = "org.gnome.eog.desktop";
-        "image/vnd.ms-modi" = "org.gnome.eog.desktop";
-        "image/vnd.net-fpx" = "org.gnome.eog.desktop";
-        "image/vnd.pco.b16" = "org.gnome.eog.desktop";
-        "image/vnd.radiance" = "org.gnome.eog.desktop";
-        "image/vnd.sealed.png" = "org.gnome.eog.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.eog.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.eog.desktop";
-        "image/vnd.svf" = "org.gnome.eog.desktop";
-        "image/vnd.tencent.tap" = "org.gnome.eog.desktop";
-        "image/vnd.valve.source.texture" = "org.gnome.eog.desktop";
-        "image/vnd.wap.wbmp" = "org.gnome.eog.desktop";
-        "image/vnd.xiff" = "org.gnome.eog.desktop";
-        "image/vnd.zbrush.pcx" = "org.gnome.eog.desktop";
-        "image/webp" = "org.gnome.eog.desktop";
-        "image/wmf" = "org.gnome.eog.desktop";
-        "image/x-emf" = "org.gnome.eog.desktop";
-        "image/x-wmf" = "org.gnome.eog.desktop";
+        "image/aces" = "org.gnome.Loupe.desktop";
+        "image/apng" = "org.gnome.Loupe.desktop";
+        "image/avci" = "org.gnome.Loupe.desktop";
+        "image/avcs" = "org.gnome.Loupe.desktop";
+        "image/avif" = "org.gnome.Loupe.desktop";
+        "image/bmp" = "org.gnome.Loupe.desktop";
+        "image/cgm" = "org.gnome.Loupe.desktop";
+        "image/dicom-rle" = "org.gnome.Loupe.desktop";
+        "image/dpx" = "org.gnome.Loupe.desktop";
+        "image/emf" = "org.gnome.Loupe.desktop";
+        "image/fits" = "org.gnome.Loupe.desktop";
+        "image/g3fax" = "org.gnome.Loupe.desktop";
+        "image/gif" = "org.gnome.Loupe.desktop";
+        "image/heic-sequence" = "org.gnome.Loupe.desktop";
+        "image/heic" = "org.gnome.Loupe.desktop";
+        "image/heif-sequence" = "org.gnome.Loupe.desktop";
+        "image/heif" = "org.gnome.Loupe.desktop";
+        "image/hej2k" = "org.gnome.Loupe.desktop";
+        "image/hsj2" = "org.gnome.Loupe.desktop";
+        "image/ief" = "org.gnome.Loupe.desktop";
+        "image/j2c" = "org.gnome.Loupe.desktop";
+        "image/jaii" = "org.gnome.Loupe.desktop";
+        "image/jais" = "org.gnome.Loupe.desktop";
+        "image/jls" = "org.gnome.Loupe.desktop";
+        "image/jp2" = "org.gnome.Loupe.desktop";
+        "image/jpeg" = "org.gnome.Loupe.desktop";
+        "image/jph" = "org.gnome.Loupe.desktop";
+        "image/jphc" = "org.gnome.Loupe.desktop";
+        "image/jpm" = "org.gnome.Loupe.desktop";
+        "image/jpx" = "org.gnome.Loupe.desktop";
+        "image/jxl" = "org.gnome.Loupe.desktop";
+        "image/jxr" = "org.gnome.Loupe.desktop";
+        "image/jxrA" = "org.gnome.Loupe.desktop";
+        "image/jxrS" = "org.gnome.Loupe.desktop";
+        "image/jxs" = "org.gnome.Loupe.desktop";
+        "image/jxsc" = "org.gnome.Loupe.desktop";
+        "image/jxsi" = "org.gnome.Loupe.desktop";
+        "image/jxss" = "org.gnome.Loupe.desktop";
+        "image/ktx" = "org.gnome.Loupe.desktop";
+        "image/ktx2" = "org.gnome.Loupe.desktop";
+        "image/naplps" = "org.gnome.Loupe.desktop";
+        "image/png" = "org.gnome.Loupe.desktop";
+        "image/prs.btif" = "org.gnome.Loupe.desktop";
+        "image/prs.pti" = "org.gnome.Loupe.desktop";
+        "image/pwg-raster" = "org.gnome.Loupe.desktop";
+        "image/svg+xml" = "org.gnome.Loupe.desktop";
+        "image/t38" = "org.gnome.Loupe.desktop";
+        "image/tiff-fx" = "org.gnome.Loupe.desktop";
+        "image/tiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
+        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
+        "image/vnd.clip" = "org.gnome.Loupe.desktop";
+        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
+        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
+        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
+        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
+        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
+        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
+        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
+        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.fst" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
+        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
+        "image/vnd.mix" = "org.gnome.Loupe.desktop";
+        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
+        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
+        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
+        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
+        "image/vnd.svf" = "org.gnome.Loupe.desktop";
+        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
+        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
+        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
+        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
+        "image/webp" = "org.gnome.Loupe.desktop";
+        "image/wmf" = "org.gnome.Loupe.desktop";
+        "image/x-emf" = "org.gnome.Loupe.desktop";
+        "image/x-wmf" = "org.gnome.Loupe.desktop";
 
         "audio/1d-interleaved-parityfec" = "mpv.desktop";
         "audio/32kadpcm" = "mpv.desktop";
@@ -3704,8 +3617,8 @@ in
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
 
-        "application/x-bittorrent" = "deluge.desktop";
-        "x-scheme-handler/magnet" = "deluge.desktop";
+        "application/x-bittorrent" = "de.haeckerfelix.Fragments.desktop";
+        "x-scheme-handler/magnet" = "de.haeckerfelix.Fragments.desktop";
 
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
@@ -3725,9 +3638,8 @@ in
     portal = {
       enable = true;
       extraPortals = with pkgs; [
-        (pkgs.xdg-desktop-portal-hyprland.override {
-          debug = false;
-        })
+        xdg-desktop-portal-gnome
+        xdg-desktop-portal-gtk
       ];
 
       xdgOpenUsePortal = false; # Opening Programs
@@ -3735,7 +3647,8 @@ in
       config = {
         common = {
           default = [
-            "hyprland"
+            "gnome"
+            "gtk"
           ];
 
           "org.freedesktop.impl.portal.Secret" = [
@@ -3750,7 +3663,9 @@ in
 
   qt = {
     enable = true;
-    platformTheme = "qt5ct"; # Includes qt6ct
+
+    platformTheme = "gnome";
+    style = "adwaita-dark";
   };
 
   documentation = {
@@ -3881,354 +3796,6 @@ in
           stateVersion = "26.05";
         };
 
-        wayland.windowManager.hyprland = {
-          enable = true;
-          package = (
-            pkgs.hyprland.override {
-              debug = false;
-              enableXWayland = true;
-              withSystemd = true;
-              wrapRuntimeDeps = true;
-            }
-          );
-
-          systemd = {
-            enable = false;
-            enableXdgAutostart = true;
-
-            variables = [
-              "--all"
-            ];
-          };
-
-          # plugins = with pkgs.hyprlandPlugins; [ ];
-
-          xwayland.enable = true;
-
-          sourceFirst = true;
-
-          settings = {
-            env = [
-              "XCURSOR_SIZE, ${toString cursor.size}"
-            ];
-
-            monitor = [
-              # Name, Resolution, Position, Scale, Transform-Parameter, Transform
-              ", highres, auto, 1, transform, 0"
-              "eDP-1, highres, auto, 1, transform, 0"
-              "HDMI-A-1, highres, auto, 1, transform, 1"
-            ];
-
-            exec-once = [
-              "setfacl --modify user:jellyfin:--x ~"
-
-              "uwsm app -- soteria" # DMS Polkit Agent Does Not Work and Soteria Does Not Autostart
-              "adb start-server"
-            ];
-
-            bind = [
-              "SUPER, I, exec, dms ipc call keybinds toggle hyprland"
-
-              "SUPER, L, exec, dms ipc call lock lock"
-              "SUPER CTRL, I, exec, dms ipc call inhibit toggle"
-              "SUPER CTRL, P, exec, dms ipc call powermenu toggle"
-
-              "SUPER, O, exec, dms ipc call hypr toggleOverview"
-
-              "SUPER, 1, workspace, 1"
-              "SUPER, 2, workspace, 2"
-              "SUPER, 3, workspace, 3"
-              "SUPER, 4, workspace, 4"
-              "SUPER, 5, workspace, 5"
-              "SUPER, 6, workspace, 6"
-              "SUPER, 7, workspace, 7"
-              "SUPER, 8, workspace, 8"
-              "SUPER, 9, workspace, 9"
-              "SUPER, 0, workspace, 10"
-              "SUPER, mouse_down, workspace, e+1"
-              "SUPER, mouse_up, workspace, e-1"
-              "SUPER, S, togglespecialworkspace, magic"
-
-              "SUPER, left, movefocus, l"
-              "SUPER, right, movefocus, r"
-              "SUPER, up, movefocus, u"
-              "SUPER, down, movefocus, d"
-
-              "SUPER SHIFT, 1, movetoworkspace, 1"
-              "SUPER SHIFT, 2, movetoworkspace, 2"
-              "SUPER SHIFT, 3, movetoworkspace, 3"
-              "SUPER SHIFT, 4, movetoworkspace, 4"
-              "SUPER SHIFT, 5, movetoworkspace, 5"
-              "SUPER SHIFT, 6, movetoworkspace, 6"
-              "SUPER SHIFT, 7, movetoworkspace, 7"
-              "SUPER SHIFT, 8, movetoworkspace, 8"
-              "SUPER SHIFT, 9, movetoworkspace, 9"
-              "SUPER SHIFT, 0, movetoworkspace, 10"
-              "SUPER SHIFT, S, movetoworkspace, special:magic"
-              "SUPER SHIFT ALT, 1, movetoworkspacesilent, 1"
-              "SUPER SHIFT ALT, 2, movetoworkspacesilent, 2"
-              "SUPER SHIFT ALT, 3, movetoworkspacesilent, 3"
-              "SUPER SHIFT ALT, 4, movetoworkspacesilent, 4"
-              "SUPER SHIFT ALT, 5, movetoworkspacesilent, 5"
-              "SUPER SHIFT ALT, 6, movetoworkspacesilent, 6"
-              "SUPER SHIFT ALT, 7, movetoworkspacesilent, 7"
-              "SUPER SHIFT ALT, 8, movetoworkspacesilent, 8"
-              "SUPER SHIFT ALT, 9, movetoworkspacesilent, 9"
-              "SUPER SHIFT ALT, 0, movetoworkspacesilent, 10"
-              "SUPER SHIFT ALT, S, movetoworkspacesilent, special:magic"
-
-              "SUPER SHIFT, T, togglesplit,"
-              "SUPER SHIFT, F, togglefloating,"
-              ", F11, fullscreen, 0"
-              "SUPER, Q, killactive,"
-
-              ", PRINT, exec, dms screenshot region --cursor --format=png"
-
-              "SUPER, A, exec, dms ipc call spotlight toggle"
-              "SUPER, R, exec, uwsm app -- wofi --show run --disable-history | xargs -r uwsm app --"
-
-              "SUPER, C, exec, dms ipc call clipboard toggle"
-
-              "SUPER, N, exec, dms ipc call notifications open"
-
-              "SUPER, T, exec, uwsm app -- foot"
-
-              ", XF86Explorer, exec, uwsm app -- nautilus"
-              "SUPER, F, exec, uwsm app -- nautilus"
-              "SUPER ALT, F, exec, dms ipc call spotlight toggleQuery \"/\""
-
-              "SUPER, K, exec, uwsm app -- keepassxc"
-              "SUPER ALT, K, exec, uwsm app -- keepassxc --lock"
-
-              "SUPER, U, exec, dms ipc call processlist open"
-
-              "SUPER, W, exec, uwsm app -- brave"
-              "SUPER ALT, W, exec, uwsm app -- brave --incognito"
-
-              ", XF86Mail, exec, uwsm app -- electron-mail"
-              "SUPER, M, exec, uwsm app -- electron-mail"
-
-              "SUPER, E, exec, uwsm app -- codium"
-
-              "SUPER, D, exec, uwsm app -- dbeaver"
-
-              "SUPER, P, exec, uwsm app -- scrcpy --render-driver=opengl"
-            ];
-
-            bindm = [
-              "SUPER, mouse:272, movewindow"
-              "SUPER, mouse:273, resizewindow"
-            ]; # Mouse
-
-            bindl = [
-              ", XF86AudioPlay, exec, dms ipc call mpris playPause"
-              ", XF86AudioPause, exec, dms ipc call mpris playPause"
-              ", XF86AudioStop, exec, dms ipc call mpris stop"
-              ", XF86AudioPrev, exec, dms ipc call mpris previous"
-              ", XF86AudioNext, exec, dms ipc call mpris next"
-
-              ", XF86AudioMute, exec, dms ipc call audio mute"
-              ", XF86AudioMicMute, exec, dms ipc call audio micmute"
-            ]; # Will also work when locked
-
-            bindel = [
-              ", XF86MonBrightnessUp, exec, dms ipc call brightness increment 1 \"\""
-              ", XF86MonBrightnessDown, exec, dms ipc call brightness decrement 1 \"\""
-
-              ", XF86AudioRaiseVolume, exec, dms ipc call audio increment 1"
-              ", XF86AudioLowerVolume, exec, dms ipc call audio decrement 1"
-            ]; # Repeat and will work when locked
-
-            general = {
-              allow_tearing = false;
-
-              gaps_workspaces = 0;
-
-              layout = "dwindle";
-
-              gaps_in = 2;
-              gaps_out = "2, 0, 0, 0"; # Top, Right, Bottom, Left
-
-              border_size = 0;
-
-              no_focus_fallback = false;
-
-              resize_on_border = true;
-              hover_icon_on_border = true;
-
-              snap = {
-                enabled = true;
-                border_overlap = false;
-              };
-            };
-
-            ecosystem = {
-              no_update_news = false;
-            };
-
-            misc = {
-              disable_autoreload = false;
-
-              allow_session_lock_restore = true;
-
-              key_press_enables_dpms = true;
-              mouse_move_enables_dpms = true;
-
-              vfr = true;
-              vrr = 1;
-
-              mouse_move_focuses_monitor = true;
-
-              disable_hyprland_logo = true;
-              force_default_wallpaper = 1;
-              disable_splash_rendering = true;
-
-              font_family = fontPreferences.name.sans_serif;
-
-              close_special_on_empty = true;
-
-              animate_mouse_windowdragging = false;
-              animate_manual_resizes = false;
-
-              exit_window_retains_fullscreen = false;
-
-              layers_hog_keyboard_focus = true;
-
-              focus_on_activate = false;
-
-              middle_click_paste = true;
-            };
-
-            dwindle = {
-              pseudotile = false;
-
-              use_active_for_splits = true;
-              force_split = 0; # Follows Mouse
-              smart_split = false;
-              preserve_split = true;
-
-              smart_resizing = true;
-            };
-
-            xwayland = {
-              enabled = true;
-              force_zero_scaling = true;
-              use_nearest_neighbor = true;
-            };
-
-            # windowrule = [
-            # ];
-
-            input = {
-              kb_layout = "us";
-
-              numlock_by_default = false;
-
-              follow_mouse = 1;
-              focus_on_close = 1;
-
-              left_handed = false;
-              natural_scroll = false;
-
-              touchpad = {
-                natural_scroll = true;
-
-                tap-to-click = true;
-                tap-and-drag = true;
-                drag_lock = true;
-
-                disable_while_typing = true;
-              };
-
-              touchdevice = {
-                enabled = true;
-              };
-
-              tablet = {
-                left_handed = false;
-              };
-            };
-
-            cursor = {
-              no_hardware_cursors = false;
-
-              sync_gsettings_theme = true;
-
-              persistent_warps = true;
-
-              no_warps = false;
-
-              hide_on_key_press = false;
-              hide_on_touch = true;
-            };
-
-            binds = {
-              disable_keybind_grabbing = true;
-              pass_mouse_when_bound = false;
-
-              window_direction_monitor_fallback = true;
-            };
-
-            gestures = {
-              # Touchpad
-              workspace_swipe_invert = true;
-
-              # Touchscreen
-              workspace_swipe_touch = false;
-              workspace_swipe_touch_invert = false;
-
-              workspace_swipe_create_new = true;
-              workspace_swipe_forever = true;
-            };
-
-            decoration = {
-              dim_special = 0.25;
-
-              rounding = builtins.floor (design_factor / 2); # 8
-
-              active_opacity = 1.0;
-              fullscreen_opacity = 1.0;
-              inactive_opacity = 1.0;
-
-              dim_inactive = false;
-              dim_strength = 0.0;
-
-              blur.enabled = false;
-              shadow.enabled = false;
-            };
-
-            animations = {
-              enabled = true;
-
-              bezier = [
-                "linear, 0, 0, 1, 1" # https://www.cssportal.com/css-cubic-bezier-generator/#0,0,1,1
-              ];
-
-              animation = [
-                "global, 1, 1.0, linear"
-                "border, 1, 1.0, linear"
-                "windows, 1, 1.0, linear"
-                "windowsIn, 1, 1.0, linear"
-                "windowsOut, 1, 1.0, linear"
-                "fadeIn, 1, 1.0, linear"
-                "fadeOut, 1, 1.0, linear"
-                "fade, 1, 1.0, linear"
-                "layers, 1, 1.0, linear"
-                "layersIn, 1, 1.0, linear"
-                "layersOut, 1, 1.0, linear"
-                "fadeLayersIn, 1, 1.0, linear"
-                "fadeLayersOut, 1, 1.0, linear"
-                "workspaces, 1, 1.0, linear"
-                "workspacesIn, 1, 1.0, linear"
-                "workspacesOut, 1, 1.0, linear"
-              ];
-              # Name, On/Off, Speed, Bezier
-            };
-
-            # plugin = { };
-          };
-        };
-
         xdg = {
           mime.enable = true;
 
@@ -4252,18 +3819,16 @@ in
         gtk = {
           enable = true;
 
+          colorScheme = "dark";
+
           theme = {
-            name = "adw-gtk3-dark";
-            package = pkgs.adw-gtk3;
+            name = "Adwaita";
+            package = pkgs.gnome-themes-extra;
           };
 
           iconTheme = {
-            name = "Papirus-Dark";
-            package = (
-              pkgs.papirus-icon-theme.override {
-                color = "black";
-              }
-            );
+            name = "Adwaita";
+            package = pkgs.adwaita-icon-theme;
           };
 
           cursorTheme = {
@@ -4281,32 +3846,104 @@ in
 
         qt = {
           enable = true;
-          platformTheme.name = "qtct";
+
+          platformTheme.name = "adwaita";
+          style = {
+            name = "adwaita-dark";
+            package = (
+              pkgs.adwaita-qt6.override {
+                useQt6 = false;
+              }
+            );
+          };
         };
 
         services = {
           poweralertd.enable = true;
 
-          udiskie = {
+          polkit-gnome = {
             enable = true;
-            package = pkgs.udiskie;
+            package = pkgs.polkit_gnome;
+          };
 
-            automount = true;
-            tray = "always";
-            notify = true;
+          gnome-keyring = {
+            enable = true;
+            package = (
+              pkgs.gnome-keyring.override {
+                useWrappedDaemon = true;
+              }
+            );
 
-            settings = {
-              terminal = "${pkgs.foot}/bin/foot -D";
-              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
-
-              menu = "nested";
-
-              password_cache = 5; # 5 Minutes
-            };
+            components = [
+              "pkcs11"
+              "secrets"
+              "ssh"
+            ];
           };
         };
 
         programs = {
+          gnome-shell = {
+            enable = true;
+
+            extensions = [
+              {
+                package = pkgs.gnomeExtensions.appindicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
+              }
+              {
+                package = pkgs.gnomeExtensions.blur-my-shell;
+              }
+              {
+                package = pkgs.gnomeExtensions.clipboard-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.desktop-cube;
+              }
+              {
+                package = pkgs.gnomeExtensions.display-configuration-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.extra-reboot-options;
+              }
+              {
+                package = pkgs.gnomeExtensions.frequency-boost-switch;
+              }
+              {
+                package = pkgs.gnomeExtensions.gamemode-shell-extension;
+              }
+              {
+                package = pkgs.gnomeExtensions.gsconnect;
+              }
+              {
+                package = pkgs.gnomeExtensions.places-status-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.privacy-settings-menu;
+              }
+              {
+                package = pkgs.gnomeExtensions.sermon;
+              }
+              {
+                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
+              }
+              {
+                package = pkgs.gnomeExtensions.top-bar-organizer;
+              }
+              {
+                package = pkgs.gnomeExtensions.touchpad-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.vitals;
+              }
+              {
+                package = pkgs.gnomeExtensions.wifi-qrcode;
+              }
+            ];
+          };
+
           # gradle = {
           #   enable = true;
           #   package = pkgs.gradle;
@@ -4641,12 +4278,6 @@ in
                       version = "0.13.251128001";
                       sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
-                    {
-                      name = "dms-theme";
-                      publisher = "danklinux";
-                      version = "0.0.3";
-                      sha256 = "sha256-MI1x1wiqvwg/N89oMuNVp0qlRT84ubvuMjtpkX0WKQY=";
-                    }
                   ];
 
                 enableUpdateCheck = true;
@@ -4702,7 +4333,6 @@ in
               insensitive = true;
 
               single_click = true;
-              term = "foot";
             };
 
             style = ''
