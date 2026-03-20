@@ -101,15 +101,6 @@ let
     size = builtins.floor (design_factor * 0.75); # 12
   };
 
-  cursor = {
-    theme = {
-      name = "Adwaita";
-      package = pkgs.adwaita-icon-theme;
-    };
-
-    size = builtins.floor (design_factor * 1.50); # 24
-  };
-
   tlsCertificateFiles =
     pkgs.runCommand "tlsCertificate"
       {
@@ -165,13 +156,13 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [
       # apfs # FIXME: Build Failure
-      # zfs_unstable # Marked Broken
       cpupower
       mm-tools
       openafs
       tmon
       turbostat
       usbip
+      zfs_unstable
     ];
 
     hardwareScan = true;
@@ -714,7 +705,7 @@ in
       enable = true;
       package = (
         pkgs.libvirt.override {
-          enableCeph = false; # FIXME: Build Failure
+          enableCeph = true;
           enableGlusterfs = true;
           enableIscsi = true;
           enableXen = true;
@@ -728,7 +719,7 @@ in
         #     alsaSupport = true;
         #     canokeySupport = false; # Marked as Broken
         #     capstoneSupport = true;
-        #     cephSupport = false; # FIXME: Build Failure
+        #     cephSupport = true;
         #     enableBlobs = true;
         #     enableDocs = true;
         #     enableTools = true;
@@ -917,19 +908,6 @@ in
       debug = false;
     };
 
-    smartd = {
-      enable = true;
-
-      autodetect = true;
-
-      notifications = {
-        mail.enable = false;
-        systembus-notify.enable = false;
-        test = false;
-        wall.enable = true;
-      };
-    };
-
     logind = {
       settings = {
         Login = {
@@ -951,6 +929,21 @@ in
           hibernateKey = "hibernate";
           hibernateKeyLongPress = "hibernate";
         };
+      };
+    };
+
+    colord.enable = true;
+
+    smartd = {
+      enable = true;
+
+      autodetect = true;
+
+      notifications = {
+        mail.enable = false;
+        systembus-notify.enable = false;
+        test = false;
+        wall.enable = true;
       };
     };
 
@@ -2307,7 +2300,6 @@ in
         # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
-        # open-interpreter # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
@@ -2377,6 +2369,7 @@ in
         constrict
         cramfsprogs
         cron
+        crosspipe
         cryptsetup
         ctop
         cups-pk-helper
@@ -2438,7 +2431,7 @@ in
         freesmlauncher # Overlay from Flake
         fritzing
         fstl
-        gcc15
+        gcc
         gdb
         ghex
         ghostunnel
@@ -2527,9 +2520,7 @@ in
         jmol
         john
         johnny
-        jq
         json-tui
-        kdePackages.kimageformats
         kernel-hardening-checker
         kernelshark
         kexec-tools
@@ -2564,9 +2555,7 @@ in
         libarchive
         libhsts
         libinput
-        libloragw-2g4
         libnotify
-        libreoffice-fresh
         libsecret
         libsixel
         libva-utils
@@ -2588,7 +2577,6 @@ in
         macchanger
         mailcap
         massdns
-        matugen
         mcaselector
         md-lsp
         meld
@@ -2626,13 +2614,13 @@ in
         nurl
         nvme-cli
         onionshare-gui
+        onlyoffice-desktopeditors
         openai-whisper
         opendmarc
         openssl
         p7zip
         paper-clip
         papers
-        papirus-folders
         parted
         pciutils
         pdfarranger
@@ -2718,11 +2706,8 @@ in
         tree
         trufflehog
         trustymail
-        tuicam
         udftools
         uefi-firmware-parser
-        uget
-        uget-integrator
         ugit
         undollar
         unhide
@@ -2737,6 +2722,7 @@ in
         util-linux
         valgrind
         valuta
+        varia
         video2x
         virt-top
         virt-v2v
@@ -2761,13 +2747,13 @@ in
         whois
         winboat
         wl-clipboard
-        wl-kbptr
         wordbook
         worldpainter
         wpprobe
         wvkbd # wvkbd-mobintl
         x2goclient
         xdg-user-dirs
+        xdg-user-dirs-gtk
         xdg-utils
         xfsdump
         xfsprogs
@@ -2775,7 +2761,6 @@ in
         yaml-language-server
         yara-x
         yoshimi
-        ytdownloader
         zenity
         zenmap
         zfs
@@ -2986,6 +2971,9 @@ in
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
+        })
+        (wget2.override {
+          sslSupport = true;
         })
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
@@ -3778,9 +3766,9 @@ in
           };
 
           pointerCursor = {
-            name = cursor.theme.name;
-            package = cursor.theme.package;
-            size = cursor.size;
+            name = config.home-manager.users.root.gtk.cursorTheme.name;
+            package = config.home-manager.users.root.gtk.cursorTheme.package;
+            size = config.home-manager.users.root.gtk.cursorTheme.size;
 
             gtk.enable = true;
           };
@@ -3832,9 +3820,9 @@ in
           };
 
           cursorTheme = {
-            name = cursor.theme.name;
-            package = cursor.theme.package;
-            size = cursor.size;
+            name = config.home-manager.users.root.gtk.iconTheme.name;
+            package = config.home-manager.users.root.gtk.iconTheme.package;
+            size = builtins.floor (design_factor * 1.50); # 24
           };
 
           font = {
