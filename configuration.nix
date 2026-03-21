@@ -401,6 +401,12 @@ in
           withSystemd = true;
         }
       );
+      plugins = with pkgs; [
+        networkmanager-l2tp
+        networkmanager-openvpn
+        networkmanager-ssh
+        networkmanager-sstp
+      ];
 
       ethernet.macAddress = "permanent";
 
@@ -861,11 +867,20 @@ in
   };
 
   services = {
-    zram-generator = {
-      enable = true;
-      package = pkgs.zram-generator;
+    timesyncd = {
+      enable = false; # Disabled due to Misbehavior
 
-      # settings = { };
+      servers = config.networking.timeServers;
+      fallbackServers = config.networking.timeServers;
+    };
+
+    fwupd = {
+      enable = true;
+      package = (
+        pkgs.fwupd.override {
+          enableFlashrom = true;
+        }
+      );
     };
 
     upower = {
@@ -894,20 +909,6 @@ in
       logEvents = false;
     };
 
-    power-profiles-daemon = {
-      enable = true;
-      package = pkgs.power-profiles-daemon;
-    };
-
-    thermald = {
-      enable = true;
-      package = pkgs.thermald;
-
-      ignoreCpuidCheck = false;
-
-      debug = false;
-    };
-
     logind = {
       settings = {
         Login = {
@@ -932,7 +933,48 @@ in
       };
     };
 
+    power-profiles-daemon = {
+      enable = true;
+      package = pkgs.power-profiles-daemon;
+    };
+
+    thermald = {
+      enable = true;
+      package = pkgs.thermald;
+
+      ignoreCpuidCheck = false;
+
+      debug = false;
+    };
+
     colord.enable = true;
+
+    udev = {
+      enable = true;
+      packages = with pkgs; [
+        game-devices-udev-rules
+        libmtp.out
+        rtl-sdr
+      ];
+    };
+
+    udisks2 = {
+      enable = true;
+      package = pkgs.udisks;
+
+      mountOnMedia = false;
+    };
+
+    gvfs = {
+      enable = true;
+      package = (
+        pkgs.gnome.gvfs.override {
+          gnomeSupport = true;
+          googleSupport = true;
+          udevSupport = true;
+        }
+      );
+    };
 
     smartd = {
       enable = true;
@@ -945,6 +987,13 @@ in
         test = false;
         wall.enable = true;
       };
+    };
+
+    zram-generator = {
+      enable = true;
+      package = pkgs.zram-generator;
+
+      # settings = { };
     };
 
     dbus = {
@@ -963,38 +1012,6 @@ in
     };
 
     accounts-daemon.enable = true;
-
-    timesyncd = {
-      enable = false; # Disabled due to Misbehavior
-
-      servers = config.networking.timeServers;
-      fallbackServers = config.networking.timeServers;
-    };
-
-    fwupd = {
-      enable = true;
-      package = (
-        pkgs.fwupd.override {
-          enableFlashrom = true;
-        }
-      );
-    };
-
-    udev = {
-      enable = true;
-      packages = with pkgs; [
-        game-devices-udev-rules
-        libmtp.out
-        rtl-sdr
-      ];
-    };
-
-    udisks2 = {
-      enable = true;
-      package = pkgs.udisks;
-
-      mountOnMedia = false;
-    };
 
     fprintd = {
       enable = true;
@@ -1073,17 +1090,6 @@ in
       gnome-software.enable = false;
       core-developer-tools.enable = false;
       games.enable = false;
-    };
-
-    gvfs = {
-      enable = true;
-      package = (
-        pkgs.gnome.gvfs.override {
-          gnomeSupport = true;
-          googleSupport = true;
-          udevSupport = true;
-        }
-      );
     };
 
     pipewire = {
@@ -1167,8 +1173,75 @@ in
 
       raopOpenFirewall = true;
     };
-
     pulseaudio.enable = false;
+
+    printing = {
+      enable = true;
+      package = (
+        pkgs.cups.override {
+          enableSystemd = true;
+        }
+      );
+
+      drivers = with pkgs; [
+        (gutenprint.override {
+          cupsSupport = true;
+        })
+        gutenprintBin
+      ];
+
+      cups-pdf.enable = true;
+
+      listenAddresses = [
+        "*:631"
+      ];
+
+      allowFrom = [
+        "all"
+      ];
+
+      browsing = true;
+      webInterface = true;
+
+      defaultShared = true;
+      startWhenNeeded = true;
+
+      extraConf = ''
+        DefaultLanguage en
+        ServerName ${config.networking.fqdn}
+        ServerAlias *
+        ServerTokens Full
+        ServerAdmin bitscoper@${config.networking.fqdn}
+        BrowseLocalProtocols all
+        BrowseWebIF On
+        HostNameLookups On
+        AccessLogLevel config
+        AutoPurgeJobs Yes
+        PreserveJobHistory Off
+        PreserveJobFiles Off
+        DirtyCleanInterval 30
+        LogTimeFormat standard
+      '';
+
+      logLevel = "warn";
+
+      openFirewall = true;
+    };
+    ipp-usb.enable = true;
+    system-config-printer.enable = true;
+
+    saned.enable = true;
+
+    gpsd = {
+      enable = true;
+
+      readonly = true;
+
+      listenany = true;
+      port = 2947;
+
+      debugLevel = 0; # 0 = No Debugging
+    };
 
     phpfpm = {
       phpPackage =
@@ -1263,6 +1336,10 @@ in
         session.cache_limiter = nocache
         xdebug.mode=debug
       '';
+    };
+
+    kubernetes = {
+      package = pkgs.kubernetes;
     };
 
     avahi = {
@@ -1369,74 +1446,6 @@ in
       };
 
       openFirewall = true;
-    };
-
-    printing = {
-      enable = true;
-      package = (
-        pkgs.cups.override {
-          enableSystemd = true;
-        }
-      );
-
-      drivers = with pkgs; [
-        (gutenprint.override {
-          cupsSupport = true;
-        })
-        gutenprintBin
-      ];
-
-      cups-pdf.enable = true;
-
-      listenAddresses = [
-        "*:631"
-      ];
-
-      allowFrom = [
-        "all"
-      ];
-
-      browsing = true;
-      webInterface = true;
-
-      defaultShared = true;
-      startWhenNeeded = true;
-
-      extraConf = ''
-        DefaultLanguage en
-        ServerName ${config.networking.fqdn}
-        ServerAlias *
-        ServerTokens Full
-        ServerAdmin bitscoper@${config.networking.fqdn}
-        BrowseLocalProtocols all
-        BrowseWebIF On
-        HostNameLookups On
-        AccessLogLevel config
-        AutoPurgeJobs Yes
-        PreserveJobHistory Off
-        PreserveJobFiles Off
-        DirtyCleanInterval 30
-        LogTimeFormat standard
-      '';
-
-      logLevel = "warn";
-
-      openFirewall = true;
-    };
-    ipp-usb.enable = true;
-    system-config-printer.enable = true;
-
-    saned.enable = true;
-
-    gpsd = {
-      enable = true;
-
-      readonly = true;
-
-      listenany = true;
-      port = 2947;
-
-      debugLevel = 0; # 0 = No Debugging
     };
 
     bind = {
@@ -1752,10 +1761,6 @@ in
     cloudflared = {
       enable = true;
       package = pkgs.cloudflared;
-    };
-
-    kubernetes = {
-      package = pkgs.kubernetes;
     };
 
     sysprof.enable = true;
@@ -2250,45 +2255,6 @@ in
 
     stub-ld.enable = true;
 
-    variables = {
-      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
-
-      LD_LIBRARY_PATH = lib.mkForce "${
-        pkgs.lib.makeLibraryPath (
-          with pkgs;
-          [
-            sqlite
-          ]
-        )
-      }:$LD_LIBRARY_PATH";
-
-      CHROME_EXECUTABLE = "brave";
-    };
-
-    sessionVariables = {
-      NIXOS_OZONE_WL = "1";
-
-      GTK_IM_MODULE = "ibus";
-      QT_IM_MODULE = "wayland;ibus";
-      XMODIFIERS = "@im=ibus";
-    };
-
-    shellAliases = {
-      unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
-      bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
-
-      fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
-      upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
-      clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nh clean all && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
-    };
-
-    # extraInit = '''';
-    # loginShellInit = '''';
-    # shellInit = '''';
-    # interactiveShellInit = '''';
-
     wordlist = {
       enable = true;
       # lists = ;
@@ -2431,6 +2397,7 @@ in
         freesmlauncher # Overlay from Flake
         fritzing
         fstl
+        gabutdm
         gcc
         gdb
         ghex
@@ -2722,7 +2689,6 @@ in
         util-linux
         valgrind
         valuta
-        varia
         video2x
         virt-top
         virt-v2v
@@ -2771,12 +2737,12 @@ in
           videoSupport = true;
         })
         (brave.override {
-          # commandLineArgs = "";
           enableVideoAcceleration = true;
           enableVulkan = false; # Breaks VA-API
           libvaSupport = true;
           pulseSupport = true;
           vulkanSupport = false; # Breaks VA-API
+          # commandLineArgs = "";
         })
         (curlFull.override {
           brotliSupport = true;
@@ -3111,6 +3077,45 @@ in
       showtime
       yelp
     ];
+
+    variables = {
+      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
+
+      LD_LIBRARY_PATH = lib.mkForce "${
+        pkgs.lib.makeLibraryPath (
+          with pkgs;
+          [
+            sqlite
+          ]
+        )
+      }:$LD_LIBRARY_PATH";
+
+      CHROME_EXECUTABLE = "brave";
+    };
+
+    sessionVariables = {
+      NIXOS_OZONE_WL = "1";
+
+      GTK_IM_MODULE = "ibus";
+      QT_IM_MODULE = "wayland;ibus";
+      XMODIFIERS = "@im=ibus";
+    };
+
+    shellAliases = {
+      unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
+      bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
+
+      fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
+      upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
+      clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nh clean all && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
+    };
+
+    # extraInit = '''';
+    # loginShellInit = '''';
+    # shellInit = '''';
+    # interactiveShellInit = '''';
 
     enableDebugInfo = false;
   };
@@ -3871,67 +3876,6 @@ in
         };
 
         programs = {
-          gnome-shell = {
-            enable = true;
-
-            extensions = [
-              {
-                package = pkgs.gnomeExtensions.appindicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
-              }
-              {
-                package = pkgs.gnomeExtensions.blur-my-shell;
-              }
-              {
-                package = pkgs.gnomeExtensions.clipboard-indicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.desktop-cube;
-              }
-              {
-                package = pkgs.gnomeExtensions.display-configuration-switcher;
-              }
-              {
-                package = pkgs.gnomeExtensions.extra-reboot-options;
-              }
-              {
-                package = pkgs.gnomeExtensions.frequency-boost-switch;
-              }
-              {
-                package = pkgs.gnomeExtensions.gamemode-shell-extension;
-              }
-              {
-                package = pkgs.gnomeExtensions.gsconnect;
-              }
-              {
-                package = pkgs.gnomeExtensions.places-status-indicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.privacy-settings-menu;
-              }
-              {
-                package = pkgs.gnomeExtensions.sermon;
-              }
-              {
-                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
-              }
-              {
-                package = pkgs.gnomeExtensions.top-bar-organizer;
-              }
-              {
-                package = pkgs.gnomeExtensions.touchpad-switcher;
-              }
-              {
-                package = pkgs.gnomeExtensions.vitals;
-              }
-              {
-                package = pkgs.gnomeExtensions.wifi-qrcode;
-              }
-            ];
-          };
-
           # gradle = {
           #   enable = true;
           #   package = pkgs.gradle;
@@ -4024,7 +3968,6 @@ in
               enable = true;
               package = (
                 pkgs.mpv.override {
-                  youtubeSupport = true;
                   mpv-unwrapped = pkgs.mpv-unwrapped.override {
                     alsaSupport = true;
                     archiveSupport = true;
@@ -4052,6 +3995,8 @@ in
                     x11Support = true;
                     zimgSupport = true;
                   };
+                  yt-dlp = config.home-manager.users.root.programs.yt-dlp.package;
+                  youtubeSupport = true;
                   scripts =
                     (with pkgs.mpvScripts.builtins; [
                       autocrop
@@ -4090,6 +4035,67 @@ in
                 };
               };
             };
+
+          gnome-shell = {
+            enable = true;
+
+            extensions = [
+              {
+                package = pkgs.gnomeExtensions.appindicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
+              }
+              {
+                package = pkgs.gnomeExtensions.blur-my-shell;
+              }
+              {
+                package = pkgs.gnomeExtensions.clipboard-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.desktop-cube;
+              }
+              {
+                package = pkgs.gnomeExtensions.display-configuration-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.extra-reboot-options;
+              }
+              {
+                package = pkgs.gnomeExtensions.frequency-boost-switch;
+              }
+              {
+                package = pkgs.gnomeExtensions.gamemode-shell-extension;
+              }
+              {
+                package = pkgs.gnomeExtensions.gsconnect;
+              }
+              {
+                package = pkgs.gnomeExtensions.places-status-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.privacy-settings-menu;
+              }
+              {
+                package = pkgs.gnomeExtensions.sermon;
+              }
+              {
+                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
+              }
+              {
+                package = pkgs.gnomeExtensions.top-bar-organizer;
+              }
+              {
+                package = pkgs.gnomeExtensions.touchpad-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.vitals;
+              }
+              {
+                package = pkgs.gnomeExtensions.wifi-qrcode;
+              }
+            ];
+          };
 
           keepassxc = {
             enable = true;
