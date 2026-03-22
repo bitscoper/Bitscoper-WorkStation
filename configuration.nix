@@ -284,9 +284,30 @@ in
     };
 
     activationScripts = {
-      script_1 = ''
-        chown -R qemu-libvirtd /var/lib/libvirt/qemu/
-      '';
+      copyOnlyOfficeFonts =
+        let
+          fonts = config.fonts.packages;
+        in
+        ''
+          FONTDIR="/var/lib/onlyoffice-fonts/"
+          mkdir -p "$FONTDIR"
+
+          ${lib.concatMapStrings (package: ''
+            if [ -d "${package}/share/fonts" ]; then
+              find "${package}/share/fonts" -type f \( \
+                -name "*.bdf" -o \
+                -name "*.otf" -o \
+                -name "*.pcf" -o \
+                -name "*.pfa" -o \
+                -name "*.pfb" -o \
+                -name "*.ttc" -o \
+                -name "*.ttf" \
+              \) -exec cp -f {} "$FONTDIR" \;
+            fi
+          '') fonts}
+
+          chmod -R 777 "$FONTDIR"
+        '';
     };
 
     # userActivationScripts = { };
@@ -475,11 +496,10 @@ in
       services = {
         login = {
           unixAuth = true;
-          nodelay = false;
-
           fprintAuth = false; # FIXME: Conflicts
 
           logFailures = true;
+          nodelay = false;
 
           enableGnomeKeyring = true;
 
@@ -488,24 +508,28 @@ in
             storeOnly = false;
             noAutostart = false;
           };
+
+          showMotd = true;
         };
 
         sudo = {
           unixAuth = true;
-          nodelay = false;
-
           fprintAuth = true;
 
           logFailures = true;
+          nodelay = false;
+
+          showMotd = true;
         };
 
         polkit-1 = {
           unixAuth = true;
-          nodelay = false;
-
           fprintAuth = true;
 
           logFailures = true;
+          nodelay = false;
+
+          showMotd = true;
         };
       };
     };
@@ -868,7 +892,7 @@ in
 
   services = {
     timesyncd = {
-      enable = false; # Disabled due to Misbehavior
+      enable = false; # FIXME: Disabled due to Misbehavior
 
       servers = config.networking.timeServers;
       fallbackServers = config.networking.timeServers;
@@ -2255,11 +2279,6 @@ in
 
     stub-ld.enable = true;
 
-    wordlist = {
-      enable = true;
-      # lists = ;
-    };
-
     systemPackages =
       with pkgs;
       [
@@ -2283,7 +2302,7 @@ in
         alsa-utils
         alsa-utils-nhlt
         android-backup-extractor
-        androidComposition.androidsdk # Custom Composition
+        androidComposition.androidsdk # Custom Composition # Unfree
         anydesk # Unfree
         apfsprogs
         apitrace
@@ -2323,6 +2342,7 @@ in
         certdump
         chart-testing
         citations
+        cli-tips
         clinfo
         cloc
         cmake
@@ -2331,6 +2351,7 @@ in
         codevis
         collision
         compose2nix
+        concurrently
         conmon
         constrict
         cramfsprogs
@@ -2398,6 +2419,7 @@ in
         fritzing
         fstl
         gabutdm
+        gawk
         gcc
         gdb
         ghex
@@ -2406,6 +2428,7 @@ in
         git-filter-repo
         git-repo
         github-changelog-generator
+        glib
         gnome-autoar
         gnome-bluetooth
         gnome-calculator
@@ -2478,6 +2501,7 @@ in
         inkscape-with-extensions
         inotify-tools
         input-leap
+        inspector
         interception-tools
         iotop-c
         jellyfin-desktop
@@ -2487,6 +2511,7 @@ in
         jmol
         john
         johnny
+        jq
         json-tui
         kernel-hardening-checker
         kernelshark
@@ -2559,7 +2584,6 @@ in
         mousai
         mtools
         mtr-gui
-        muse-sounds-manager
         musescore
         nautilus
         nautilus-python
@@ -2601,6 +2625,7 @@ in
         podman-desktop
         podman-tui
         polari
+        poop # POOP = Performance Optimizer Observation Platform
         postgres-language-server
         procps
         profile-cleaner
@@ -2616,7 +2641,6 @@ in
         raider
         rclone
         rclone-browser
-        redisinsight
         refine
         regex-tui
         rp-pppoe
@@ -2632,10 +2656,12 @@ in
         selectdefaultapplication
         serial-studio
         share-preview
+        shellclear
         sherlock
         simple-scan
         sipvicious
         sleuthkit
+        smag
         smartmontools
         snapshot
         sof-tools
@@ -2673,6 +2699,7 @@ in
         tree
         trufflehog
         trustymail
+        tsukae
         udftools
         uefi-firmware-parser
         ugit
@@ -2699,7 +2726,6 @@ in
         wakeonlan
         wayback_machine_downloader
         wayback-machine-archiver
-        waybackurls # Not Unfree
         waycheck
         waydroid-helper
         wayland-utils
@@ -2716,7 +2742,6 @@ in
         wordbook
         worldpainter
         wpprobe
-        wvkbd # wvkbd-mobintl
         x2goclient
         xdg-user-dirs
         xdg-user-dirs-gtk
@@ -2731,18 +2756,9 @@ in
         zenmap
         zfs
         zip
-        zoom-us # Unfree
         (ardour.override {
           optimize = true;
           videoSupport = true;
-        })
-        (brave.override {
-          enableVideoAcceleration = true;
-          enableVulkan = false; # Breaks VA-API
-          libvaSupport = true;
-          pulseSupport = true;
-          vulkanSupport = false; # Breaks VA-API
-          # commandLineArgs = "";
         })
         (curlFull.override {
           brotliSupport = true;
@@ -2946,6 +2962,8 @@ in
         config.services.phpfpm.phpPackage
       ]
       # ++ config.home-manager.users.root.programs.brave.nativeMessagingHosts # Duplicate
+      # ++ config.home-manager.users.root.programs.chromium.dictionaries
+      # ++ config.home-manager.users.root.programs.chromium.nativeMessagingHosts # Duplicate
       # ++ config.home-manager.users.root.programs.lutris.protonPackages
       # ++ config.services.pipewire.wireplumber.extraLv2Packages # Duplicate
       ++ config.boot.extraModulePackages
@@ -3078,10 +3096,21 @@ in
       yelp
     ];
 
+    wordlist = {
+      enable = true;
+      lists = {
+        WORDLISTS = [
+          "${config.home-manager.users.root.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
+          "${pkgs.rockyou}/share/wordlists/rockyou.txt"
+          # (builtins.toFile "extra-wordlist" '''')
+        ];
+      };
+    };
+
     variables = {
-      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
+      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk"; # Unfree
+      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk"; # Unfree
+      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle"; # Unfree
 
       LD_LIBRARY_PATH = lib.mkForce "${
         pkgs.lib.makeLibraryPath (
@@ -3092,7 +3121,7 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      CHROME_EXECUTABLE = "brave";
+      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
     };
 
     sessionVariables = {
@@ -3703,7 +3732,7 @@ in
       }
     );
 
-    motd = "Welcome";
+    motd = "Welcome to ${config.networking.fqdn}";
 
     users.bitscoper = {
       isNormalUser = true;
@@ -3782,7 +3811,17 @@ in
 
           # sessionSearchVariables = { };
 
-          activation = { };
+          activation = {
+            copyOnlyOfficeFonts = ''
+              mkdir -p $HOME/.local/share/fonts/
+              cp -f /var/lib/onlyoffice-fonts/* $HOME/.local/share/fonts/ || true
+              ${pkgs.fontconfig}/bin/fc-cache -f $HOME/.local/share/fonts/
+            '';
+
+            resetApplicationPicker = ''
+              ${pkgs.glib}/bin/gsettings set org.gnome.shell app-picker-layout "[]"
+            '';
+          };
 
           enableDebugInfo = false;
 
@@ -4006,7 +4045,6 @@ in
                     ++ (with pkgs.mpvScripts; [
                       autosub
                       autosubsync-mpv
-                      convert
                       cutter
                       modernz
                       mpris
@@ -4018,7 +4056,6 @@ in
                       sponsorblock
                       visualizer
                       webtorrent-mpv-hook
-                      youtube-upnext
                     ]);
                 }
               );
@@ -4068,6 +4105,9 @@ in
                 package = pkgs.gnomeExtensions.gamemode-shell-extension;
               }
               {
+                package = pkgs.gnomeExtensions.gjs-osk;
+              }
+              {
                 package = pkgs.gnomeExtensions.gsconnect;
               }
               {
@@ -4114,9 +4154,28 @@ in
             # settings = { };
           };
 
-          brave.nativeMessagingHosts = with pkgs; [
-            config.home-manager.users.root.programs.keepassxc.package
-          ];
+          chromium = {
+            enable = true;
+            package = (
+              pkgs.brave.override {
+                enableVideoAcceleration = true;
+                enableVulkan = false; # Breaks VA-API
+                libvaSupport = true;
+                pulseSupport = true;
+                vulkanSupport = false; # Breaks VA-API
+                # commandLineArgs = "";
+              }
+            );
+            dictionaries = with pkgs.hunspellDictsChromium; [
+              en_US
+              en-us
+            ];
+
+            nativeMessagingHosts = with pkgs; [
+              config.home-manager.users.root.programs.keepassxc.package
+            ];
+          };
+          brave.nativeMessagingHosts = config.home-manager.users.root.programs.chromium.nativeMessagingHosts;
 
           vscode = {
             enable = true;
@@ -4221,7 +4280,7 @@ in
                     mypy-type-checker
                     pylint
                     python
-                    vscode-pylance
+                    vscode-pylance # Unfree
                   ])
                   ++ (with pkgs.vscode-extensions.ms-vscode; [
                     cmake-tools
@@ -4299,7 +4358,7 @@ in
             protonPackages = with pkgs; [
               proton-ge-bin
             ];
-          }; # Unfree
+          };
 
           wofi = {
             enable = true;
