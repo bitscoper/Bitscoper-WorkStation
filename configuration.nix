@@ -448,9 +448,7 @@ in
 
       allowPing = true;
 
-      allowedTCPPorts = [
-        config.home-manager.users.root.programs.mpv.scriptOpts.webui.port
-      ];
+      allowedTCPPorts = [ ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
@@ -1592,6 +1590,7 @@ in
       };
 
       initialScript = pkgs.writeText "mariadbInitialScript.sql" ''
+        FLUSH PRIVILEGES;
         CREATE USER IF NOT EXISTS 'root'@'localhost';
         CREATE USER IF NOT EXISTS 'root'@'%';
         ALTER USER 'root'@'localhost' IDENTIFIED BY '${secrets.password_1_of_bitscoper}';
@@ -2282,11 +2281,13 @@ in
     systemPackages =
       with pkgs;
       [
+        # alpaca # Build Failure
         # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
+        # winboat # Build Failure
         # xfstests # FIXME: Build Failure
         aapt
         above
@@ -2296,7 +2297,6 @@ in
         addlicense
         agi # FIXME: Cannot find libswt
         aircrack-ng
-        alpaca
         alsa-plugins
         alsa-tools
         alsa-utils
@@ -2450,7 +2450,9 @@ in
         gnome-kra-ora-thumbnailer
         gnome-logs
         gnome-mahjongg
+        gnome-maps
         gnome-multi-writer
+        gnome-music
         gnome-nettool
         gnome-network-displays
         gnome-power-manager
@@ -2505,7 +2507,6 @@ in
         interception-tools
         iotop-c
         jellyfin-desktop
-        jellyfin-mpv-shim
         jfsutils
         jmc2obj
         jmol
@@ -2658,6 +2659,7 @@ in
         share-preview
         shellclear
         sherlock
+        showtime
         simple-scan
         sipvicious
         sleuthkit
@@ -2737,7 +2739,6 @@ in
         whatfiles
         which
         whois
-        winboat
         wl-clipboard
         wordbook
         worldpainter
@@ -2889,7 +2890,7 @@ in
         #   enableRawUdp = true;
         #   enableOsmosdr = false; # FIXME: Build Failure
         # }) # FIXME: Build Failure
-        (kicad-testing.override {
+        (kicad.override {
           addons = with pkgs.kicadAddons; [
             kikit
             kikit-library
@@ -3089,10 +3090,8 @@ in
     gnome.excludePackages = with pkgs; [
       decibels
       epiphany
-      gnome-music
       gnome-text-editor
       gnome-tour
-      showtime
       yelp
     ];
 
@@ -3136,9 +3135,7 @@ in
       unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
       bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
 
-      fetch_upgrade_data = "sudo nix-channel --update && sudo nix-env -u --always";
-      upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
-      clean_upgrade = "sudo nix-channel --update && sudo nix-env -u --always && sudo rm -rf /nix/var/nix/gcroots/auto/* && sudo nix-env --delete-generations old && sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --optimise && sudo nh clean all && sudo nixos-rebuild switch --refresh --install-bootloader --upgrade-all";
+      clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
     };
 
     # extraInit = '''';
@@ -3345,265 +3342,265 @@ in
         "image/x-emf" = "org.gnome.Loupe.desktop";
         "image/x-wmf" = "org.gnome.Loupe.desktop";
 
-        "audio/1d-interleaved-parityfec" = "mpv.desktop";
-        "audio/32kadpcm" = "mpv.desktop";
-        "audio/3gpp" = "mpv.desktop";
-        "audio/3gpp2" = "mpv.desktop";
-        "audio/aac" = "mpv.desktop";
-        "audio/ac3" = "mpv.desktop";
-        "audio/AMR-WB" = "mpv.desktop";
-        "audio/amr-wb+" = "mpv.desktop";
-        "audio/AMR" = "mpv.desktop";
-        "audio/aptx" = "mpv.desktop";
-        "audio/asc" = "mpv.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "mpv.desktop";
-        "audio/ATRAC-X" = "mpv.desktop";
-        "audio/ATRAC3" = "mpv.desktop";
-        "audio/basic" = "mpv.desktop";
-        "audio/BV16" = "mpv.desktop";
-        "audio/BV32" = "mpv.desktop";
-        "audio/clearmode" = "mpv.desktop";
-        "audio/CN" = "mpv.desktop";
-        "audio/DAT12" = "mpv.desktop";
-        "audio/dls" = "mpv.desktop";
-        "audio/dsr-es201108" = "mpv.desktop";
-        "audio/dsr-es202050" = "mpv.desktop";
-        "audio/dsr-es202211" = "mpv.desktop";
-        "audio/dsr-es202212" = "mpv.desktop";
-        "audio/DV" = "mpv.desktop";
-        "audio/DVI4" = "mpv.desktop";
-        "audio/eac3" = "mpv.desktop";
-        "audio/encaprtp" = "mpv.desktop";
-        "audio/EVRC-QCP" = "mpv.desktop";
-        "audio/EVRC" = "mpv.desktop";
-        "audio/EVRC0" = "mpv.desktop";
-        "audio/EVRC1" = "mpv.desktop";
-        "audio/EVRCB" = "mpv.desktop";
-        "audio/EVRCB0" = "mpv.desktop";
-        "audio/EVRCB1" = "mpv.desktop";
-        "audio/EVRCNW" = "mpv.desktop";
-        "audio/EVRCNW0" = "mpv.desktop";
-        "audio/EVRCNW1" = "mpv.desktop";
-        "audio/EVRCWB" = "mpv.desktop";
-        "audio/EVRCWB0" = "mpv.desktop";
-        "audio/EVRCWB1" = "mpv.desktop";
-        "audio/EVS" = "mpv.desktop";
-        "audio/flac" = "mpv.desktop";
-        "audio/flexfec" = "mpv.desktop";
-        "audio/fwdred" = "mpv.desktop";
-        "audio/G711-0" = "mpv.desktop";
-        "audio/G719" = "mpv.desktop";
-        "audio/G722" = "mpv.desktop";
-        "audio/G7221" = "mpv.desktop";
-        "audio/G723" = "mpv.desktop";
-        "audio/G726-16" = "mpv.desktop";
-        "audio/G726-24" = "mpv.desktop";
-        "audio/G726-32" = "mpv.desktop";
-        "audio/G726-40" = "mpv.desktop";
-        "audio/G728" = "mpv.desktop";
-        "audio/G729" = "mpv.desktop";
-        "audio/G7291" = "mpv.desktop";
-        "audio/G729D" = "mpv.desktop";
-        "audio/G729E" = "mpv.desktop";
-        "audio/GSM-EFR" = "mpv.desktop";
-        "audio/GSM-HR-08" = "mpv.desktop";
-        "audio/GSM" = "mpv.desktop";
-        "audio/iLBC" = "mpv.desktop";
-        "audio/ip-mr_v2.5" = "mpv.desktop";
-        "audio/L16" = "mpv.desktop";
-        "audio/L20" = "mpv.desktop";
-        "audio/L24" = "mpv.desktop";
-        "audio/L8" = "mpv.desktop";
-        "audio/LPC" = "mpv.desktop";
-        "audio/matroska" = "mpv.desktop";
-        "audio/MELP" = "mpv.desktop";
-        "audio/MELP1200" = "mpv.desktop";
-        "audio/MELP2400" = "mpv.desktop";
-        "audio/MELP600" = "mpv.desktop";
-        "audio/mhas" = "mpv.desktop";
-        "audio/midi-clip" = "mpv.desktop";
-        "audio/mobile-xmf" = "mpv.desktop";
-        "audio/mp4" = "mpv.desktop";
-        "audio/MP4A-LATM" = "mpv.desktop";
-        "audio/mpa-robust" = "mpv.desktop";
-        "audio/MPA" = "mpv.desktop";
-        "audio/mpeg" = "mpv.desktop";
-        "audio/mpeg4-generic" = "mpv.desktop";
-        "audio/ogg" = "mpv.desktop";
-        "audio/opus" = "mpv.desktop";
-        "audio/parityfec" = "mpv.desktop";
-        "audio/PCMA-WB" = "mpv.desktop";
-        "audio/PCMA" = "mpv.desktop";
-        "audio/PCMU-WB" = "mpv.desktop";
-        "audio/PCMU" = "mpv.desktop";
-        "audio/prs.sid" = "mpv.desktop";
-        "audio/QCELP" = "mpv.desktop";
-        "audio/raptorfec" = "mpv.desktop";
-        "audio/RED" = "mpv.desktop";
-        "audio/rtp-enc-aescm128" = "mpv.desktop";
-        "audio/rtp-midi" = "mpv.desktop";
-        "audio/rtploopback" = "mpv.desktop";
-        "audio/rtx" = "mpv.desktop";
-        "audio/scip" = "mpv.desktop";
-        "audio/SMV-QCP" = "mpv.desktop";
-        "audio/SMV" = "mpv.desktop";
-        "audio/SMV0" = "mpv.desktop";
-        "audio/sofa" = "mpv.desktop";
-        "audio/soundfont" = "mpv.desktop";
-        "audio/sp-midi" = "mpv.desktop";
-        "audio/speex" = "mpv.desktop";
-        "audio/t140c" = "mpv.desktop";
-        "audio/t38" = "mpv.desktop";
-        "audio/telephone-event" = "mpv.desktop";
-        "audio/TETRA_ACELP_BB" = "mpv.desktop";
-        "audio/TETRA_ACELP" = "mpv.desktop";
-        "audio/tone" = "mpv.desktop";
-        "audio/TSVCIS" = "mpv.desktop";
-        "audio/UEMCLIP" = "mpv.desktop";
-        "audio/ulpfec" = "mpv.desktop";
-        "audio/usac" = "mpv.desktop";
-        "audio/VDVI" = "mpv.desktop";
-        "audio/VMR-WB" = "mpv.desktop";
-        "audio/vnd.3gpp.iufp" = "mpv.desktop";
-        "audio/vnd.4SB" = "mpv.desktop";
-        "audio/vnd.audiokoz" = "mpv.desktop";
-        "audio/vnd.blockfact.facta" = "mpv.desktop";
-        "audio/vnd.CELP" = "mpv.desktop";
-        "audio/vnd.cisco.nse" = "mpv.desktop";
-        "audio/vnd.cmles.radio-events" = "mpv.desktop";
-        "audio/vnd.cns.anp1" = "mpv.desktop";
-        "audio/vnd.cns.inf1" = "mpv.desktop";
-        "audio/vnd.dece.audio" = "mpv.desktop";
-        "audio/vnd.digital-winds" = "mpv.desktop";
-        "audio/vnd.dlna.adts" = "mpv.desktop";
-        "audio/vnd.dolby.heaac.1" = "mpv.desktop";
-        "audio/vnd.dolby.heaac.2" = "mpv.desktop";
-        "audio/vnd.dolby.mlp" = "mpv.desktop";
-        "audio/vnd.dolby.mps" = "mpv.desktop";
-        "audio/vnd.dolby.pl2" = "mpv.desktop";
-        "audio/vnd.dolby.pl2x" = "mpv.desktop";
-        "audio/vnd.dolby.pl2z" = "mpv.desktop";
-        "audio/vnd.dolby.pulse.1" = "mpv.desktop";
-        "audio/vnd.dra" = "mpv.desktop";
-        "audio/vnd.dts.hd" = "mpv.desktop";
-        "audio/vnd.dts.uhd" = "mpv.desktop";
-        "audio/vnd.dts" = "mpv.desktop";
-        "audio/vnd.dvb.file" = "mpv.desktop";
-        "audio/vnd.everad.plj" = "mpv.desktop";
-        "audio/vnd.hns.audio" = "mpv.desktop";
-        "audio/vnd.lucent.voice" = "mpv.desktop";
-        "audio/vnd.ms-playready.media.pya" = "mpv.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "mpv.desktop";
-        "audio/vnd.nortel.vbk" = "mpv.desktop";
-        "audio/vnd.nuera.ecelp4800" = "mpv.desktop";
-        "audio/vnd.nuera.ecelp7470" = "mpv.desktop";
-        "audio/vnd.nuera.ecelp9600" = "mpv.desktop";
-        "audio/vnd.octel.sbc" = "mpv.desktop";
-        "audio/vnd.presonus.multitrack" = "mpv.desktop";
-        "audio/vnd.qcelp" = "mpv.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "mpv.desktop";
-        "audio/vnd.rip" = "mpv.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "mpv.desktop";
-        "audio/vnd.vmx.cvsd" = "mpv.desktop";
-        "audio/vorbis-config" = "mpv.desktop";
-        "audio/vorbis" = "mpv.desktop";
+        "audio/1d-interleaved-parityfec" = "org.gnome.Music.desktop";
+        "audio/32kadpcm" = "org.gnome.Music.desktop";
+        "audio/3gpp" = "org.gnome.Music.desktop";
+        "audio/3gpp2" = "org.gnome.Music.desktop";
+        "audio/aac" = "org.gnome.Music.desktop";
+        "audio/ac3" = "org.gnome.Music.desktop";
+        "audio/AMR-WB" = "org.gnome.Music.desktop";
+        "audio/amr-wb+" = "org.gnome.Music.desktop";
+        "audio/AMR" = "org.gnome.Music.desktop";
+        "audio/aptx" = "org.gnome.Music.desktop";
+        "audio/asc" = "org.gnome.Music.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "org.gnome.Music.desktop";
+        "audio/ATRAC-X" = "org.gnome.Music.desktop";
+        "audio/ATRAC3" = "org.gnome.Music.desktop";
+        "audio/basic" = "org.gnome.Music.desktop";
+        "audio/BV16" = "org.gnome.Music.desktop";
+        "audio/BV32" = "org.gnome.Music.desktop";
+        "audio/clearmode" = "org.gnome.Music.desktop";
+        "audio/CN" = "org.gnome.Music.desktop";
+        "audio/DAT12" = "org.gnome.Music.desktop";
+        "audio/dls" = "org.gnome.Music.desktop";
+        "audio/dsr-es201108" = "org.gnome.Music.desktop";
+        "audio/dsr-es202050" = "org.gnome.Music.desktop";
+        "audio/dsr-es202211" = "org.gnome.Music.desktop";
+        "audio/dsr-es202212" = "org.gnome.Music.desktop";
+        "audio/DV" = "org.gnome.Music.desktop";
+        "audio/DVI4" = "org.gnome.Music.desktop";
+        "audio/eac3" = "org.gnome.Music.desktop";
+        "audio/encaprtp" = "org.gnome.Music.desktop";
+        "audio/EVRC-QCP" = "org.gnome.Music.desktop";
+        "audio/EVRC" = "org.gnome.Music.desktop";
+        "audio/EVRC0" = "org.gnome.Music.desktop";
+        "audio/EVRC1" = "org.gnome.Music.desktop";
+        "audio/EVRCB" = "org.gnome.Music.desktop";
+        "audio/EVRCB0" = "org.gnome.Music.desktop";
+        "audio/EVRCB1" = "org.gnome.Music.desktop";
+        "audio/EVRCNW" = "org.gnome.Music.desktop";
+        "audio/EVRCNW0" = "org.gnome.Music.desktop";
+        "audio/EVRCNW1" = "org.gnome.Music.desktop";
+        "audio/EVRCWB" = "org.gnome.Music.desktop";
+        "audio/EVRCWB0" = "org.gnome.Music.desktop";
+        "audio/EVRCWB1" = "org.gnome.Music.desktop";
+        "audio/EVS" = "org.gnome.Music.desktop";
+        "audio/flac" = "org.gnome.Music.desktop";
+        "audio/flexfec" = "org.gnome.Music.desktop";
+        "audio/fwdred" = "org.gnome.Music.desktop";
+        "audio/G711-0" = "org.gnome.Music.desktop";
+        "audio/G719" = "org.gnome.Music.desktop";
+        "audio/G722" = "org.gnome.Music.desktop";
+        "audio/G7221" = "org.gnome.Music.desktop";
+        "audio/G723" = "org.gnome.Music.desktop";
+        "audio/G726-16" = "org.gnome.Music.desktop";
+        "audio/G726-24" = "org.gnome.Music.desktop";
+        "audio/G726-32" = "org.gnome.Music.desktop";
+        "audio/G726-40" = "org.gnome.Music.desktop";
+        "audio/G728" = "org.gnome.Music.desktop";
+        "audio/G729" = "org.gnome.Music.desktop";
+        "audio/G7291" = "org.gnome.Music.desktop";
+        "audio/G729D" = "org.gnome.Music.desktop";
+        "audio/G729E" = "org.gnome.Music.desktop";
+        "audio/GSM-EFR" = "org.gnome.Music.desktop";
+        "audio/GSM-HR-08" = "org.gnome.Music.desktop";
+        "audio/GSM" = "org.gnome.Music.desktop";
+        "audio/iLBC" = "org.gnome.Music.desktop";
+        "audio/ip-mr_v2.5" = "org.gnome.Music.desktop";
+        "audio/L16" = "org.gnome.Music.desktop";
+        "audio/L20" = "org.gnome.Music.desktop";
+        "audio/L24" = "org.gnome.Music.desktop";
+        "audio/L8" = "org.gnome.Music.desktop";
+        "audio/LPC" = "org.gnome.Music.desktop";
+        "audio/matroska" = "org.gnome.Music.desktop";
+        "audio/MELP" = "org.gnome.Music.desktop";
+        "audio/MELP1200" = "org.gnome.Music.desktop";
+        "audio/MELP2400" = "org.gnome.Music.desktop";
+        "audio/MELP600" = "org.gnome.Music.desktop";
+        "audio/mhas" = "org.gnome.Music.desktop";
+        "audio/midi-clip" = "org.gnome.Music.desktop";
+        "audio/mobile-xmf" = "org.gnome.Music.desktop";
+        "audio/mp4" = "org.gnome.Music.desktop";
+        "audio/MP4A-LATM" = "org.gnome.Music.desktop";
+        "audio/mpa-robust" = "org.gnome.Music.desktop";
+        "audio/MPA" = "org.gnome.Music.desktop";
+        "audio/mpeg" = "org.gnome.Music.desktop";
+        "audio/mpeg4-generic" = "org.gnome.Music.desktop";
+        "audio/ogg" = "org.gnome.Music.desktop";
+        "audio/opus" = "org.gnome.Music.desktop";
+        "audio/parityfec" = "org.gnome.Music.desktop";
+        "audio/PCMA-WB" = "org.gnome.Music.desktop";
+        "audio/PCMA" = "org.gnome.Music.desktop";
+        "audio/PCMU-WB" = "org.gnome.Music.desktop";
+        "audio/PCMU" = "org.gnome.Music.desktop";
+        "audio/prs.sid" = "org.gnome.Music.desktop";
+        "audio/QCELP" = "org.gnome.Music.desktop";
+        "audio/raptorfec" = "org.gnome.Music.desktop";
+        "audio/RED" = "org.gnome.Music.desktop";
+        "audio/rtp-enc-aescm128" = "org.gnome.Music.desktop";
+        "audio/rtp-midi" = "org.gnome.Music.desktop";
+        "audio/rtploopback" = "org.gnome.Music.desktop";
+        "audio/rtx" = "org.gnome.Music.desktop";
+        "audio/scip" = "org.gnome.Music.desktop";
+        "audio/SMV-QCP" = "org.gnome.Music.desktop";
+        "audio/SMV" = "org.gnome.Music.desktop";
+        "audio/SMV0" = "org.gnome.Music.desktop";
+        "audio/sofa" = "org.gnome.Music.desktop";
+        "audio/soundfont" = "org.gnome.Music.desktop";
+        "audio/sp-midi" = "org.gnome.Music.desktop";
+        "audio/speex" = "org.gnome.Music.desktop";
+        "audio/t140c" = "org.gnome.Music.desktop";
+        "audio/t38" = "org.gnome.Music.desktop";
+        "audio/telephone-event" = "org.gnome.Music.desktop";
+        "audio/TETRA_ACELP_BB" = "org.gnome.Music.desktop";
+        "audio/TETRA_ACELP" = "org.gnome.Music.desktop";
+        "audio/tone" = "org.gnome.Music.desktop";
+        "audio/TSVCIS" = "org.gnome.Music.desktop";
+        "audio/UEMCLIP" = "org.gnome.Music.desktop";
+        "audio/ulpfec" = "org.gnome.Music.desktop";
+        "audio/usac" = "org.gnome.Music.desktop";
+        "audio/VDVI" = "org.gnome.Music.desktop";
+        "audio/VMR-WB" = "org.gnome.Music.desktop";
+        "audio/vnd.3gpp.iufp" = "org.gnome.Music.desktop";
+        "audio/vnd.4SB" = "org.gnome.Music.desktop";
+        "audio/vnd.audiokoz" = "org.gnome.Music.desktop";
+        "audio/vnd.blockfact.facta" = "org.gnome.Music.desktop";
+        "audio/vnd.CELP" = "org.gnome.Music.desktop";
+        "audio/vnd.cisco.nse" = "org.gnome.Music.desktop";
+        "audio/vnd.cmles.radio-events" = "org.gnome.Music.desktop";
+        "audio/vnd.cns.anp1" = "org.gnome.Music.desktop";
+        "audio/vnd.cns.inf1" = "org.gnome.Music.desktop";
+        "audio/vnd.dece.audio" = "org.gnome.Music.desktop";
+        "audio/vnd.digital-winds" = "org.gnome.Music.desktop";
+        "audio/vnd.dlna.adts" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.heaac.1" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.heaac.2" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.mlp" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.mps" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.pl2" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.pl2x" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.pl2z" = "org.gnome.Music.desktop";
+        "audio/vnd.dolby.pulse.1" = "org.gnome.Music.desktop";
+        "audio/vnd.dra" = "org.gnome.Music.desktop";
+        "audio/vnd.dts.hd" = "org.gnome.Music.desktop";
+        "audio/vnd.dts.uhd" = "org.gnome.Music.desktop";
+        "audio/vnd.dts" = "org.gnome.Music.desktop";
+        "audio/vnd.dvb.file" = "org.gnome.Music.desktop";
+        "audio/vnd.everad.plj" = "org.gnome.Music.desktop";
+        "audio/vnd.hns.audio" = "org.gnome.Music.desktop";
+        "audio/vnd.lucent.voice" = "org.gnome.Music.desktop";
+        "audio/vnd.ms-playready.media.pya" = "org.gnome.Music.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "org.gnome.Music.desktop";
+        "audio/vnd.nortel.vbk" = "org.gnome.Music.desktop";
+        "audio/vnd.nuera.ecelp4800" = "org.gnome.Music.desktop";
+        "audio/vnd.nuera.ecelp7470" = "org.gnome.Music.desktop";
+        "audio/vnd.nuera.ecelp9600" = "org.gnome.Music.desktop";
+        "audio/vnd.octel.sbc" = "org.gnome.Music.desktop";
+        "audio/vnd.presonus.multitrack" = "org.gnome.Music.desktop";
+        "audio/vnd.qcelp" = "org.gnome.Music.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "org.gnome.Music.desktop";
+        "audio/vnd.rip" = "org.gnome.Music.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "org.gnome.Music.desktop";
+        "audio/vnd.vmx.cvsd" = "org.gnome.Music.desktop";
+        "audio/vorbis-config" = "org.gnome.Music.desktop";
+        "audio/vorbis" = "org.gnome.Music.desktop";
 
-        "video/1d-interleaved-parityfec" = "mpv.desktop";
-        "video/3gpp-tt" = "mpv.desktop";
-        "video/3gpp" = "mpv.desktop";
-        "video/3gpp2" = "mpv.desktop";
-        "video/AV1" = "mpv.desktop";
-        "video/BMPEG" = "mpv.desktop";
-        "video/BT656" = "mpv.desktop";
-        "video/CelB" = "mpv.desktop";
-        "video/DV" = "mpv.desktop";
-        "video/encaprtp" = "mpv.desktop";
-        "video/evc" = "mpv.desktop";
-        "video/FFV1" = "mpv.desktop";
-        "video/flexfec" = "mpv.desktop";
-        "video/H261" = "mpv.desktop";
-        "video/H263-1998" = "mpv.desktop";
-        "video/H263-2000" = "mpv.desktop";
-        "video/H263" = "mpv.desktop";
-        "video/H264-RCDO" = "mpv.desktop";
-        "video/H264-SVC" = "mpv.desktop";
-        "video/H264" = "mpv.desktop";
-        "video/H265" = "mpv.desktop";
-        "video/H266" = "mpv.desktop";
-        "video/iso.segment" = "mpv.desktop";
-        "video/JPEG" = "mpv.desktop";
-        "video/jpeg2000-scl" = "mpv.desktop";
-        "video/jpeg2000" = "mpv.desktop";
-        "video/jxsv" = "mpv.desktop";
-        "video/lottie+json" = "mpv.desktop";
-        "video/matroska-3d" = "mpv.desktop";
-        "video/matroska" = "mpv.desktop";
-        "video/mj2" = "mpv.desktop";
-        "video/MP1S" = "mpv.desktop";
-        "video/MP2P" = "mpv.desktop";
-        "video/MP2T" = "mpv.desktop";
-        "video/mp4" = "mpv.desktop";
-        "video/MP4V-ES" = "mpv.desktop";
-        "video/mpeg" = "mpv.desktop";
-        "video/mpeg4-generic" = "mpv.desktop";
-        "video/MPV" = "mpv.desktop";
-        "video/nv" = "mpv.desktop";
-        "video/ogg" = "mpv.desktop";
-        "video/parityfec" = "mpv.desktop";
-        "video/pointer" = "mpv.desktop";
-        "video/quicktime" = "mpv.desktop";
-        "video/raptorfec" = "mpv.desktop";
-        "video/raw" = "mpv.desktop";
-        "video/rtp-enc-aescm128" = "mpv.desktop";
-        "video/rtploopback" = "mpv.desktop";
-        "video/rtx" = "mpv.desktop";
-        "video/scip" = "mpv.desktop";
-        "video/smpte291" = "mpv.desktop";
-        "video/SMPTE292M" = "mpv.desktop";
-        "video/ulpfec" = "mpv.desktop";
-        "video/vc1" = "mpv.desktop";
-        "video/vc2" = "mpv.desktop";
-        "video/vnd.blockfact.factv" = "mpv.desktop";
-        "video/vnd.CCTV" = "mpv.desktop";
-        "video/vnd.dece.hd" = "mpv.desktop";
-        "video/vnd.dece.mobile" = "mpv.desktop";
-        "video/vnd.dece.mp4" = "mpv.desktop";
-        "video/vnd.dece.pd" = "mpv.desktop";
-        "video/vnd.dece.sd" = "mpv.desktop";
-        "video/vnd.dece.video" = "mpv.desktop";
-        "video/vnd.directv.mpeg-tts" = "mpv.desktop";
-        "video/vnd.directv.mpeg" = "mpv.desktop";
-        "video/vnd.dlna.mpeg-tts" = "mpv.desktop";
-        "video/vnd.dvb.file" = "mpv.desktop";
-        "video/vnd.fvt" = "mpv.desktop";
-        "video/vnd.hns.video" = "mpv.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "mpv.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "mpv.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "mpv.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "mpv.desktop";
-        "video/vnd.iptvforum.ttsavc" = "mpv.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "mpv.desktop";
-        "video/vnd.motorola.video" = "mpv.desktop";
-        "video/vnd.motorola.videop" = "mpv.desktop";
-        "video/vnd.mpegurl" = "mpv.desktop";
-        "video/vnd.ms-playready.media.pyv" = "mpv.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "mpv.desktop";
-        "video/vnd.nokia.mp4vr" = "mpv.desktop";
-        "video/vnd.nokia.videovoip" = "mpv.desktop";
-        "video/vnd.objectvideo" = "mpv.desktop";
-        "video/vnd.planar" = "mpv.desktop";
-        "video/vnd.radgamettools.bink" = "mpv.desktop";
-        "video/vnd.radgamettools.smacker" = "mpv.desktop";
-        "video/vnd.sealed.mpeg1" = "mpv.desktop";
-        "video/vnd.sealed.mpeg4" = "mpv.desktop";
-        "video/vnd.sealed.swf" = "mpv.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "mpv.desktop";
-        "video/vnd.uvvu.mp4" = "mpv.desktop";
-        "video/vnd.vivo" = "mpv.desktop";
-        "video/vnd.youtube.yt" = "mpv.desktop";
-        "video/VP8" = "mpv.desktop";
-        "video/VP9" = "mpv.desktop";
-        "video/x-matroska" = "mpv.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "org.gnome.Showtime.desktop";
+        "video/3gpp-tt" = "org.gnome.Showtime.desktop";
+        "video/3gpp" = "org.gnome.Showtime.desktop";
+        "video/3gpp2" = "org.gnome.Showtime.desktop";
+        "video/AV1" = "org.gnome.Showtime.desktop";
+        "video/BMPEG" = "org.gnome.Showtime.desktop";
+        "video/BT656" = "org.gnome.Showtime.desktop";
+        "video/CelB" = "org.gnome.Showtime.desktop";
+        "video/DV" = "org.gnome.Showtime.desktop";
+        "video/encaprtp" = "org.gnome.Showtime.desktop";
+        "video/evc" = "org.gnome.Showtime.desktop";
+        "video/FFV1" = "org.gnome.Showtime.desktop";
+        "video/flexfec" = "org.gnome.Showtime.desktop";
+        "video/H261" = "org.gnome.Showtime.desktop";
+        "video/H263-1998" = "org.gnome.Showtime.desktop";
+        "video/H263-2000" = "org.gnome.Showtime.desktop";
+        "video/H263" = "org.gnome.Showtime.desktop";
+        "video/H264-RCDO" = "org.gnome.Showtime.desktop";
+        "video/H264-SVC" = "org.gnome.Showtime.desktop";
+        "video/H264" = "org.gnome.Showtime.desktop";
+        "video/H265" = "org.gnome.Showtime.desktop";
+        "video/H266" = "org.gnome.Showtime.desktop";
+        "video/iso.segment" = "org.gnome.Showtime.desktop";
+        "video/JPEG" = "org.gnome.Showtime.desktop";
+        "video/jpeg2000-scl" = "org.gnome.Showtime.desktop";
+        "video/jpeg2000" = "org.gnome.Showtime.desktop";
+        "video/jxsv" = "org.gnome.Showtime.desktop";
+        "video/lottie+json" = "org.gnome.Showtime.desktop";
+        "video/matroska-3d" = "org.gnome.Showtime.desktop";
+        "video/matroska" = "org.gnome.Showtime.desktop";
+        "video/mj2" = "org.gnome.Showtime.desktop";
+        "video/MP1S" = "org.gnome.Showtime.desktop";
+        "video/MP2P" = "org.gnome.Showtime.desktop";
+        "video/MP2T" = "org.gnome.Showtime.desktop";
+        "video/mp4" = "org.gnome.Showtime.desktop";
+        "video/MP4V-ES" = "org.gnome.Showtime.desktop";
+        "video/mpeg" = "org.gnome.Showtime.desktop";
+        "video/mpeg4-generic" = "org.gnome.Showtime.desktop";
+        "video/MPV" = "org.gnome.Showtime.desktop";
+        "video/nv" = "org.gnome.Showtime.desktop";
+        "video/ogg" = "org.gnome.Showtime.desktop";
+        "video/parityfec" = "org.gnome.Showtime.desktop";
+        "video/pointer" = "org.gnome.Showtime.desktop";
+        "video/quicktime" = "org.gnome.Showtime.desktop";
+        "video/raptorfec" = "org.gnome.Showtime.desktop";
+        "video/raw" = "org.gnome.Showtime.desktop";
+        "video/rtp-enc-aescm128" = "org.gnome.Showtime.desktop";
+        "video/rtploopback" = "org.gnome.Showtime.desktop";
+        "video/rtx" = "org.gnome.Showtime.desktop";
+        "video/scip" = "org.gnome.Showtime.desktop";
+        "video/smpte291" = "org.gnome.Showtime.desktop";
+        "video/SMPTE292M" = "org.gnome.Showtime.desktop";
+        "video/ulpfec" = "org.gnome.Showtime.desktop";
+        "video/vc1" = "org.gnome.Showtime.desktop";
+        "video/vc2" = "org.gnome.Showtime.desktop";
+        "video/vnd.blockfact.factv" = "org.gnome.Showtime.desktop";
+        "video/vnd.CCTV" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.hd" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.mobile" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.mp4" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.pd" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.sd" = "org.gnome.Showtime.desktop";
+        "video/vnd.dece.video" = "org.gnome.Showtime.desktop";
+        "video/vnd.directv.mpeg-tts" = "org.gnome.Showtime.desktop";
+        "video/vnd.directv.mpeg" = "org.gnome.Showtime.desktop";
+        "video/vnd.dlna.mpeg-tts" = "org.gnome.Showtime.desktop";
+        "video/vnd.dvb.file" = "org.gnome.Showtime.desktop";
+        "video/vnd.fvt" = "org.gnome.Showtime.desktop";
+        "video/vnd.hns.video" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.ttsavc" = "org.gnome.Showtime.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "org.gnome.Showtime.desktop";
+        "video/vnd.motorola.video" = "org.gnome.Showtime.desktop";
+        "video/vnd.motorola.videop" = "org.gnome.Showtime.desktop";
+        "video/vnd.mpegurl" = "org.gnome.Showtime.desktop";
+        "video/vnd.ms-playready.media.pyv" = "org.gnome.Showtime.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "org.gnome.Showtime.desktop";
+        "video/vnd.nokia.mp4vr" = "org.gnome.Showtime.desktop";
+        "video/vnd.nokia.videovoip" = "org.gnome.Showtime.desktop";
+        "video/vnd.objectvideo" = "org.gnome.Showtime.desktop";
+        "video/vnd.planar" = "org.gnome.Showtime.desktop";
+        "video/vnd.radgamettools.bink" = "org.gnome.Showtime.desktop";
+        "video/vnd.radgamettools.smacker" = "org.gnome.Showtime.desktop";
+        "video/vnd.sealed.mpeg1" = "org.gnome.Showtime.desktop";
+        "video/vnd.sealed.mpeg4" = "org.gnome.Showtime.desktop";
+        "video/vnd.sealed.swf" = "org.gnome.Showtime.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "org.gnome.Showtime.desktop";
+        "video/vnd.uvvu.mp4" = "org.gnome.Showtime.desktop";
+        "video/vnd.vivo" = "org.gnome.Showtime.desktop";
+        "video/vnd.youtube.yt" = "org.gnome.Showtime.desktop";
+        "video/VP8" = "org.gnome.Showtime.desktop";
+        "video/VP9" = "org.gnome.Showtime.desktop";
+        "video/x-matroska" = "org.gnome.Showtime.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -3996,82 +3993,6 @@ in
               no-embed-thumbnail = true;
             };
           };
-
-          mpv =
-            let
-              mpvAuthenticationFile = pkgs.writeText "mpv_htpasswd.txt" ''
-                bitscoper:${secrets.password_1_of_bitscoper}
-              '';
-            in
-            {
-              enable = true;
-              package = (
-                pkgs.mpv.override {
-                  mpv-unwrapped = pkgs.mpv-unwrapped.override {
-                    alsaSupport = true;
-                    archiveSupport = true;
-                    bluraySupport = true;
-                    bs2bSupport = true;
-                    cacaSupport = true;
-                    cddaSupport = true;
-                    cmsSupport = true;
-                    drmSupport = true;
-                    dvbinSupport = true;
-                    dvdnavSupport = true;
-                    jackaudioSupport = true;
-                    javascriptSupport = true;
-                    openalSupport = true;
-                    pipewireSupport = true;
-                    pulseSupport = true;
-                    rubberbandSupport = true;
-                    sdl2Support = true;
-                    sixelSupport = true;
-                    vaapiSupport = true;
-                    vapoursynthSupport = true;
-                    vdpauSupport = true;
-                    vulkanSupport = true;
-                    waylandSupport = true;
-                    x11Support = true;
-                    zimgSupport = true;
-                  };
-                  yt-dlp = config.home-manager.users.root.programs.yt-dlp.package;
-                  youtubeSupport = true;
-                  scripts =
-                    (with pkgs.mpvScripts.builtins; [
-                      autocrop
-                      autodeint
-                      autoload
-                    ])
-                    ++ (with pkgs.mpvScripts; [
-                      autosub
-                      autosubsync-mpv
-                      cutter
-                      modernz
-                      mpris
-                      mpv-notify-send
-                      mpv-subtitle-lines
-                      quality-menu
-                      reload
-                      simple-mpv-webui
-                      sponsorblock
-                      visualizer
-                      webtorrent-mpv-hook
-                    ]);
-                }
-              );
-
-              scriptOpts = {
-                webui = {
-                  disable = "no";
-
-                  ipv4 = "yes";
-                  ipv6 = "yes";
-                  port = 8080;
-
-                  htpasswd_path = "${mpvAuthenticationFile}";
-                };
-              };
-            };
 
           gnome-shell = {
             enable = true;
