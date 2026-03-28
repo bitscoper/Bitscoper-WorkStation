@@ -245,9 +245,12 @@ in
       enable = true;
 
       themePackages = [
-        pkgs.nixos-bgrt-plymouth
+        (pkgs.kdePackages.breeze-plymouth.override {
+          osName = config.system.nixos.distroName;
+          osVersion = config.system.nixos.release;
+        }) # TODO: Fill Up
       ];
-      theme = "nixos-bgrt";
+      theme = "breeze";
 
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
@@ -347,7 +350,7 @@ in
       android_sdk.accept_license = true;
 
       permittedInsecurePackages = [
-        "libsoup-2.74.3"
+        "olm-3.2.16"
         "opendkim-2.11.0-Beta2"
       ];
     };
@@ -494,12 +497,17 @@ in
       services = {
         login = {
           unixAuth = true;
-          fprintAuth = false; # FIXME: Conflicts
+          fprintAuth = true;
 
           logFailures = true;
           nodelay = false;
 
-          enableGnomeKeyring = true;
+          kwallet = {
+            enable = true;
+            # package = pkgs.kdePackages.kwallet-pam;
+
+            forceRun = true;
+          };
 
           gnupg = {
             enable = true;
@@ -987,17 +995,6 @@ in
       mountOnMedia = false;
     };
 
-    gvfs = {
-      enable = true;
-      package = (
-        pkgs.gnome.gvfs.override {
-          gnomeSupport = true;
-          googleSupport = true;
-          udevSupport = true;
-        }
-      );
-    };
-
     smartd = {
       enable = true;
 
@@ -1028,9 +1025,7 @@ in
 
       implementation = "broker";
 
-      packages = with pkgs; [
-        gnome2.GConf
-      ];
+      # Packages = with pkgs; [ ];
     };
 
     accounts-daemon.enable = true;
@@ -1047,14 +1042,11 @@ in
     displayManager = {
       enable = true;
 
-      gdm = {
+      plasma-login-manager = {
         enable = true;
+        package = pkgs.kdePackages.plasma-login-manager;
 
-        wayland = true;
-        banner = config.networking.fqdn;
-        autoSuspend = false;
-
-        debug = false;
+        # settings = { };
       };
 
       autoLogin.enable = false;
@@ -1062,56 +1054,11 @@ in
       logToJournal = true;
     };
 
-    desktopManager.gnome = {
+    desktopManager.plasma6 = {
       enable = true;
-      debug = false;
-    };
 
-    gnome = {
-      glib-networking.enable = true;
-
-      core-os-services.enable = true;
-      core-shell.enable = true;
-      gnome-settings-daemon.enable = true;
-
-      gnome-keyring.enable = true;
-      gcr-ssh-agent = {
-        enable = true;
-        package = (
-          pkgs.gcr_4.override {
-            systemdSupport = true;
-          }
-        );
-      };
-      gnome-online-accounts.enable = true;
-
-      gnome-user-share.enable = true;
-      rygel = {
-        enable = true;
-        package = pkgs.rygel;
-      };
-
-      gnome-remote-desktop.enable = true;
-
-      at-spi2-core.enable = true;
-      tinysparql.enable = true;
-      localsearch.enable = true;
-
-      evolution-data-server = {
-        enable = true;
-        plugins = with pkgs; [
-          evolution-ews
-        ];
-      };
-
-      core-apps.enable = true;
-      sushi.enable = true;
-      gnome-browser-connector.enable = true;
-
-      gnome-initial-setup.enable = false;
-      gnome-software.enable = false;
-      core-developer-tools.enable = false;
-      games.enable = false;
+      enableQt5Integration = true;
+      notoPackage = fontPreferences.package;
     };
 
     pipewire = {
@@ -1786,8 +1733,6 @@ in
       package = pkgs.cloudflared;
     };
 
-    sysprof.enable = true;
-
     logrotate = {
       enable = true;
 
@@ -1907,7 +1852,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-gnome3.override {
+          pkgs.pinentry-qt.override {
             withLibsecret = true;
           }
         );
@@ -1925,7 +1870,7 @@ in
         }
       );
 
-      startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
+      startAgent = true;
       agentTimeout = null;
     };
 
@@ -2020,6 +1965,13 @@ in
 
     xwayland.enable = true;
 
+    gamemode = {
+      enable = true;
+
+      enableRenice = true;
+      # settings = { };
+    };
+
     dconf = {
       enable = true;
       profiles.user.databases = [
@@ -2027,42 +1979,6 @@ in
           lockAll = true;
 
           settings = {
-            "org/gnome/desktop/privacy" = {
-              remember-app-usage = false;
-              remember-recent-files = false;
-              remove-old-temp-files = true;
-              remove-old-trash-files = true;
-              report-technical-problems = false;
-              send-software-usage-stats = false;
-              usb-protection = true;
-            };
-
-            "org/gtk/gtk4/settings/file-chooser" = {
-              sort-directories-first = true;
-            };
-
-            "org/gnome/nautilus/preferences" = {
-              click-policy = "double";
-              recursive-search = "always";
-              show-create-link = true;
-              show-delete-permanently = true;
-              show-directory-item-counts = "always";
-              show-image-thumbnails = "always";
-              date-time-format = "simple";
-            };
-
-            "org/gnome/nautilus/icon-view" = {
-              captions = [
-                "size"
-                "date_modified"
-                "none"
-              ];
-            };
-
-            "org/gnome/file-roller/ui" = {
-              view-sidebar = true;
-            };
-
             "com/github/huluti/Curtail" = {
               file-attributes = true;
               metadata = false;
@@ -2072,16 +1988,6 @@ in
 
             "com/github/tenderowl/frog" = {
               telemetry = false;
-            };
-
-            "org/gnome/meld" = {
-              enable-space-drawer = true;
-              highlight-current-line = true;
-              highlight-syntax = true;
-              prefer-dark-theme = true;
-              show-line-numbers = true;
-              show-overview-map = true;
-              wrap-mode = "word";
             };
 
             "io/gitlab/adhami3310/Converter" = {
@@ -2142,12 +2048,10 @@ in
       ];
     };
 
-    gnome-disks.enable = true;
+    partition-manager.enable = true;
+    k3b.enable = true;
 
     system-config-printer.enable = true;
-
-    seahorse.enable = true;
-    calls.enable = true;
 
     virt-manager = {
       enable = true;
@@ -2158,11 +2062,12 @@ in
       );
     };
 
-    gamemode = {
+    kde-pim = {
       enable = true;
 
-      enableRenice = true;
-      # settings = { };
+      kontact = true;
+      kmail = true;
+      merkuro = false;
     };
 
     obs-studio = {
@@ -2221,7 +2126,7 @@ in
 
     kdeconnect = {
       enable = true;
-      package = pkgs.gnomeExtensions.gsconnect;
+      # package = pkgs.kdePackages.kdeconnect-kde;
     };
   };
 
@@ -2281,7 +2186,6 @@ in
     systemPackages =
       with pkgs;
       [
-        # alpaca # Build Failure
         # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
@@ -2319,10 +2223,8 @@ in
         autopsy
         avrdude
         banner
-        baobab
         bash-language-server
         bcachefs-tools
-        binary
         binutils
         binwalk
         blanket
@@ -2335,7 +2237,7 @@ in
         bulk_extractor
         bustle
         butt
-        cameractrls-gtk4
+        calligraphy
         cava
         cdrkit
         celestia
@@ -2357,6 +2259,7 @@ in
         cramfsprogs
         cron
         crosspipe
+        crow-translate
         cryptsetup
         ctop
         cups-pk-helper
@@ -2368,7 +2271,8 @@ in
         dbeaver-bin
         dconf-editor
         dconf2nix
-        dialect
+        ddcui
+        ddcutil
         diffoci
         dig
         disktui
@@ -2385,7 +2289,6 @@ in
         dtui
         dvb-apps
         e2fsprogs
-        eartag
         easyeda2kicad
         efibootmgr
         egypt
@@ -2402,68 +2305,31 @@ in
         f2fs-tools
         fastfetch
         fdroidcl
-        ffmpegthumbnailer
         fh
         file
-        file-roller
         fileinfo
         filezilla
         flake-checker
         flare-floss
-        flowblade
         flutter
         fontfor
-        fragments
         freecad
         freesmlauncher # Overlay from Flake
         fritzing
         fstl
-        gabutdm
         gawk
         gcc
         gdb
-        ghex
         ghostunnel
         gimp3-with-plugins
         git-filter-repo
         git-repo
         github-changelog-generator
-        glib
-        gnome-autoar
-        gnome-bluetooth
-        gnome-calculator
-        gnome-calendar
-        gnome-characters
-        gnome-clocks
-        gnome-color-manager
-        gnome-connections
-        gnome-console
-        gnome-contacts
-        gnome-control-center
-        gnome-decoder
-        gnome-epub-thumbnailer
         gnome-firmware
         gnome-font-viewer
         gnome-frog
-        gnome-graphs
-        gnome-keysign
-        gnome-kra-ora-thumbnailer
-        gnome-logs
-        gnome-mahjongg
-        gnome-maps
         gnome-multi-writer
-        gnome-music
         gnome-nettool
-        gnome-network-displays
-        gnome-power-manager
-        gnome-secrets
-        gnome-session-ctl
-        gnome-sound-recorder
-        gnome-system-monitor
-        gnome-tecla
-        gnome-tweaks
-        gnome-video-effects
-        gnome-weather
         gnugrep
         gnumake
         gnused
@@ -2471,7 +2337,6 @@ in
         gollama
         google-lighthouse
         gource
-        gparted-full
         gpg-tui
         gpredict
         gpu-viewer
@@ -2486,6 +2351,7 @@ in
         hashcat-utils
         hashes
         hdparm
+        heaptrack
         helm-dashboard
         helm-ls
         hfsprogs
@@ -2498,7 +2364,6 @@ in
         i2c-tools
         iaito
         iftop
-        impression
         indent
         inkscape-with-extensions
         inotify-tools
@@ -2514,15 +2379,20 @@ in
         johnny
         jq
         json-tui
+        karp
+        kdiff3
         kernel-hardening-checker
         kernelshark
         kexec-tools
-        kgraphviewer
+        kgeotag
+        kid3-kde
         killall
         kind
         kmod
         kotlin
         kotlin-language-server
+        krename
+        ktimetracker
         kubectl
         kubectl-ai
         kubectl-convert
@@ -2544,6 +2414,7 @@ in
         kubernetes-metrics-server
         kubeshark
         kubetui
+        labplot
         letterpress
         libarchive
         libhsts
@@ -2572,7 +2443,6 @@ in
         massdns
         mcaselector
         md-lsp
-        meld
         memtier-benchmark
         mermaid-cli
         mesa-demos
@@ -2583,14 +2453,12 @@ in
         minikube
         motion
         mousai
+        mt-st
         mtools
         mtr-gui
         musescore
-        nautilus
-        nautilus-python
         nemu
         nethogs
-        newsflash
         nikto
         nilfs-utils
         ninja
@@ -2605,27 +2473,25 @@ in
         numatop
         nurl
         nvme-cli
+        obexftp
         onionshare-gui
         onlyoffice-desktopeditors
         openai-whisper
         opendmarc
+        openobex
         openssl
         p7zip
         paper-clip
-        papers
         parted
         pciutils
-        pdfarranger
         pe-bear
         pev
         pg_top
-        pinta
         pkg-config
         platformio
         podman-compose
         podman-desktop
         podman-tui
-        polari
         poop # POOP = Performance Optimizer Observation Platform
         postgres-language-server
         procps
@@ -2642,7 +2508,6 @@ in
         raider
         rclone
         rclone-browser
-        refine
         regex-tui
         rp-pppoe
         rpi-imager
@@ -2654,18 +2519,14 @@ in
         scrcpy
         screen
         sdrangel
-        selectdefaultapplication
         serial-studio
         share-preview
         shellclear
         sherlock
-        showtime
-        simple-scan
         sipvicious
         sleuthkit
         smag
         smartmontools
-        snapshot
         sof-tools
         sound-theme-freedesktop
         soundconverter
@@ -2675,16 +2536,15 @@ in
         steam-run-free
         stegseek
         stellarium
+        stenc
         streamlit
         subfinder
         subtitleedit
         switcheroo
         symlinks
-        sysprof
         systemctl-tui
         systemd-lsp
         systemdgenie
-        szyszka
         telegraph
         terminaltexteffects
         texliveFull
@@ -2717,7 +2577,6 @@ in
         usbutils
         util-linux
         valgrind
-        valuta
         video2x
         virt-top
         virt-v2v
@@ -2745,7 +2604,6 @@ in
         wpprobe
         x2goclient
         xdg-user-dirs
-        xdg-user-dirs-gtk
         xdg-utils
         xfsdump
         xfsprogs
@@ -2757,10 +2615,6 @@ in
         zenmap
         zfs
         zip
-        (ardour.override {
-          optimize = true;
-          videoSupport = true;
-        })
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -2951,6 +2805,12 @@ in
         (virt-viewer.override {
           spiceSupport = true;
         })
+        (vlc.override {
+          chromecastSupport = true;
+          jackSupport = true;
+          skins2Support = true;
+          waylandSupport = true;
+        })
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -2979,7 +2839,6 @@ in
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
       ++ config.services.cockpit.plugins
-      ++ config.services.gnome.evolution-data-server.plugins
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
@@ -3041,6 +2900,335 @@ in
           enableDocumentation = true;
         })
       ])
+      ++ (with kdePackages; [
+        # maplibre-native-qt # Build Failure
+        # plasma-vault # Build Failure
+        # waylib # Build Failure
+        # wayqt # Build Failure
+        accessibility-inspector
+        accounts-qt
+        akonadi
+        akonadi-calendar
+        akonadi-calendar-tools
+        akonadi-contacts
+        akonadi-import-wizard
+        akonadi-mime
+        akonadi-search
+        akonadiconsole
+        akregator
+        alpaka
+        applet-window-buttons6
+        ark
+        attica
+        audex
+        audiocd-kio
+        audiotube
+        aurorae
+        baloo
+        baloo-widgets
+        bluedevil
+        bluez-qt
+        breeze-gtk
+        breeze-icons
+        calendarsupport
+        colord-kde
+        dolphin
+        dolphin-plugins
+        drkonqi
+        drumstick
+        dynamic-workspaces
+        eventviews
+        extra-cmake-modules
+        ffmpegthumbs
+        filelight
+        frameworkintegration
+        futuresql
+        glaxnimate
+        gwenview
+        incidenceeditor
+        isoimagewriter
+        kaccounts-integration
+        kaccounts-providers
+        kactivitymanagerd
+        kaddressbook
+        kalarm
+        kalzium
+        kamera
+        kamoso
+        karchive
+        karousel
+        kasts
+        kauth
+        kbackup
+        kbookmarks
+        kcachegrind
+        kcalc
+        kcalendarcore
+        kcalutils
+        kcharselect
+        kcmutils
+        kcodecs
+        kcolorchooser
+        kcolorpicker
+        kcolorscheme
+        kcompletion
+        kconfig
+        kconfigwidgets
+        kcontacts
+        kcoreaddons
+        kcrash
+        kcron
+        kdav
+        kdbusaddons
+        kde-gtk-config
+        kde-inotify-survey
+        kdebugsettings
+        kdeclarative
+        kdecoration
+        kded
+        kdegraphics-mobipocket
+        kdegraphics-thumbnailers
+        kdenetwork-filesharing
+        kdenlive
+        kdepim-addons
+        kdepim-runtime
+        kdeplasma-addons
+        kdesdk-kio
+        kdesdk-thumbnailers
+        kdesu
+        kdf
+        kdiagram
+        kdialog
+        keysmith
+        kfilemetadata
+        kfind
+        kgamma
+        kget
+        kglobalaccel
+        kglobalacceld
+        kgpg
+        kgraphviewer
+        kguiaddons
+        khelpcenter
+        kholidays
+        ki18n
+        kiconthemes
+        kidentitymanagement
+        kidletime
+        kig
+        kimageformats
+        kimagemapeditor
+        kimap
+        kinfocenter
+        kio
+        kio-admin
+        kio-extras
+        kio-extras-kf5
+        kio-fuse
+        kio-gdrive
+        kio-zeroconf
+        kitemviews
+        kjobwidgets
+        kjournald
+        kldap
+        kleopatra
+        kmag
+        kmahjongg
+        kmail-account-wizard
+        kmailtransport
+        kmbox
+        kmenuedit
+        kmime
+        kmousetool
+        kmouth
+        kmplot
+        knotifications
+        knotifyconfig
+        kolourpaint
+        kompare
+        konsole
+        kontactinterface
+        kontrast
+        konversation
+        kopeninghours
+        korganizer
+        kpackage
+        kparts
+        kpeople
+        kpimtextedit
+        kpipewire
+        kpkpass
+        kpmcore
+        kqtquickcharts
+        kquickcharts
+        kquickimageedit
+        krdc
+        krdp
+        krecorder
+        krfb
+        krohnkite
+        kronometer
+        kruler
+        krunner
+        ksanecore
+        kscreen
+        kscreenlocker
+        kservice
+        ksmtp
+        ksshaskpass
+        kstars
+        kstatusnotifieritem
+        ksvg
+        ksystemlog
+        ksystemstats
+        ktextaddons
+        ktexttemplate
+        ktextwidgets
+        ktimer
+        ktnef
+        ktorrent
+        kubrick
+        kunifiedpush
+        kunitconversion
+        kup
+        kwallet
+        kwalletmanager
+        kwave
+        kwayland
+        kwayland-integration
+        kweather
+        kweathercore
+        kwidgetsaddons
+        kwin
+        kwindowsystem
+        kwrited
+        kzones
+        layer-shell-qt
+        libgravatar
+        libiodata
+        libkcddb
+        libkcompactdisc
+        libkdcraw
+        libkdepim
+        libkexiv2
+        libkgapi
+        libkleo
+        libkomparediff2
+        libksane
+        libkscreen
+        libksieve
+        libksysguard
+        libktorrent
+        libplasma
+        libqaccessibilityclient
+        libqglviewer
+        libquotient
+        lokalize
+        mailcommon
+        mailimporter
+        marble
+        markdownpart
+        massif-visualizer
+        mbox-importer
+        messagelib
+        mimetreeparser
+        mlt
+        modemmanager-qt
+        neochat
+        networkmanager-qt
+        okteta
+        okular
+        phonon
+        phonon-vlc
+        pim-data-exporter
+        pim-sieve-editor
+        pimcommon
+        plasma-activities
+        plasma-activities-stats
+        plasma-browser-integration
+        plasma-desktop
+        plasma-dialer
+        plasma-disks
+        plasma-firewall
+        plasma-integration
+        plasma-keyboard
+        plasma-nm
+        plasma-pa
+        plasma-systemmonitor
+        plasma-thunderbolt
+        plasma-wayland-protocols
+        plasma-workspace
+        plasma-workspace-wallpapers
+        plasmatube
+        plymouth-kcm
+        polkit-kde-agent-1
+        polkit-qt-1
+        poppler
+        powerdevil
+        print-manager
+        prison
+        pulseaudio-qt
+        qca
+        qcoro
+        qcustomplot
+        qgpgme
+        qhotkey
+        qrca
+        qt-color-widgets
+        qt3d
+        qt6gtk2
+        qtbase
+        qtcharts
+        qtconnectivity
+        qtgraphs
+        qtgrpc
+        qtimageformats
+        qtkeychain
+        qtlocation
+        qtmultimedia
+        qtnetworkauth
+        qtpositioning
+        qtremoteobjects
+        qtsensors
+        qtserialbus
+        qtserialport
+        qtshadertools
+        qtspeech
+        qtspell
+        qtsvg
+        qttools
+        qttranslations
+        qtutilities
+        qtvirtualkeyboard
+        qtwayland
+        qtwebchannel
+        qtwebengine
+        qtwebsockets
+        qtwebview
+        quazip
+        qwlroots
+        qxlsx
+        signon-kwallet-extension
+        signond
+        skanpage
+        solid
+        sonnet
+        spacebar
+        spectacle
+        step
+        svgpart
+        sweeper
+        syndication
+        syntax-highlighting
+        systemsettings
+        taglib
+        timed
+        tokodon
+        wallpaper-engine-plugin
+        wayland
+        wayland-protocols
+        zanshin
+      ])
       ++ (with kubernetes-helmPlugins; [
         helm-diff
         helm-git
@@ -3087,12 +3275,9 @@ in
         xxd
       ]);
 
-    gnome.excludePackages = with pkgs; [
-      decibels
-      epiphany
-      gnome-text-editor
-      gnome-tour
-      yelp
+    plasma6.excludePackages = with pkgs.kdePackages; [
+      discover
+      kate
     ];
 
     wordlist = {
@@ -3156,7 +3341,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "nautilus.desktop";
+        "inode/directory" = "org.kde.dolphin.desktop";
 
         "text/1d-interleaved-parityfec" = "codium.desktop";
         "text/cache-manifest" = "codium.desktop";
@@ -3256,351 +3441,351 @@ in
         "text/xml" = "codium.desktop";
         "text/xml-external-parsed-entity" = "codium.desktop";
 
-        "image/aces" = "org.gnome.Loupe.desktop";
-        "image/apng" = "org.gnome.Loupe.desktop";
-        "image/avci" = "org.gnome.Loupe.desktop";
-        "image/avcs" = "org.gnome.Loupe.desktop";
-        "image/avif" = "org.gnome.Loupe.desktop";
-        "image/bmp" = "org.gnome.Loupe.desktop";
-        "image/cgm" = "org.gnome.Loupe.desktop";
-        "image/dicom-rle" = "org.gnome.Loupe.desktop";
-        "image/dpx" = "org.gnome.Loupe.desktop";
-        "image/emf" = "org.gnome.Loupe.desktop";
-        "image/fits" = "org.gnome.Loupe.desktop";
-        "image/g3fax" = "org.gnome.Loupe.desktop";
-        "image/gif" = "org.gnome.Loupe.desktop";
-        "image/heic-sequence" = "org.gnome.Loupe.desktop";
-        "image/heic" = "org.gnome.Loupe.desktop";
-        "image/heif-sequence" = "org.gnome.Loupe.desktop";
-        "image/heif" = "org.gnome.Loupe.desktop";
-        "image/hej2k" = "org.gnome.Loupe.desktop";
-        "image/hsj2" = "org.gnome.Loupe.desktop";
-        "image/ief" = "org.gnome.Loupe.desktop";
-        "image/j2c" = "org.gnome.Loupe.desktop";
-        "image/jaii" = "org.gnome.Loupe.desktop";
-        "image/jais" = "org.gnome.Loupe.desktop";
-        "image/jls" = "org.gnome.Loupe.desktop";
-        "image/jp2" = "org.gnome.Loupe.desktop";
-        "image/jpeg" = "org.gnome.Loupe.desktop";
-        "image/jph" = "org.gnome.Loupe.desktop";
-        "image/jphc" = "org.gnome.Loupe.desktop";
-        "image/jpm" = "org.gnome.Loupe.desktop";
-        "image/jpx" = "org.gnome.Loupe.desktop";
-        "image/jxl" = "org.gnome.Loupe.desktop";
-        "image/jxr" = "org.gnome.Loupe.desktop";
-        "image/jxrA" = "org.gnome.Loupe.desktop";
-        "image/jxrS" = "org.gnome.Loupe.desktop";
-        "image/jxs" = "org.gnome.Loupe.desktop";
-        "image/jxsc" = "org.gnome.Loupe.desktop";
-        "image/jxsi" = "org.gnome.Loupe.desktop";
-        "image/jxss" = "org.gnome.Loupe.desktop";
-        "image/ktx" = "org.gnome.Loupe.desktop";
-        "image/ktx2" = "org.gnome.Loupe.desktop";
-        "image/naplps" = "org.gnome.Loupe.desktop";
-        "image/png" = "org.gnome.Loupe.desktop";
-        "image/prs.btif" = "org.gnome.Loupe.desktop";
-        "image/prs.pti" = "org.gnome.Loupe.desktop";
-        "image/pwg-raster" = "org.gnome.Loupe.desktop";
-        "image/svg+xml" = "org.gnome.Loupe.desktop";
-        "image/t38" = "org.gnome.Loupe.desktop";
-        "image/tiff-fx" = "org.gnome.Loupe.desktop";
-        "image/tiff" = "org.gnome.Loupe.desktop";
-        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
-        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
-        "image/vnd.clip" = "org.gnome.Loupe.desktop";
-        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
-        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
-        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
-        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
-        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
-        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
-        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
-        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.fst" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
-        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
-        "image/vnd.mix" = "org.gnome.Loupe.desktop";
-        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
-        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
-        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
-        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
-        "image/vnd.svf" = "org.gnome.Loupe.desktop";
-        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
-        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
-        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
-        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
-        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
-        "image/webp" = "org.gnome.Loupe.desktop";
-        "image/wmf" = "org.gnome.Loupe.desktop";
-        "image/x-emf" = "org.gnome.Loupe.desktop";
-        "image/x-wmf" = "org.gnome.Loupe.desktop";
+        "image/aces" = "org.kde.gwenview.desktopp";
+        "image/apng" = "org.kde.gwenview.desktopp";
+        "image/avci" = "org.kde.gwenview.desktopp";
+        "image/avcs" = "org.kde.gwenview.desktopp";
+        "image/avif" = "org.kde.gwenview.desktopp";
+        "image/bmp" = "org.kde.gwenview.desktopp";
+        "image/cgm" = "org.kde.gwenview.desktopp";
+        "image/dicom-rle" = "org.kde.gwenview.desktopp";
+        "image/dpx" = "org.kde.gwenview.desktopp";
+        "image/emf" = "org.kde.gwenview.desktopp";
+        "image/fits" = "org.kde.gwenview.desktopp";
+        "image/g3fax" = "org.kde.gwenview.desktopp";
+        "image/gif" = "org.kde.gwenview.desktopp";
+        "image/heic-sequence" = "org.kde.gwenview.desktopp";
+        "image/heic" = "org.kde.gwenview.desktopp";
+        "image/heif-sequence" = "org.kde.gwenview.desktopp";
+        "image/heif" = "org.kde.gwenview.desktopp";
+        "image/hej2k" = "org.kde.gwenview.desktopp";
+        "image/hsj2" = "org.kde.gwenview.desktopp";
+        "image/ief" = "org.kde.gwenview.desktopp";
+        "image/j2c" = "org.kde.gwenview.desktopp";
+        "image/jaii" = "org.kde.gwenview.desktopp";
+        "image/jais" = "org.kde.gwenview.desktopp";
+        "image/jls" = "org.kde.gwenview.desktopp";
+        "image/jp2" = "org.kde.gwenview.desktopp";
+        "image/jpeg" = "org.kde.gwenview.desktopp";
+        "image/jph" = "org.kde.gwenview.desktopp";
+        "image/jphc" = "org.kde.gwenview.desktopp";
+        "image/jpm" = "org.kde.gwenview.desktopp";
+        "image/jpx" = "org.kde.gwenview.desktopp";
+        "image/jxl" = "org.kde.gwenview.desktopp";
+        "image/jxr" = "org.kde.gwenview.desktopp";
+        "image/jxrA" = "org.kde.gwenview.desktopp";
+        "image/jxrS" = "org.kde.gwenview.desktopp";
+        "image/jxs" = "org.kde.gwenview.desktopp";
+        "image/jxsc" = "org.kde.gwenview.desktopp";
+        "image/jxsi" = "org.kde.gwenview.desktopp";
+        "image/jxss" = "org.kde.gwenview.desktopp";
+        "image/ktx" = "org.kde.gwenview.desktopp";
+        "image/ktx2" = "org.kde.gwenview.desktopp";
+        "image/naplps" = "org.kde.gwenview.desktopp";
+        "image/png" = "org.kde.gwenview.desktopp";
+        "image/prs.btif" = "org.kde.gwenview.desktopp";
+        "image/prs.pti" = "org.kde.gwenview.desktopp";
+        "image/pwg-raster" = "org.kde.gwenview.desktopp";
+        "image/svg+xml" = "org.kde.gwenview.desktopp";
+        "image/t38" = "org.kde.gwenview.desktopp";
+        "image/tiff-fx" = "org.kde.gwenview.desktopp";
+        "image/tiff" = "org.kde.gwenview.desktopp";
+        "image/vnd.adobe.photoshop" = "org.kde.gwenview.desktopp";
+        "image/vnd.airzip.accelerator.azv" = "org.kde.gwenview.desktopp";
+        "image/vnd.blockfact.facti" = "org.kde.gwenview.desktopp";
+        "image/vnd.clip" = "org.kde.gwenview.desktopp";
+        "image/vnd.cns.inf2" = "org.kde.gwenview.desktopp";
+        "image/vnd.dece.graphic" = "org.kde.gwenview.desktopp";
+        "image/vnd.djvu" = "org.kde.gwenview.desktopp";
+        "image/vnd.dvb.subtitle" = "org.kde.gwenview.desktopp";
+        "image/vnd.dwg" = "org.kde.gwenview.desktopp";
+        "image/vnd.dxf" = "org.kde.gwenview.desktopp";
+        "image/vnd.fastbidsheet" = "org.kde.gwenview.desktopp";
+        "image/vnd.fpx" = "org.kde.gwenview.desktopp";
+        "image/vnd.fst" = "org.kde.gwenview.desktopp";
+        "image/vnd.fujixerox.edmics-mmr" = "org.kde.gwenview.desktopp";
+        "image/vnd.fujixerox.edmics-rlc" = "org.kde.gwenview.desktopp";
+        "image/vnd.globalgraphics.pgb" = "org.kde.gwenview.desktopp";
+        "image/vnd.microsoft.icon" = "org.kde.gwenview.desktopp";
+        "image/vnd.mix" = "org.kde.gwenview.desktopp";
+        "image/vnd.mozilla.apng" = "org.kde.gwenview.desktopp";
+        "image/vnd.ms-modi" = "org.kde.gwenview.desktopp";
+        "image/vnd.net-fpx" = "org.kde.gwenview.desktopp";
+        "image/vnd.pco.b16" = "org.kde.gwenview.desktopp";
+        "image/vnd.radiance" = "org.kde.gwenview.desktopp";
+        "image/vnd.sealed.png" = "org.kde.gwenview.desktopp";
+        "image/vnd.sealedmedia.softseal.gif" = "org.kde.gwenview.desktopp";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.kde.gwenview.desktopp";
+        "image/vnd.svf" = "org.kde.gwenview.desktopp";
+        "image/vnd.tencent.tap" = "org.kde.gwenview.desktopp";
+        "image/vnd.valve.source.texture" = "org.kde.gwenview.desktopp";
+        "image/vnd.wap.wbmp" = "org.kde.gwenview.desktopp";
+        "image/vnd.xiff" = "org.kde.gwenview.desktopp";
+        "image/vnd.zbrush.pcx" = "org.kde.gwenview.desktopp";
+        "image/webp" = "org.kde.gwenview.desktopp";
+        "image/wmf" = "org.kde.gwenview.desktopp";
+        "image/x-emf" = "org.kde.gwenview.desktopp";
+        "image/x-wmf" = "org.kde.gwenview.desktopp";
 
-        "audio/1d-interleaved-parityfec" = "org.gnome.Music.desktop";
-        "audio/32kadpcm" = "org.gnome.Music.desktop";
-        "audio/3gpp" = "org.gnome.Music.desktop";
-        "audio/3gpp2" = "org.gnome.Music.desktop";
-        "audio/aac" = "org.gnome.Music.desktop";
-        "audio/ac3" = "org.gnome.Music.desktop";
-        "audio/AMR-WB" = "org.gnome.Music.desktop";
-        "audio/amr-wb+" = "org.gnome.Music.desktop";
-        "audio/AMR" = "org.gnome.Music.desktop";
-        "audio/aptx" = "org.gnome.Music.desktop";
-        "audio/asc" = "org.gnome.Music.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "org.gnome.Music.desktop";
-        "audio/ATRAC-X" = "org.gnome.Music.desktop";
-        "audio/ATRAC3" = "org.gnome.Music.desktop";
-        "audio/basic" = "org.gnome.Music.desktop";
-        "audio/BV16" = "org.gnome.Music.desktop";
-        "audio/BV32" = "org.gnome.Music.desktop";
-        "audio/clearmode" = "org.gnome.Music.desktop";
-        "audio/CN" = "org.gnome.Music.desktop";
-        "audio/DAT12" = "org.gnome.Music.desktop";
-        "audio/dls" = "org.gnome.Music.desktop";
-        "audio/dsr-es201108" = "org.gnome.Music.desktop";
-        "audio/dsr-es202050" = "org.gnome.Music.desktop";
-        "audio/dsr-es202211" = "org.gnome.Music.desktop";
-        "audio/dsr-es202212" = "org.gnome.Music.desktop";
-        "audio/DV" = "org.gnome.Music.desktop";
-        "audio/DVI4" = "org.gnome.Music.desktop";
-        "audio/eac3" = "org.gnome.Music.desktop";
-        "audio/encaprtp" = "org.gnome.Music.desktop";
-        "audio/EVRC-QCP" = "org.gnome.Music.desktop";
-        "audio/EVRC" = "org.gnome.Music.desktop";
-        "audio/EVRC0" = "org.gnome.Music.desktop";
-        "audio/EVRC1" = "org.gnome.Music.desktop";
-        "audio/EVRCB" = "org.gnome.Music.desktop";
-        "audio/EVRCB0" = "org.gnome.Music.desktop";
-        "audio/EVRCB1" = "org.gnome.Music.desktop";
-        "audio/EVRCNW" = "org.gnome.Music.desktop";
-        "audio/EVRCNW0" = "org.gnome.Music.desktop";
-        "audio/EVRCNW1" = "org.gnome.Music.desktop";
-        "audio/EVRCWB" = "org.gnome.Music.desktop";
-        "audio/EVRCWB0" = "org.gnome.Music.desktop";
-        "audio/EVRCWB1" = "org.gnome.Music.desktop";
-        "audio/EVS" = "org.gnome.Music.desktop";
-        "audio/flac" = "org.gnome.Music.desktop";
-        "audio/flexfec" = "org.gnome.Music.desktop";
-        "audio/fwdred" = "org.gnome.Music.desktop";
-        "audio/G711-0" = "org.gnome.Music.desktop";
-        "audio/G719" = "org.gnome.Music.desktop";
-        "audio/G722" = "org.gnome.Music.desktop";
-        "audio/G7221" = "org.gnome.Music.desktop";
-        "audio/G723" = "org.gnome.Music.desktop";
-        "audio/G726-16" = "org.gnome.Music.desktop";
-        "audio/G726-24" = "org.gnome.Music.desktop";
-        "audio/G726-32" = "org.gnome.Music.desktop";
-        "audio/G726-40" = "org.gnome.Music.desktop";
-        "audio/G728" = "org.gnome.Music.desktop";
-        "audio/G729" = "org.gnome.Music.desktop";
-        "audio/G7291" = "org.gnome.Music.desktop";
-        "audio/G729D" = "org.gnome.Music.desktop";
-        "audio/G729E" = "org.gnome.Music.desktop";
-        "audio/GSM-EFR" = "org.gnome.Music.desktop";
-        "audio/GSM-HR-08" = "org.gnome.Music.desktop";
-        "audio/GSM" = "org.gnome.Music.desktop";
-        "audio/iLBC" = "org.gnome.Music.desktop";
-        "audio/ip-mr_v2.5" = "org.gnome.Music.desktop";
-        "audio/L16" = "org.gnome.Music.desktop";
-        "audio/L20" = "org.gnome.Music.desktop";
-        "audio/L24" = "org.gnome.Music.desktop";
-        "audio/L8" = "org.gnome.Music.desktop";
-        "audio/LPC" = "org.gnome.Music.desktop";
-        "audio/matroska" = "org.gnome.Music.desktop";
-        "audio/MELP" = "org.gnome.Music.desktop";
-        "audio/MELP1200" = "org.gnome.Music.desktop";
-        "audio/MELP2400" = "org.gnome.Music.desktop";
-        "audio/MELP600" = "org.gnome.Music.desktop";
-        "audio/mhas" = "org.gnome.Music.desktop";
-        "audio/midi-clip" = "org.gnome.Music.desktop";
-        "audio/mobile-xmf" = "org.gnome.Music.desktop";
-        "audio/mp4" = "org.gnome.Music.desktop";
-        "audio/MP4A-LATM" = "org.gnome.Music.desktop";
-        "audio/mpa-robust" = "org.gnome.Music.desktop";
-        "audio/MPA" = "org.gnome.Music.desktop";
-        "audio/mpeg" = "org.gnome.Music.desktop";
-        "audio/mpeg4-generic" = "org.gnome.Music.desktop";
-        "audio/ogg" = "org.gnome.Music.desktop";
-        "audio/opus" = "org.gnome.Music.desktop";
-        "audio/parityfec" = "org.gnome.Music.desktop";
-        "audio/PCMA-WB" = "org.gnome.Music.desktop";
-        "audio/PCMA" = "org.gnome.Music.desktop";
-        "audio/PCMU-WB" = "org.gnome.Music.desktop";
-        "audio/PCMU" = "org.gnome.Music.desktop";
-        "audio/prs.sid" = "org.gnome.Music.desktop";
-        "audio/QCELP" = "org.gnome.Music.desktop";
-        "audio/raptorfec" = "org.gnome.Music.desktop";
-        "audio/RED" = "org.gnome.Music.desktop";
-        "audio/rtp-enc-aescm128" = "org.gnome.Music.desktop";
-        "audio/rtp-midi" = "org.gnome.Music.desktop";
-        "audio/rtploopback" = "org.gnome.Music.desktop";
-        "audio/rtx" = "org.gnome.Music.desktop";
-        "audio/scip" = "org.gnome.Music.desktop";
-        "audio/SMV-QCP" = "org.gnome.Music.desktop";
-        "audio/SMV" = "org.gnome.Music.desktop";
-        "audio/SMV0" = "org.gnome.Music.desktop";
-        "audio/sofa" = "org.gnome.Music.desktop";
-        "audio/soundfont" = "org.gnome.Music.desktop";
-        "audio/sp-midi" = "org.gnome.Music.desktop";
-        "audio/speex" = "org.gnome.Music.desktop";
-        "audio/t140c" = "org.gnome.Music.desktop";
-        "audio/t38" = "org.gnome.Music.desktop";
-        "audio/telephone-event" = "org.gnome.Music.desktop";
-        "audio/TETRA_ACELP_BB" = "org.gnome.Music.desktop";
-        "audio/TETRA_ACELP" = "org.gnome.Music.desktop";
-        "audio/tone" = "org.gnome.Music.desktop";
-        "audio/TSVCIS" = "org.gnome.Music.desktop";
-        "audio/UEMCLIP" = "org.gnome.Music.desktop";
-        "audio/ulpfec" = "org.gnome.Music.desktop";
-        "audio/usac" = "org.gnome.Music.desktop";
-        "audio/VDVI" = "org.gnome.Music.desktop";
-        "audio/VMR-WB" = "org.gnome.Music.desktop";
-        "audio/vnd.3gpp.iufp" = "org.gnome.Music.desktop";
-        "audio/vnd.4SB" = "org.gnome.Music.desktop";
-        "audio/vnd.audiokoz" = "org.gnome.Music.desktop";
-        "audio/vnd.blockfact.facta" = "org.gnome.Music.desktop";
-        "audio/vnd.CELP" = "org.gnome.Music.desktop";
-        "audio/vnd.cisco.nse" = "org.gnome.Music.desktop";
-        "audio/vnd.cmles.radio-events" = "org.gnome.Music.desktop";
-        "audio/vnd.cns.anp1" = "org.gnome.Music.desktop";
-        "audio/vnd.cns.inf1" = "org.gnome.Music.desktop";
-        "audio/vnd.dece.audio" = "org.gnome.Music.desktop";
-        "audio/vnd.digital-winds" = "org.gnome.Music.desktop";
-        "audio/vnd.dlna.adts" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.heaac.1" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.heaac.2" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.mlp" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.mps" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.pl2" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.pl2x" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.pl2z" = "org.gnome.Music.desktop";
-        "audio/vnd.dolby.pulse.1" = "org.gnome.Music.desktop";
-        "audio/vnd.dra" = "org.gnome.Music.desktop";
-        "audio/vnd.dts.hd" = "org.gnome.Music.desktop";
-        "audio/vnd.dts.uhd" = "org.gnome.Music.desktop";
-        "audio/vnd.dts" = "org.gnome.Music.desktop";
-        "audio/vnd.dvb.file" = "org.gnome.Music.desktop";
-        "audio/vnd.everad.plj" = "org.gnome.Music.desktop";
-        "audio/vnd.hns.audio" = "org.gnome.Music.desktop";
-        "audio/vnd.lucent.voice" = "org.gnome.Music.desktop";
-        "audio/vnd.ms-playready.media.pya" = "org.gnome.Music.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "org.gnome.Music.desktop";
-        "audio/vnd.nortel.vbk" = "org.gnome.Music.desktop";
-        "audio/vnd.nuera.ecelp4800" = "org.gnome.Music.desktop";
-        "audio/vnd.nuera.ecelp7470" = "org.gnome.Music.desktop";
-        "audio/vnd.nuera.ecelp9600" = "org.gnome.Music.desktop";
-        "audio/vnd.octel.sbc" = "org.gnome.Music.desktop";
-        "audio/vnd.presonus.multitrack" = "org.gnome.Music.desktop";
-        "audio/vnd.qcelp" = "org.gnome.Music.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "org.gnome.Music.desktop";
-        "audio/vnd.rip" = "org.gnome.Music.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "org.gnome.Music.desktop";
-        "audio/vnd.vmx.cvsd" = "org.gnome.Music.desktop";
-        "audio/vorbis-config" = "org.gnome.Music.desktop";
-        "audio/vorbis" = "org.gnome.Music.desktop";
+        "audio/1d-interleaved-parityfec" = "vlc.desktop";
+        "audio/32kadpcm" = "vlc.desktop";
+        "audio/3gpp" = "vlc.desktop";
+        "audio/3gpp2" = "vlc.desktop";
+        "audio/aac" = "vlc.desktop";
+        "audio/ac3" = "vlc.desktop";
+        "audio/AMR-WB" = "vlc.desktop";
+        "audio/amr-wb+" = "vlc.desktop";
+        "audio/AMR" = "vlc.desktop";
+        "audio/aptx" = "vlc.desktop";
+        "audio/asc" = "vlc.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "vlc.desktop";
+        "audio/ATRAC-X" = "vlc.desktop";
+        "audio/ATRAC3" = "vlc.desktop";
+        "audio/basic" = "vlc.desktop";
+        "audio/BV16" = "vlc.desktop";
+        "audio/BV32" = "vlc.desktop";
+        "audio/clearmode" = "vlc.desktop";
+        "audio/CN" = "vlc.desktop";
+        "audio/DAT12" = "vlc.desktop";
+        "audio/dls" = "vlc.desktop";
+        "audio/dsr-es201108" = "vlc.desktop";
+        "audio/dsr-es202050" = "vlc.desktop";
+        "audio/dsr-es202211" = "vlc.desktop";
+        "audio/dsr-es202212" = "vlc.desktop";
+        "audio/DV" = "vlc.desktop";
+        "audio/DVI4" = "vlc.desktop";
+        "audio/eac3" = "vlc.desktop";
+        "audio/encaprtp" = "vlc.desktop";
+        "audio/EVRC-QCP" = "vlc.desktop";
+        "audio/EVRC" = "vlc.desktop";
+        "audio/EVRC0" = "vlc.desktop";
+        "audio/EVRC1" = "vlc.desktop";
+        "audio/EVRCB" = "vlc.desktop";
+        "audio/EVRCB0" = "vlc.desktop";
+        "audio/EVRCB1" = "vlc.desktop";
+        "audio/EVRCNW" = "vlc.desktop";
+        "audio/EVRCNW0" = "vlc.desktop";
+        "audio/EVRCNW1" = "vlc.desktop";
+        "audio/EVRCWB" = "vlc.desktop";
+        "audio/EVRCWB0" = "vlc.desktop";
+        "audio/EVRCWB1" = "vlc.desktop";
+        "audio/EVS" = "vlc.desktop";
+        "audio/flac" = "vlc.desktop";
+        "audio/flexfec" = "vlc.desktop";
+        "audio/fwdred" = "vlc.desktop";
+        "audio/G711-0" = "vlc.desktop";
+        "audio/G719" = "vlc.desktop";
+        "audio/G722" = "vlc.desktop";
+        "audio/G7221" = "vlc.desktop";
+        "audio/G723" = "vlc.desktop";
+        "audio/G726-16" = "vlc.desktop";
+        "audio/G726-24" = "vlc.desktop";
+        "audio/G726-32" = "vlc.desktop";
+        "audio/G726-40" = "vlc.desktop";
+        "audio/G728" = "vlc.desktop";
+        "audio/G729" = "vlc.desktop";
+        "audio/G7291" = "vlc.desktop";
+        "audio/G729D" = "vlc.desktop";
+        "audio/G729E" = "vlc.desktop";
+        "audio/GSM-EFR" = "vlc.desktop";
+        "audio/GSM-HR-08" = "vlc.desktop";
+        "audio/GSM" = "vlc.desktop";
+        "audio/iLBC" = "vlc.desktop";
+        "audio/ip-mr_v2.5" = "vlc.desktop";
+        "audio/L16" = "vlc.desktop";
+        "audio/L20" = "vlc.desktop";
+        "audio/L24" = "vlc.desktop";
+        "audio/L8" = "vlc.desktop";
+        "audio/LPC" = "vlc.desktop";
+        "audio/matroska" = "vlc.desktop";
+        "audio/MELP" = "vlc.desktop";
+        "audio/MELP1200" = "vlc.desktop";
+        "audio/MELP2400" = "vlc.desktop";
+        "audio/MELP600" = "vlc.desktop";
+        "audio/mhas" = "vlc.desktop";
+        "audio/midi-clip" = "vlc.desktop";
+        "audio/mobile-xmf" = "vlc.desktop";
+        "audio/mp4" = "vlc.desktop";
+        "audio/MP4A-LATM" = "vlc.desktop";
+        "audio/mpa-robust" = "vlc.desktop";
+        "audio/MPA" = "vlc.desktop";
+        "audio/mpeg" = "vlc.desktop";
+        "audio/mpeg4-generic" = "vlc.desktop";
+        "audio/ogg" = "vlc.desktop";
+        "audio/opus" = "vlc.desktop";
+        "audio/parityfec" = "vlc.desktop";
+        "audio/PCMA-WB" = "vlc.desktop";
+        "audio/PCMA" = "vlc.desktop";
+        "audio/PCMU-WB" = "vlc.desktop";
+        "audio/PCMU" = "vlc.desktop";
+        "audio/prs.sid" = "vlc.desktop";
+        "audio/QCELP" = "vlc.desktop";
+        "audio/raptorfec" = "vlc.desktop";
+        "audio/RED" = "vlc.desktop";
+        "audio/rtp-enc-aescm128" = "vlc.desktop";
+        "audio/rtp-midi" = "vlc.desktop";
+        "audio/rtploopback" = "vlc.desktop";
+        "audio/rtx" = "vlc.desktop";
+        "audio/scip" = "vlc.desktop";
+        "audio/SMV-QCP" = "vlc.desktop";
+        "audio/SMV" = "vlc.desktop";
+        "audio/SMV0" = "vlc.desktop";
+        "audio/sofa" = "vlc.desktop";
+        "audio/soundfont" = "vlc.desktop";
+        "audio/sp-midi" = "vlc.desktop";
+        "audio/speex" = "vlc.desktop";
+        "audio/t140c" = "vlc.desktop";
+        "audio/t38" = "vlc.desktop";
+        "audio/telephone-event" = "vlc.desktop";
+        "audio/TETRA_ACELP_BB" = "vlc.desktop";
+        "audio/TETRA_ACELP" = "vlc.desktop";
+        "audio/tone" = "vlc.desktop";
+        "audio/TSVCIS" = "vlc.desktop";
+        "audio/UEMCLIP" = "vlc.desktop";
+        "audio/ulpfec" = "vlc.desktop";
+        "audio/usac" = "vlc.desktop";
+        "audio/VDVI" = "vlc.desktop";
+        "audio/VMR-WB" = "vlc.desktop";
+        "audio/vnd.3gpp.iufp" = "vlc.desktop";
+        "audio/vnd.4SB" = "vlc.desktop";
+        "audio/vnd.audiokoz" = "vlc.desktop";
+        "audio/vnd.blockfact.facta" = "vlc.desktop";
+        "audio/vnd.CELP" = "vlc.desktop";
+        "audio/vnd.cisco.nse" = "vlc.desktop";
+        "audio/vnd.cmles.radio-events" = "vlc.desktop";
+        "audio/vnd.cns.anp1" = "vlc.desktop";
+        "audio/vnd.cns.inf1" = "vlc.desktop";
+        "audio/vnd.dece.audio" = "vlc.desktop";
+        "audio/vnd.digital-winds" = "vlc.desktop";
+        "audio/vnd.dlna.adts" = "vlc.desktop";
+        "audio/vnd.dolby.heaac.1" = "vlc.desktop";
+        "audio/vnd.dolby.heaac.2" = "vlc.desktop";
+        "audio/vnd.dolby.mlp" = "vlc.desktop";
+        "audio/vnd.dolby.mps" = "vlc.desktop";
+        "audio/vnd.dolby.pl2" = "vlc.desktop";
+        "audio/vnd.dolby.pl2x" = "vlc.desktop";
+        "audio/vnd.dolby.pl2z" = "vlc.desktop";
+        "audio/vnd.dolby.pulse.1" = "vlc.desktop";
+        "audio/vnd.dra" = "vlc.desktop";
+        "audio/vnd.dts.hd" = "vlc.desktop";
+        "audio/vnd.dts.uhd" = "vlc.desktop";
+        "audio/vnd.dts" = "vlc.desktop";
+        "audio/vnd.dvb.file" = "vlc.desktop";
+        "audio/vnd.everad.plj" = "vlc.desktop";
+        "audio/vnd.hns.audio" = "vlc.desktop";
+        "audio/vnd.lucent.voice" = "vlc.desktop";
+        "audio/vnd.ms-playready.media.pya" = "vlc.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "vlc.desktop";
+        "audio/vnd.nortel.vbk" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp4800" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp7470" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp9600" = "vlc.desktop";
+        "audio/vnd.octel.sbc" = "vlc.desktop";
+        "audio/vnd.presonus.multitrack" = "vlc.desktop";
+        "audio/vnd.qcelp" = "vlc.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "vlc.desktop";
+        "audio/vnd.rip" = "vlc.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "vlc.desktop";
+        "audio/vnd.vmx.cvsd" = "vlc.desktop";
+        "audio/vorbis-config" = "vlc.desktop";
+        "audio/vorbis" = "vlc.desktop";
 
-        "video/1d-interleaved-parityfec" = "org.gnome.Showtime.desktop";
-        "video/3gpp-tt" = "org.gnome.Showtime.desktop";
-        "video/3gpp" = "org.gnome.Showtime.desktop";
-        "video/3gpp2" = "org.gnome.Showtime.desktop";
-        "video/AV1" = "org.gnome.Showtime.desktop";
-        "video/BMPEG" = "org.gnome.Showtime.desktop";
-        "video/BT656" = "org.gnome.Showtime.desktop";
-        "video/CelB" = "org.gnome.Showtime.desktop";
-        "video/DV" = "org.gnome.Showtime.desktop";
-        "video/encaprtp" = "org.gnome.Showtime.desktop";
-        "video/evc" = "org.gnome.Showtime.desktop";
-        "video/FFV1" = "org.gnome.Showtime.desktop";
-        "video/flexfec" = "org.gnome.Showtime.desktop";
-        "video/H261" = "org.gnome.Showtime.desktop";
-        "video/H263-1998" = "org.gnome.Showtime.desktop";
-        "video/H263-2000" = "org.gnome.Showtime.desktop";
-        "video/H263" = "org.gnome.Showtime.desktop";
-        "video/H264-RCDO" = "org.gnome.Showtime.desktop";
-        "video/H264-SVC" = "org.gnome.Showtime.desktop";
-        "video/H264" = "org.gnome.Showtime.desktop";
-        "video/H265" = "org.gnome.Showtime.desktop";
-        "video/H266" = "org.gnome.Showtime.desktop";
-        "video/iso.segment" = "org.gnome.Showtime.desktop";
-        "video/JPEG" = "org.gnome.Showtime.desktop";
-        "video/jpeg2000-scl" = "org.gnome.Showtime.desktop";
-        "video/jpeg2000" = "org.gnome.Showtime.desktop";
-        "video/jxsv" = "org.gnome.Showtime.desktop";
-        "video/lottie+json" = "org.gnome.Showtime.desktop";
-        "video/matroska-3d" = "org.gnome.Showtime.desktop";
-        "video/matroska" = "org.gnome.Showtime.desktop";
-        "video/mj2" = "org.gnome.Showtime.desktop";
-        "video/MP1S" = "org.gnome.Showtime.desktop";
-        "video/MP2P" = "org.gnome.Showtime.desktop";
-        "video/MP2T" = "org.gnome.Showtime.desktop";
-        "video/mp4" = "org.gnome.Showtime.desktop";
-        "video/MP4V-ES" = "org.gnome.Showtime.desktop";
-        "video/mpeg" = "org.gnome.Showtime.desktop";
-        "video/mpeg4-generic" = "org.gnome.Showtime.desktop";
-        "video/MPV" = "org.gnome.Showtime.desktop";
-        "video/nv" = "org.gnome.Showtime.desktop";
-        "video/ogg" = "org.gnome.Showtime.desktop";
-        "video/parityfec" = "org.gnome.Showtime.desktop";
-        "video/pointer" = "org.gnome.Showtime.desktop";
-        "video/quicktime" = "org.gnome.Showtime.desktop";
-        "video/raptorfec" = "org.gnome.Showtime.desktop";
-        "video/raw" = "org.gnome.Showtime.desktop";
-        "video/rtp-enc-aescm128" = "org.gnome.Showtime.desktop";
-        "video/rtploopback" = "org.gnome.Showtime.desktop";
-        "video/rtx" = "org.gnome.Showtime.desktop";
-        "video/scip" = "org.gnome.Showtime.desktop";
-        "video/smpte291" = "org.gnome.Showtime.desktop";
-        "video/SMPTE292M" = "org.gnome.Showtime.desktop";
-        "video/ulpfec" = "org.gnome.Showtime.desktop";
-        "video/vc1" = "org.gnome.Showtime.desktop";
-        "video/vc2" = "org.gnome.Showtime.desktop";
-        "video/vnd.blockfact.factv" = "org.gnome.Showtime.desktop";
-        "video/vnd.CCTV" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.hd" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.mobile" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.mp4" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.pd" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.sd" = "org.gnome.Showtime.desktop";
-        "video/vnd.dece.video" = "org.gnome.Showtime.desktop";
-        "video/vnd.directv.mpeg-tts" = "org.gnome.Showtime.desktop";
-        "video/vnd.directv.mpeg" = "org.gnome.Showtime.desktop";
-        "video/vnd.dlna.mpeg-tts" = "org.gnome.Showtime.desktop";
-        "video/vnd.dvb.file" = "org.gnome.Showtime.desktop";
-        "video/vnd.fvt" = "org.gnome.Showtime.desktop";
-        "video/vnd.hns.video" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.ttsavc" = "org.gnome.Showtime.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "org.gnome.Showtime.desktop";
-        "video/vnd.motorola.video" = "org.gnome.Showtime.desktop";
-        "video/vnd.motorola.videop" = "org.gnome.Showtime.desktop";
-        "video/vnd.mpegurl" = "org.gnome.Showtime.desktop";
-        "video/vnd.ms-playready.media.pyv" = "org.gnome.Showtime.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "org.gnome.Showtime.desktop";
-        "video/vnd.nokia.mp4vr" = "org.gnome.Showtime.desktop";
-        "video/vnd.nokia.videovoip" = "org.gnome.Showtime.desktop";
-        "video/vnd.objectvideo" = "org.gnome.Showtime.desktop";
-        "video/vnd.planar" = "org.gnome.Showtime.desktop";
-        "video/vnd.radgamettools.bink" = "org.gnome.Showtime.desktop";
-        "video/vnd.radgamettools.smacker" = "org.gnome.Showtime.desktop";
-        "video/vnd.sealed.mpeg1" = "org.gnome.Showtime.desktop";
-        "video/vnd.sealed.mpeg4" = "org.gnome.Showtime.desktop";
-        "video/vnd.sealed.swf" = "org.gnome.Showtime.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "org.gnome.Showtime.desktop";
-        "video/vnd.uvvu.mp4" = "org.gnome.Showtime.desktop";
-        "video/vnd.vivo" = "org.gnome.Showtime.desktop";
-        "video/vnd.youtube.yt" = "org.gnome.Showtime.desktop";
-        "video/VP8" = "org.gnome.Showtime.desktop";
-        "video/VP9" = "org.gnome.Showtime.desktop";
-        "video/x-matroska" = "org.gnome.Showtime.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "vlc.desktop";
+        "video/3gpp-tt" = "vlc.desktop";
+        "video/3gpp" = "vlc.desktop";
+        "video/3gpp2" = "vlc.desktop";
+        "video/AV1" = "vlc.desktop";
+        "video/BMPEG" = "vlc.desktop";
+        "video/BT656" = "vlc.desktop";
+        "video/CelB" = "vlc.desktop";
+        "video/DV" = "vlc.desktop";
+        "video/encaprtp" = "vlc.desktop";
+        "video/evc" = "vlc.desktop";
+        "video/FFV1" = "vlc.desktop";
+        "video/flexfec" = "vlc.desktop";
+        "video/H261" = "vlc.desktop";
+        "video/H263-1998" = "vlc.desktop";
+        "video/H263-2000" = "vlc.desktop";
+        "video/H263" = "vlc.desktop";
+        "video/H264-RCDO" = "vlc.desktop";
+        "video/H264-SVC" = "vlc.desktop";
+        "video/H264" = "vlc.desktop";
+        "video/H265" = "vlc.desktop";
+        "video/H266" = "vlc.desktop";
+        "video/iso.segment" = "vlc.desktop";
+        "video/JPEG" = "vlc.desktop";
+        "video/jpeg2000-scl" = "vlc.desktop";
+        "video/jpeg2000" = "vlc.desktop";
+        "video/jxsv" = "vlc.desktop";
+        "video/lottie+json" = "vlc.desktop";
+        "video/matroska-3d" = "vlc.desktop";
+        "video/matroska" = "vlc.desktop";
+        "video/mj2" = "vlc.desktop";
+        "video/MP1S" = "vlc.desktop";
+        "video/MP2P" = "vlc.desktop";
+        "video/MP2T" = "vlc.desktop";
+        "video/mp4" = "vlc.desktop";
+        "video/MP4V-ES" = "vlc.desktop";
+        "video/mpeg" = "vlc.desktop";
+        "video/mpeg4-generic" = "vlc.desktop";
+        "video/MPV" = "vlc.desktop";
+        "video/nv" = "vlc.desktop";
+        "video/ogg" = "vlc.desktop";
+        "video/parityfec" = "vlc.desktop";
+        "video/pointer" = "vlc.desktop";
+        "video/quicktime" = "vlc.desktop";
+        "video/raptorfec" = "vlc.desktop";
+        "video/raw" = "vlc.desktop";
+        "video/rtp-enc-aescm128" = "vlc.desktop";
+        "video/rtploopback" = "vlc.desktop";
+        "video/rtx" = "vlc.desktop";
+        "video/scip" = "vlc.desktop";
+        "video/smpte291" = "vlc.desktop";
+        "video/SMPTE292M" = "vlc.desktop";
+        "video/ulpfec" = "vlc.desktop";
+        "video/vc1" = "vlc.desktop";
+        "video/vc2" = "vlc.desktop";
+        "video/vnd.blockfact.factv" = "vlc.desktop";
+        "video/vnd.CCTV" = "vlc.desktop";
+        "video/vnd.dece.hd" = "vlc.desktop";
+        "video/vnd.dece.mobile" = "vlc.desktop";
+        "video/vnd.dece.mp4" = "vlc.desktop";
+        "video/vnd.dece.pd" = "vlc.desktop";
+        "video/vnd.dece.sd" = "vlc.desktop";
+        "video/vnd.dece.video" = "vlc.desktop";
+        "video/vnd.directv.mpeg-tts" = "vlc.desktop";
+        "video/vnd.directv.mpeg" = "vlc.desktop";
+        "video/vnd.dlna.mpeg-tts" = "vlc.desktop";
+        "video/vnd.dvb.file" = "vlc.desktop";
+        "video/vnd.fvt" = "vlc.desktop";
+        "video/vnd.hns.video" = "vlc.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "vlc.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "vlc.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "vlc.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "vlc.desktop";
+        "video/vnd.iptvforum.ttsavc" = "vlc.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "vlc.desktop";
+        "video/vnd.motorola.video" = "vlc.desktop";
+        "video/vnd.motorola.videop" = "vlc.desktop";
+        "video/vnd.mpegurl" = "vlc.desktop";
+        "video/vnd.ms-playready.media.pyv" = "vlc.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "vlc.desktop";
+        "video/vnd.nokia.mp4vr" = "vlc.desktop";
+        "video/vnd.nokia.videovoip" = "vlc.desktop";
+        "video/vnd.objectvideo" = "vlc.desktop";
+        "video/vnd.planar" = "vlc.desktop";
+        "video/vnd.radgamettools.bink" = "vlc.desktop";
+        "video/vnd.radgamettools.smacker" = "vlc.desktop";
+        "video/vnd.sealed.mpeg1" = "vlc.desktop";
+        "video/vnd.sealed.mpeg4" = "vlc.desktop";
+        "video/vnd.sealed.swf" = "vlc.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "vlc.desktop";
+        "video/vnd.uvvu.mp4" = "vlc.desktop";
+        "video/vnd.vivo" = "vlc.desktop";
+        "video/vnd.youtube.yt" = "vlc.desktop";
+        "video/VP8" = "vlc.desktop";
+        "video/VP9" = "vlc.desktop";
+        "video/x-matroska" = "vlc.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -3626,18 +3811,18 @@ in
         "font/woff" = "org.gnome.font-viewer.desktop";
         "font/woff2" = "org.gnome.font-viewer.desktop";
 
-        "application/gzip" = "org.gnome.FileRoller.desktop";
-        "application/vnd.rar" = "org.gnome.FileRoller.desktop";
-        "application/x-7z-compressed" = "org.gnome.FileRoller.desktop";
-        "application/x-arj" = "org.gnome.FileRoller.desktop";
-        "application/x-bzip2" = "org.gnome.FileRoller.desktop";
-        "application/x-gtar" = "org.gnome.FileRoller.desktop";
-        "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More common than "application/vnd.rar"
-        "application/x-tar" = "org.gnome.FileRoller.desktop";
-        "application/zip" = "org.gnome.FileRoller.desktop";
+        "application/gzip" = "org.kde.ark.desktop";
+        "application/vnd.rar" = "org.kde.ark.desktop";
+        "application/x-7z-compressed" = "org.kde.ark.desktop";
+        "application/x-arj" = "org.kde.ark.desktop";
+        "application/x-bzip2" = "org.kde.ark.desktop";
+        "application/x-gtar" = "org.kde.ark.desktop";
+        "application/x-rar-compressed " = "org.kde.ark.desktop"; # More common than "application/vnd.rar"
+        "application/x-tar" = "org.kde.ark.desktop";
+        "application/zip" = "org.kde.ark.desktop";
 
-        "application/x-bittorrent" = "de.haeckerfelix.Fragments.desktop";
-        "x-scheme-handler/magnet" = "de.haeckerfelix.Fragments.desktop";
+        "application/x-bittorrent" = "org.kde.ktorrent.desktop";
+        "x-scheme-handler/magnet" = "org.kde.ktorrent.desktop";
 
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
@@ -3657,24 +3842,10 @@ in
     portal = {
       enable = true;
       extraPortals = with pkgs; [
-        xdg-desktop-portal-gnome
-        xdg-desktop-portal-gtk
+        kdePackages.xdg-desktop-portal-kde
       ];
 
       xdgOpenUsePortal = false; # Opening Programs
-
-      config = {
-        common = {
-          default = [
-            "gnome"
-            "gtk"
-          ];
-
-          "org.freedesktop.impl.portal.Secret" = [
-            "gnome-keyring"
-          ];
-        };
-      };
     };
   };
 
@@ -3683,8 +3854,8 @@ in
   qt = {
     enable = true;
 
-    platformTheme = "gnome";
-    style = "adwaita-dark";
+    platformTheme = "kde";
+    style = "breeze";
   };
 
   documentation = {
@@ -3796,13 +3967,13 @@ in
             enableBashIntegration = true;
           };
 
-          pointerCursor = {
-            name = config.home-manager.users.root.gtk.cursorTheme.name;
-            package = config.home-manager.users.root.gtk.cursorTheme.package;
-            size = config.home-manager.users.root.gtk.cursorTheme.size;
+          # pointerCursor = {
+          #   name = config.home-manager.users.root.gtk.cursorTheme.name;
+          #   package = config.home-manager.users.root.gtk.cursorTheme.package;
+          #   size = config.home-manager.users.root.gtk.cursorTheme.size;
 
-            gtk.enable = true;
-          };
+          #   gtk.enable = true;
+          # };
 
           preferXdgDirectories = true;
 
@@ -3813,10 +3984,6 @@ in
               mkdir -p $HOME/.local/share/fonts/
               cp -f /var/lib/onlyoffice-fonts/* $HOME/.local/share/fonts/ || true
               ${pkgs.fontconfig}/bin/fc-cache -f $HOME/.local/share/fonts/
-            '';
-
-            resetApplicationPicker = ''
-              ${pkgs.glib}/bin/gsettings set org.gnome.shell app-picker-layout "[]"
             '';
           };
 
@@ -3845,69 +4012,52 @@ in
           };
         };
 
-        gtk = {
-          enable = true;
+        # gtk = {
+        #   enable = true;
 
-          colorScheme = "dark";
+        #   colorScheme = "dark";
 
-          theme = {
-            name = "Adwaita";
-            package = pkgs.gnome-themes-extra;
-          };
+        #   theme = {
+        #     name = "Adwaita";
+        #     package = pkgs.gnome-themes-extra;
+        #   };
 
-          iconTheme = {
-            name = "Adwaita";
-            package = pkgs.adwaita-icon-theme;
-          };
+        #   iconTheme = {
+        #     name = "Adwaita";
+        #     package = pkgs.adwaita-icon-theme;
+        #   };
 
-          cursorTheme = {
-            name = config.home-manager.users.root.gtk.iconTheme.name;
-            package = config.home-manager.users.root.gtk.iconTheme.package;
-            size = builtins.floor (design_factor * 1.50); # 24
-          };
+        #   cursorTheme = {
+        #     name = config.home-manager.users.root.gtk.iconTheme.name;
+        #     package = config.home-manager.users.root.gtk.iconTheme.package;
+        #     size = builtins.floor (design_factor * 1.50); # 24
+        #   };
 
-          font = {
-            name = fontPreferences.name.sans_serif;
-            package = fontPreferences.package;
-            size = fontPreferences.size;
-          };
-        };
+        #   font = {
+        #     name = fontPreferences.name.sans_serif;
+        #     package = fontPreferences.package;
+        #     size = fontPreferences.size;
+        #   };
+        # };
 
         qt = {
           enable = true;
 
-          platformTheme.name = "adwaita";
+          platformTheme.name = "kde";
           style = {
-            name = "adwaita-dark";
-            package = (
-              pkgs.adwaita-qt6.override {
-                useQt6 = false;
-              }
-            );
+            name = "Breeze";
+            package = pkgs.kdePackages.breeze;
           };
         };
 
         services = {
           poweralertd.enable = true;
 
-          polkit-gnome = {
+          kdeconnect = {
             enable = true;
-            package = pkgs.polkit_gnome;
-          };
+            package = pkgs.kdePackages.kdeconnect-kde;
 
-          gnome-keyring = {
-            enable = true;
-            package = (
-              pkgs.gnome-keyring.override {
-                useWrappedDaemon = true;
-              }
-            );
-
-            components = [
-              "pkcs11"
-              "secrets"
-              "ssh"
-            ];
+            indicator = true;
           };
         };
 
@@ -3992,70 +4142,6 @@ in
             settings = {
               no-embed-thumbnail = true;
             };
-          };
-
-          gnome-shell = {
-            enable = true;
-
-            extensions = [
-              {
-                package = pkgs.gnomeExtensions.appindicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
-              }
-              {
-                package = pkgs.gnomeExtensions.blur-my-shell;
-              }
-              {
-                package = pkgs.gnomeExtensions.clipboard-indicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.desktop-cube;
-              }
-              {
-                package = pkgs.gnomeExtensions.display-configuration-switcher;
-              }
-              {
-                package = pkgs.gnomeExtensions.extra-reboot-options;
-              }
-              {
-                package = pkgs.gnomeExtensions.frequency-boost-switch;
-              }
-              {
-                package = pkgs.gnomeExtensions.gamemode-shell-extension;
-              }
-              {
-                package = pkgs.gnomeExtensions.gjs-osk;
-              }
-              {
-                package = pkgs.gnomeExtensions.gsconnect;
-              }
-              {
-                package = pkgs.gnomeExtensions.places-status-indicator;
-              }
-              {
-                package = pkgs.gnomeExtensions.privacy-settings-menu;
-              }
-              {
-                package = pkgs.gnomeExtensions.sermon;
-              }
-              {
-                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
-              }
-              {
-                package = pkgs.gnomeExtensions.top-bar-organizer;
-              }
-              {
-                package = pkgs.gnomeExtensions.touchpad-switcher;
-              }
-              {
-                package = pkgs.gnomeExtensions.vitals;
-              }
-              {
-                package = pkgs.gnomeExtensions.wifi-qrcode;
-              }
-            ];
           };
 
           keepassxc = {
