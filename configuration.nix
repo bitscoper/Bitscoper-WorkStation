@@ -247,8 +247,8 @@ in
       themePackages = [
         (pkgs.kdePackages.breeze-plymouth.override {
           osName = config.system.nixos.distroName;
-          osVersion = config.system.nixos.release;
-        }) # TODO: Fill Up
+          osVersion = "${config.system.nixos.release} (${config.system.nixos.codeName})";
+        })
       ];
       theme = "breeze";
 
@@ -350,7 +350,6 @@ in
       android_sdk.accept_license = true;
 
       permittedInsecurePackages = [
-        "olm-3.2.16"
         "opendkim-2.11.0-Beta2"
       ];
     };
@@ -1994,6 +1993,12 @@ in
               show-less-popular = true;
             };
 
+            # "org/gnome/desktop/interface" = {
+            #   cursor-theme = config.home-manager.users.root.gtk.cursorTheme.name;
+            #   gtk-theme = config.home-manager.users.root.gtk.theme.name;
+            #   icon-theme = config.home-manager.users.root.gtk.iconTheme.name;
+            # };
+
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
@@ -2212,6 +2217,7 @@ in
         apitrace
         apkeep
         apkleaks
+        appimageupdate-qt
         arduino-cli
         arduino-ide
         arduino-language-server
@@ -2227,7 +2233,6 @@ in
         bcachefs-tools
         binutils
         binwalk
-        blanket
         bleachbit
         bluetuith
         bluez-tools
@@ -2243,8 +2248,6 @@ in
         celestia
         certdump
         chart-testing
-        citations
-        cli-tips
         clinfo
         cloc
         cmake
@@ -2258,7 +2261,6 @@ in
         constrict
         cramfsprogs
         cron
-        crosspipe
         crow-translate
         cryptsetup
         ctop
@@ -2273,6 +2275,7 @@ in
         dconf2nix
         ddcui
         ddcutil
+        ddrescue
         diffoci
         dig
         disktui
@@ -2290,9 +2293,9 @@ in
         dvb-apps
         e2fsprogs
         easyeda2kicad
+        ebook2cw
         efibootmgr
         egypt
-        electron-mail
         elf-dissector
         emblem
         esptool
@@ -2301,10 +2304,12 @@ in
         evtest-qt
         exfatprogs
         exiftool
+        extract-dtb
         eyedropper
         f2fs-tools
         fastfetch
         fdroidcl
+        fdt-viewer
         fh
         file
         fileinfo
@@ -2343,7 +2348,6 @@ in
         gradle-completion
         graphviz
         groovy
-        gsmartcontrol
         gtk-vnc
         guestfs-tools
         gzip
@@ -2368,7 +2372,6 @@ in
         inkscape-with-extensions
         inotify-tools
         input-leap
-        inspector
         interception-tools
         iotop-c
         jellyfin-desktop
@@ -2379,7 +2382,6 @@ in
         johnny
         jq
         json-tui
-        karp
         kdiff3
         kernel-hardening-checker
         kernelshark
@@ -2428,7 +2430,6 @@ in
         logdy
         logtop
         lorem
-        loupe
         lsb-release
         lshw
         lsof
@@ -2438,11 +2439,13 @@ in
         lynis
         lyto
         lyx
+        lziprecover
         macchanger
         mailcap
         massdns
         mcaselector
         md-lsp
+        media-downloader
         memtier-benchmark
         mermaid-cli
         mesa-demos
@@ -2457,7 +2460,6 @@ in
         mtools
         mtr-gui
         musescore
-        nemu
         nethogs
         nikto
         nilfs-utils
@@ -2484,6 +2486,7 @@ in
         paper-clip
         parted
         pciutils
+        pdf4qt
         pe-bear
         pev
         pg_top
@@ -2503,7 +2506,12 @@ in
         psmisc
         qemu-user
         qemu-utils
+        qjackctl
+        qpwgraph
         qr-backup
+        qsstv
+        qtrvsim
+        qtscrcpy
         radare2
         raider
         rclone
@@ -2516,7 +2524,6 @@ in
         rustc
         sbom2dot
         scope-tui
-        scrcpy
         screen
         sdrangel
         serial-studio
@@ -2539,7 +2546,7 @@ in
         stenc
         streamlit
         subfinder
-        subtitleedit
+        subtitlecomposer
         switcheroo
         symlinks
         systemctl-tui
@@ -2547,15 +2554,14 @@ in
         systemdgenie
         telegraph
         terminaltexteffects
+        testdisk-qt # qphotorec
         texliveFull
-        textpieces
         time
         tiny-rdm
         tpm2-abrmd
         tpm2-openssl
         tpm2-pkcs11-abrmd
         tpm2-tools
-        tpm2-totp-with-plymouth
         tpm2-tss
         traitor
         tree
@@ -2603,6 +2609,7 @@ in
         worldpainter
         wpprobe
         x2goclient
+        xdg-dbus-proxy
         xdg-user-dirs
         xdg-utils
         xfsdump
@@ -3122,7 +3129,6 @@ in
         libplasma
         libqaccessibilityclient
         libqglviewer
-        libquotient
         lokalize
         mailcommon
         mailimporter
@@ -3134,7 +3140,6 @@ in
         mimetreeparser
         mlt
         modemmanager-qt
-        neochat
         networkmanager-qt
         okteta
         okular
@@ -3827,7 +3832,7 @@ in
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
 
-        "x-scheme-handler/mailto" = "electron-mail.desktop";
+        "x-scheme-handler/mailto" = "org.kde.kmail2.desktop";
       };
     };
 
@@ -3967,13 +3972,13 @@ in
             enableBashIntegration = true;
           };
 
-          # pointerCursor = {
-          #   name = config.home-manager.users.root.gtk.cursorTheme.name;
-          #   package = config.home-manager.users.root.gtk.cursorTheme.package;
-          #   size = config.home-manager.users.root.gtk.cursorTheme.size;
+          pointerCursor = {
+            name = config.home-manager.users.root.gtk.cursorTheme.name;
+            package = config.home-manager.users.root.gtk.cursorTheme.package;
+            size = config.home-manager.users.root.gtk.cursorTheme.size;
 
-          #   gtk.enable = true;
-          # };
+            gtk.enable = true;
+          };
 
           preferXdgDirectories = true;
 
@@ -4012,33 +4017,33 @@ in
           };
         };
 
-        # gtk = {
-        #   enable = true;
+        gtk = {
+          enable = true;
 
-        #   colorScheme = "dark";
+          colorScheme = "dark";
 
-        #   theme = {
-        #     name = "Adwaita";
-        #     package = pkgs.gnome-themes-extra;
-        #   };
+          theme = {
+            name = "Breeze-Dark";
+            package = pkgs.kdePackages.breeze-gtk;
+          };
 
-        #   iconTheme = {
-        #     name = "Adwaita";
-        #     package = pkgs.adwaita-icon-theme;
-        #   };
+          iconTheme = {
+            name = "breeze-dark";
+            package = pkgs.kdePackages.breeze-icons;
+          };
 
-        #   cursorTheme = {
-        #     name = config.home-manager.users.root.gtk.iconTheme.name;
-        #     package = config.home-manager.users.root.gtk.iconTheme.package;
-        #     size = builtins.floor (design_factor * 1.50); # 24
-        #   };
+          cursorTheme = {
+            name = "breeze_cursors";
+            package = pkgs.kdePackages.breeze;
+            size = builtins.floor (design_factor * 1.50); # 24
+          };
 
-        #   font = {
-        #     name = fontPreferences.name.sans_serif;
-        #     package = fontPreferences.package;
-        #     size = fontPreferences.size;
-        #   };
-        # };
+          font = {
+            name = fontPreferences.name.sans_serif;
+            package = fontPreferences.package;
+            size = fontPreferences.size;
+          };
+        };
 
         qt = {
           enable = true;
@@ -4255,6 +4260,7 @@ in
                     wmaurer.change-case
                     xdebug.php-debug
                     zainchen.json
+                    zhwu95.riscv
                   ]
                   ++ (with pkgs.vscode-extensions.bierner; [
                     color-info
