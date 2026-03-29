@@ -18,7 +18,9 @@ let
         config = config.nixpkgs.config;
       };
 
-  homeManager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/refs/heads/master.tar.gz";
+  homeManager = builtins.getFlake "github:nix-community/home-manager/master";
+  plasmaManagerFlake = builtins.getFlake "github:nix-community/plasma-manager/trunk";
+  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -84,8 +86,6 @@ let
     includeSources = false;
   };
 
-  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
-
   design_factor = 16;
 
   fontPreferences = {
@@ -118,14 +118,13 @@ let
   tlsCertificateFile = "${tlsCertificateFiles}/certificate.crt";
   tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
-
-  secrets = import ./secrets.nix;
 in
 {
   imports = [
-    (import "${homeManager}/nixos")
+    homeManager.nixosModules.home-manager
 
     ./hardware-configuration.nix
+    ./secrets.nix
   ];
 
   boot = {
@@ -1511,7 +1510,7 @@ in
       checkConfig = true;
 
       initialScript = pkgs.writeText "postgresqlInitialScript.sql" ''
-        ALTER USER postgres WITH PASSWORD '${secrets.password_1_of_bitscoper}';
+        ALTER USER postgres WITH PASSWORD '${config.secrets.password_1}';
       '';
     };
 
@@ -1539,8 +1538,8 @@ in
         FLUSH PRIVILEGES;
         CREATE USER IF NOT EXISTS 'root'@'localhost';
         CREATE USER IF NOT EXISTS 'root'@'%';
-        ALTER USER 'root'@'localhost' IDENTIFIED BY '${secrets.password_1_of_bitscoper}';
-        ALTER USER 'root'@'%' IDENTIFIED BY '${secrets.password_1_of_bitscoper}';
+        ALTER USER 'root'@'localhost' IDENTIFIED BY '${config.secrets.password_1}';
+        ALTER USER 'root'@'%' IDENTIFIED BY '${config.secrets.password_1}';
         GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
         GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
         FLUSH PRIVILEGES;
@@ -1549,7 +1548,7 @@ in
 
     meilisearch =
       let
-        masterKeyFile = pkgs.writeText "meilisearchMasterKey.txt" "${secrets.password_1_of_bitscoper}${secrets.password_1_of_bitscoper}"; # Duplicated to meet the minimum 16-byte requirement
+        masterKeyFile = pkgs.writeText "meilisearchMasterKey.txt" "${config.secrets.password_1}${config.secrets.password_1}"; # Duplicated to meet the minimum 16-byte requirement
       in
       {
         enable = true;
@@ -1643,15 +1642,15 @@ in
 
       admin = {
         user = "bitscoper";
-        password = secrets.password_1_of_bitscoper;
+        password = config.secrets.password_1;
       };
 
       extraConfig = ''
         <location>${config.networking.fqdn}</location>
         <admin>bitscoper@${config.networking.fqdn}</admin>
         <authentication>
-          <source-password>${secrets.password_2_of_bitscoper}</source-password>
-          <relay-password>${secrets.password_2_of_bitscoper}</relay-password>
+          <source-password>${config.secrets.password_2}</source-password>
+          <relay-password>${config.secrets.password_2}</relay-password>
         </authentication>
         <directory>
           <yp-url-timeout>15</yp-url-timeout>
@@ -2206,6 +2205,7 @@ in
         addlicense
         agi # FIXME: Cannot find libswt
         aircrack-ng
+        alac
         alsa-plugins
         alsa-tools
         alsa-utils
@@ -2231,6 +2231,7 @@ in
         banner
         bash-language-server
         bcachefs-tools
+        bcg729
         binutils
         binwalk
         bleachbit
@@ -2246,13 +2247,16 @@ in
         cava
         cdrkit
         celestia
+        celt
         certdump
         chart-testing
         clinfo
         cloc
+        cm256cc
         cmake
         cmake-language-server
         cmatrix
+        codec2
         codevis
         collision
         compose2nix
@@ -2308,6 +2312,7 @@ in
         eyedropper
         f2fs-tools
         fastfetch
+        fdk_aac
         fdroidcl
         fdt-viewer
         fh
@@ -2348,9 +2353,11 @@ in
         gradle-completion
         graphviz
         groovy
+        gsm
         gtk-vnc
         guestfs-tools
         gzip
+        haruna
         hashcat
         hashcat-utils
         hashes
@@ -2382,6 +2389,7 @@ in
         johnny
         jq
         json-tui
+        jxrlib
         kdiff3
         kernel-hardening-checker
         kernelshark
@@ -2418,13 +2426,22 @@ in
         kubetui
         labplot
         letterpress
+        libaom
         libarchive
+        libde265
+        libfreeaptx
         libhsts
+        libilbc
         libinput
+        liblc3
         libnotify
+        libogg
+        libopus
         libsecret
         libsixel
+        libultrahdr
         libva-utils
+        libvpx
         linux-exploit-suggester
         linuxConsoleTools
         logdy
@@ -2439,6 +2456,7 @@ in
         lynis
         lyto
         lyx
+        lzham
         lziprecover
         macchanger
         mailcap
@@ -2454,6 +2472,7 @@ in
         mfcuk
         mfoc
         minikube
+        monkeys-audio
         motion
         mousai
         mt-st
@@ -2479,7 +2498,11 @@ in
         onionshare-gui
         onlyoffice-desktopeditors
         openai-whisper
+        openapv
+        opencore-amr
         opendmarc
+        openh264
+        openjpeg
         openobex
         openssl
         p7zip
@@ -2500,8 +2523,8 @@ in
         procps
         profile-cleaner
         progress
+        proton-vpn
         protonup-qt
-        protonvpn-gui
         ps
         psmisc
         qemu-user
@@ -2522,7 +2545,9 @@ in
         rpmextract
         rtl-sdr-librtlsdr
         rustc
+        sbc
         sbom2dot
+        schroedinger
         scope-tui
         screen
         sdrangel
@@ -2547,6 +2572,7 @@ in
         streamlit
         subfinder
         subtitlecomposer
+        svt-av1
         switcheroo
         symlinks
         systemctl-tui
@@ -2586,6 +2612,7 @@ in
         video2x
         virt-top
         virt-v2v
+        vorbis-tools
         vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
@@ -2615,6 +2642,7 @@ in
         xfsdump
         xfsprogs
         xoscope
+        xvidcore
         yaml-language-server
         yara-x
         yoshimi
@@ -2812,12 +2840,6 @@ in
         (virt-viewer.override {
           spiceSupport = true;
         })
-        (vlc.override {
-          chromecastSupport = true;
-          jackSupport = true;
-          skins2Support = true;
-          waylandSupport = true;
-        })
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -2825,6 +2847,7 @@ in
         (wget2.override {
           sslSupport = true;
         })
+        plasmaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.rc2nix
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
         config.services.phpfpm.phpPackage
@@ -2942,7 +2965,6 @@ in
         dolphin
         dolphin-plugins
         drkonqi
-        drumstick
         dynamic-workspaces
         eventviews
         extra-cmake-modules
@@ -3144,7 +3166,6 @@ in
         okteta
         okular
         phonon
-        phonon-vlc
         pim-data-exporter
         pim-sieve-editor
         pimcommon
@@ -3282,6 +3303,7 @@ in
 
     plasma6.excludePackages = with pkgs.kdePackages; [
       discover
+      elisa
       kate
     ];
 
@@ -3532,265 +3554,265 @@ in
         "image/x-emf" = "org.kde.gwenview.desktopp";
         "image/x-wmf" = "org.kde.gwenview.desktopp";
 
-        "audio/1d-interleaved-parityfec" = "vlc.desktop";
-        "audio/32kadpcm" = "vlc.desktop";
-        "audio/3gpp" = "vlc.desktop";
-        "audio/3gpp2" = "vlc.desktop";
-        "audio/aac" = "vlc.desktop";
-        "audio/ac3" = "vlc.desktop";
-        "audio/AMR-WB" = "vlc.desktop";
-        "audio/amr-wb+" = "vlc.desktop";
-        "audio/AMR" = "vlc.desktop";
-        "audio/aptx" = "vlc.desktop";
-        "audio/asc" = "vlc.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "vlc.desktop";
-        "audio/ATRAC-X" = "vlc.desktop";
-        "audio/ATRAC3" = "vlc.desktop";
-        "audio/basic" = "vlc.desktop";
-        "audio/BV16" = "vlc.desktop";
-        "audio/BV32" = "vlc.desktop";
-        "audio/clearmode" = "vlc.desktop";
-        "audio/CN" = "vlc.desktop";
-        "audio/DAT12" = "vlc.desktop";
-        "audio/dls" = "vlc.desktop";
-        "audio/dsr-es201108" = "vlc.desktop";
-        "audio/dsr-es202050" = "vlc.desktop";
-        "audio/dsr-es202211" = "vlc.desktop";
-        "audio/dsr-es202212" = "vlc.desktop";
-        "audio/DV" = "vlc.desktop";
-        "audio/DVI4" = "vlc.desktop";
-        "audio/eac3" = "vlc.desktop";
-        "audio/encaprtp" = "vlc.desktop";
-        "audio/EVRC-QCP" = "vlc.desktop";
-        "audio/EVRC" = "vlc.desktop";
-        "audio/EVRC0" = "vlc.desktop";
-        "audio/EVRC1" = "vlc.desktop";
-        "audio/EVRCB" = "vlc.desktop";
-        "audio/EVRCB0" = "vlc.desktop";
-        "audio/EVRCB1" = "vlc.desktop";
-        "audio/EVRCNW" = "vlc.desktop";
-        "audio/EVRCNW0" = "vlc.desktop";
-        "audio/EVRCNW1" = "vlc.desktop";
-        "audio/EVRCWB" = "vlc.desktop";
-        "audio/EVRCWB0" = "vlc.desktop";
-        "audio/EVRCWB1" = "vlc.desktop";
-        "audio/EVS" = "vlc.desktop";
-        "audio/flac" = "vlc.desktop";
-        "audio/flexfec" = "vlc.desktop";
-        "audio/fwdred" = "vlc.desktop";
-        "audio/G711-0" = "vlc.desktop";
-        "audio/G719" = "vlc.desktop";
-        "audio/G722" = "vlc.desktop";
-        "audio/G7221" = "vlc.desktop";
-        "audio/G723" = "vlc.desktop";
-        "audio/G726-16" = "vlc.desktop";
-        "audio/G726-24" = "vlc.desktop";
-        "audio/G726-32" = "vlc.desktop";
-        "audio/G726-40" = "vlc.desktop";
-        "audio/G728" = "vlc.desktop";
-        "audio/G729" = "vlc.desktop";
-        "audio/G7291" = "vlc.desktop";
-        "audio/G729D" = "vlc.desktop";
-        "audio/G729E" = "vlc.desktop";
-        "audio/GSM-EFR" = "vlc.desktop";
-        "audio/GSM-HR-08" = "vlc.desktop";
-        "audio/GSM" = "vlc.desktop";
-        "audio/iLBC" = "vlc.desktop";
-        "audio/ip-mr_v2.5" = "vlc.desktop";
-        "audio/L16" = "vlc.desktop";
-        "audio/L20" = "vlc.desktop";
-        "audio/L24" = "vlc.desktop";
-        "audio/L8" = "vlc.desktop";
-        "audio/LPC" = "vlc.desktop";
-        "audio/matroska" = "vlc.desktop";
-        "audio/MELP" = "vlc.desktop";
-        "audio/MELP1200" = "vlc.desktop";
-        "audio/MELP2400" = "vlc.desktop";
-        "audio/MELP600" = "vlc.desktop";
-        "audio/mhas" = "vlc.desktop";
-        "audio/midi-clip" = "vlc.desktop";
-        "audio/mobile-xmf" = "vlc.desktop";
-        "audio/mp4" = "vlc.desktop";
-        "audio/MP4A-LATM" = "vlc.desktop";
-        "audio/mpa-robust" = "vlc.desktop";
-        "audio/MPA" = "vlc.desktop";
-        "audio/mpeg" = "vlc.desktop";
-        "audio/mpeg4-generic" = "vlc.desktop";
-        "audio/ogg" = "vlc.desktop";
-        "audio/opus" = "vlc.desktop";
-        "audio/parityfec" = "vlc.desktop";
-        "audio/PCMA-WB" = "vlc.desktop";
-        "audio/PCMA" = "vlc.desktop";
-        "audio/PCMU-WB" = "vlc.desktop";
-        "audio/PCMU" = "vlc.desktop";
-        "audio/prs.sid" = "vlc.desktop";
-        "audio/QCELP" = "vlc.desktop";
-        "audio/raptorfec" = "vlc.desktop";
-        "audio/RED" = "vlc.desktop";
-        "audio/rtp-enc-aescm128" = "vlc.desktop";
-        "audio/rtp-midi" = "vlc.desktop";
-        "audio/rtploopback" = "vlc.desktop";
-        "audio/rtx" = "vlc.desktop";
-        "audio/scip" = "vlc.desktop";
-        "audio/SMV-QCP" = "vlc.desktop";
-        "audio/SMV" = "vlc.desktop";
-        "audio/SMV0" = "vlc.desktop";
-        "audio/sofa" = "vlc.desktop";
-        "audio/soundfont" = "vlc.desktop";
-        "audio/sp-midi" = "vlc.desktop";
-        "audio/speex" = "vlc.desktop";
-        "audio/t140c" = "vlc.desktop";
-        "audio/t38" = "vlc.desktop";
-        "audio/telephone-event" = "vlc.desktop";
-        "audio/TETRA_ACELP_BB" = "vlc.desktop";
-        "audio/TETRA_ACELP" = "vlc.desktop";
-        "audio/tone" = "vlc.desktop";
-        "audio/TSVCIS" = "vlc.desktop";
-        "audio/UEMCLIP" = "vlc.desktop";
-        "audio/ulpfec" = "vlc.desktop";
-        "audio/usac" = "vlc.desktop";
-        "audio/VDVI" = "vlc.desktop";
-        "audio/VMR-WB" = "vlc.desktop";
-        "audio/vnd.3gpp.iufp" = "vlc.desktop";
-        "audio/vnd.4SB" = "vlc.desktop";
-        "audio/vnd.audiokoz" = "vlc.desktop";
-        "audio/vnd.blockfact.facta" = "vlc.desktop";
-        "audio/vnd.CELP" = "vlc.desktop";
-        "audio/vnd.cisco.nse" = "vlc.desktop";
-        "audio/vnd.cmles.radio-events" = "vlc.desktop";
-        "audio/vnd.cns.anp1" = "vlc.desktop";
-        "audio/vnd.cns.inf1" = "vlc.desktop";
-        "audio/vnd.dece.audio" = "vlc.desktop";
-        "audio/vnd.digital-winds" = "vlc.desktop";
-        "audio/vnd.dlna.adts" = "vlc.desktop";
-        "audio/vnd.dolby.heaac.1" = "vlc.desktop";
-        "audio/vnd.dolby.heaac.2" = "vlc.desktop";
-        "audio/vnd.dolby.mlp" = "vlc.desktop";
-        "audio/vnd.dolby.mps" = "vlc.desktop";
-        "audio/vnd.dolby.pl2" = "vlc.desktop";
-        "audio/vnd.dolby.pl2x" = "vlc.desktop";
-        "audio/vnd.dolby.pl2z" = "vlc.desktop";
-        "audio/vnd.dolby.pulse.1" = "vlc.desktop";
-        "audio/vnd.dra" = "vlc.desktop";
-        "audio/vnd.dts.hd" = "vlc.desktop";
-        "audio/vnd.dts.uhd" = "vlc.desktop";
-        "audio/vnd.dts" = "vlc.desktop";
-        "audio/vnd.dvb.file" = "vlc.desktop";
-        "audio/vnd.everad.plj" = "vlc.desktop";
-        "audio/vnd.hns.audio" = "vlc.desktop";
-        "audio/vnd.lucent.voice" = "vlc.desktop";
-        "audio/vnd.ms-playready.media.pya" = "vlc.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "vlc.desktop";
-        "audio/vnd.nortel.vbk" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp4800" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp7470" = "vlc.desktop";
-        "audio/vnd.nuera.ecelp9600" = "vlc.desktop";
-        "audio/vnd.octel.sbc" = "vlc.desktop";
-        "audio/vnd.presonus.multitrack" = "vlc.desktop";
-        "audio/vnd.qcelp" = "vlc.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "vlc.desktop";
-        "audio/vnd.rip" = "vlc.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "vlc.desktop";
-        "audio/vnd.vmx.cvsd" = "vlc.desktop";
-        "audio/vorbis-config" = "vlc.desktop";
-        "audio/vorbis" = "vlc.desktop";
+        "audio/1d-interleaved-parityfec" = "org.kde.haruna.desktop";
+        "audio/32kadpcm" = "org.kde.haruna.desktop";
+        "audio/3gpp" = "org.kde.haruna.desktop";
+        "audio/3gpp2" = "org.kde.haruna.desktop";
+        "audio/aac" = "org.kde.haruna.desktop";
+        "audio/ac3" = "org.kde.haruna.desktop";
+        "audio/AMR-WB" = "org.kde.haruna.desktop";
+        "audio/amr-wb+" = "org.kde.haruna.desktop";
+        "audio/AMR" = "org.kde.haruna.desktop";
+        "audio/aptx" = "org.kde.haruna.desktop";
+        "audio/asc" = "org.kde.haruna.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "org.kde.haruna.desktop";
+        "audio/ATRAC-X" = "org.kde.haruna.desktop";
+        "audio/ATRAC3" = "org.kde.haruna.desktop";
+        "audio/basic" = "org.kde.haruna.desktop";
+        "audio/BV16" = "org.kde.haruna.desktop";
+        "audio/BV32" = "org.kde.haruna.desktop";
+        "audio/clearmode" = "org.kde.haruna.desktop";
+        "audio/CN" = "org.kde.haruna.desktop";
+        "audio/DAT12" = "org.kde.haruna.desktop";
+        "audio/dls" = "org.kde.haruna.desktop";
+        "audio/dsr-es201108" = "org.kde.haruna.desktop";
+        "audio/dsr-es202050" = "org.kde.haruna.desktop";
+        "audio/dsr-es202211" = "org.kde.haruna.desktop";
+        "audio/dsr-es202212" = "org.kde.haruna.desktop";
+        "audio/DV" = "org.kde.haruna.desktop";
+        "audio/DVI4" = "org.kde.haruna.desktop";
+        "audio/eac3" = "org.kde.haruna.desktop";
+        "audio/encaprtp" = "org.kde.haruna.desktop";
+        "audio/EVRC-QCP" = "org.kde.haruna.desktop";
+        "audio/EVRC" = "org.kde.haruna.desktop";
+        "audio/EVRC0" = "org.kde.haruna.desktop";
+        "audio/EVRC1" = "org.kde.haruna.desktop";
+        "audio/EVRCB" = "org.kde.haruna.desktop";
+        "audio/EVRCB0" = "org.kde.haruna.desktop";
+        "audio/EVRCB1" = "org.kde.haruna.desktop";
+        "audio/EVRCNW" = "org.kde.haruna.desktop";
+        "audio/EVRCNW0" = "org.kde.haruna.desktop";
+        "audio/EVRCNW1" = "org.kde.haruna.desktop";
+        "audio/EVRCWB" = "org.kde.haruna.desktop";
+        "audio/EVRCWB0" = "org.kde.haruna.desktop";
+        "audio/EVRCWB1" = "org.kde.haruna.desktop";
+        "audio/EVS" = "org.kde.haruna.desktop";
+        "audio/flac" = "org.kde.haruna.desktop";
+        "audio/flexfec" = "org.kde.haruna.desktop";
+        "audio/fwdred" = "org.kde.haruna.desktop";
+        "audio/G711-0" = "org.kde.haruna.desktop";
+        "audio/G719" = "org.kde.haruna.desktop";
+        "audio/G722" = "org.kde.haruna.desktop";
+        "audio/G7221" = "org.kde.haruna.desktop";
+        "audio/G723" = "org.kde.haruna.desktop";
+        "audio/G726-16" = "org.kde.haruna.desktop";
+        "audio/G726-24" = "org.kde.haruna.desktop";
+        "audio/G726-32" = "org.kde.haruna.desktop";
+        "audio/G726-40" = "org.kde.haruna.desktop";
+        "audio/G728" = "org.kde.haruna.desktop";
+        "audio/G729" = "org.kde.haruna.desktop";
+        "audio/G7291" = "org.kde.haruna.desktop";
+        "audio/G729D" = "org.kde.haruna.desktop";
+        "audio/G729E" = "org.kde.haruna.desktop";
+        "audio/GSM-EFR" = "org.kde.haruna.desktop";
+        "audio/GSM-HR-08" = "org.kde.haruna.desktop";
+        "audio/GSM" = "org.kde.haruna.desktop";
+        "audio/iLBC" = "org.kde.haruna.desktop";
+        "audio/ip-mr_v2.5" = "org.kde.haruna.desktop";
+        "audio/L16" = "org.kde.haruna.desktop";
+        "audio/L20" = "org.kde.haruna.desktop";
+        "audio/L24" = "org.kde.haruna.desktop";
+        "audio/L8" = "org.kde.haruna.desktop";
+        "audio/LPC" = "org.kde.haruna.desktop";
+        "audio/matroska" = "org.kde.haruna.desktop";
+        "audio/MELP" = "org.kde.haruna.desktop";
+        "audio/MELP1200" = "org.kde.haruna.desktop";
+        "audio/MELP2400" = "org.kde.haruna.desktop";
+        "audio/MELP600" = "org.kde.haruna.desktop";
+        "audio/mhas" = "org.kde.haruna.desktop";
+        "audio/midi-clip" = "org.kde.haruna.desktop";
+        "audio/mobile-xmf" = "org.kde.haruna.desktop";
+        "audio/mp4" = "org.kde.haruna.desktop";
+        "audio/MP4A-LATM" = "org.kde.haruna.desktop";
+        "audio/mpa-robust" = "org.kde.haruna.desktop";
+        "audio/MPA" = "org.kde.haruna.desktop";
+        "audio/mpeg" = "org.kde.haruna.desktop";
+        "audio/mpeg4-generic" = "org.kde.haruna.desktop";
+        "audio/ogg" = "org.kde.haruna.desktop";
+        "audio/opus" = "org.kde.haruna.desktop";
+        "audio/parityfec" = "org.kde.haruna.desktop";
+        "audio/PCMA-WB" = "org.kde.haruna.desktop";
+        "audio/PCMA" = "org.kde.haruna.desktop";
+        "audio/PCMU-WB" = "org.kde.haruna.desktop";
+        "audio/PCMU" = "org.kde.haruna.desktop";
+        "audio/prs.sid" = "org.kde.haruna.desktop";
+        "audio/QCELP" = "org.kde.haruna.desktop";
+        "audio/raptorfec" = "org.kde.haruna.desktop";
+        "audio/RED" = "org.kde.haruna.desktop";
+        "audio/rtp-enc-aescm128" = "org.kde.haruna.desktop";
+        "audio/rtp-midi" = "org.kde.haruna.desktop";
+        "audio/rtploopback" = "org.kde.haruna.desktop";
+        "audio/rtx" = "org.kde.haruna.desktop";
+        "audio/scip" = "org.kde.haruna.desktop";
+        "audio/SMV-QCP" = "org.kde.haruna.desktop";
+        "audio/SMV" = "org.kde.haruna.desktop";
+        "audio/SMV0" = "org.kde.haruna.desktop";
+        "audio/sofa" = "org.kde.haruna.desktop";
+        "audio/soundfont" = "org.kde.haruna.desktop";
+        "audio/sp-midi" = "org.kde.haruna.desktop";
+        "audio/speex" = "org.kde.haruna.desktop";
+        "audio/t140c" = "org.kde.haruna.desktop";
+        "audio/t38" = "org.kde.haruna.desktop";
+        "audio/telephone-event" = "org.kde.haruna.desktop";
+        "audio/TETRA_ACELP_BB" = "org.kde.haruna.desktop";
+        "audio/TETRA_ACELP" = "org.kde.haruna.desktop";
+        "audio/tone" = "org.kde.haruna.desktop";
+        "audio/TSVCIS" = "org.kde.haruna.desktop";
+        "audio/UEMCLIP" = "org.kde.haruna.desktop";
+        "audio/ulpfec" = "org.kde.haruna.desktop";
+        "audio/usac" = "org.kde.haruna.desktop";
+        "audio/VDVI" = "org.kde.haruna.desktop";
+        "audio/VMR-WB" = "org.kde.haruna.desktop";
+        "audio/vnd.3gpp.iufp" = "org.kde.haruna.desktop";
+        "audio/vnd.4SB" = "org.kde.haruna.desktop";
+        "audio/vnd.audiokoz" = "org.kde.haruna.desktop";
+        "audio/vnd.blockfact.facta" = "org.kde.haruna.desktop";
+        "audio/vnd.CELP" = "org.kde.haruna.desktop";
+        "audio/vnd.cisco.nse" = "org.kde.haruna.desktop";
+        "audio/vnd.cmles.radio-events" = "org.kde.haruna.desktop";
+        "audio/vnd.cns.anp1" = "org.kde.haruna.desktop";
+        "audio/vnd.cns.inf1" = "org.kde.haruna.desktop";
+        "audio/vnd.dece.audio" = "org.kde.haruna.desktop";
+        "audio/vnd.digital-winds" = "org.kde.haruna.desktop";
+        "audio/vnd.dlna.adts" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.heaac.1" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.heaac.2" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.mlp" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.mps" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.pl2" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.pl2x" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.pl2z" = "org.kde.haruna.desktop";
+        "audio/vnd.dolby.pulse.1" = "org.kde.haruna.desktop";
+        "audio/vnd.dra" = "org.kde.haruna.desktop";
+        "audio/vnd.dts.hd" = "org.kde.haruna.desktop";
+        "audio/vnd.dts.uhd" = "org.kde.haruna.desktop";
+        "audio/vnd.dts" = "org.kde.haruna.desktop";
+        "audio/vnd.dvb.file" = "org.kde.haruna.desktop";
+        "audio/vnd.everad.plj" = "org.kde.haruna.desktop";
+        "audio/vnd.hns.audio" = "org.kde.haruna.desktop";
+        "audio/vnd.lucent.voice" = "org.kde.haruna.desktop";
+        "audio/vnd.ms-playready.media.pya" = "org.kde.haruna.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "org.kde.haruna.desktop";
+        "audio/vnd.nortel.vbk" = "org.kde.haruna.desktop";
+        "audio/vnd.nuera.ecelp4800" = "org.kde.haruna.desktop";
+        "audio/vnd.nuera.ecelp7470" = "org.kde.haruna.desktop";
+        "audio/vnd.nuera.ecelp9600" = "org.kde.haruna.desktop";
+        "audio/vnd.octel.sbc" = "org.kde.haruna.desktop";
+        "audio/vnd.presonus.multitrack" = "org.kde.haruna.desktop";
+        "audio/vnd.qcelp" = "org.kde.haruna.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "org.kde.haruna.desktop";
+        "audio/vnd.rip" = "org.kde.haruna.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "org.kde.haruna.desktop";
+        "audio/vnd.vmx.cvsd" = "org.kde.haruna.desktop";
+        "audio/vorbis-config" = "org.kde.haruna.desktop";
+        "audio/vorbis" = "org.kde.haruna.desktop";
 
-        "video/1d-interleaved-parityfec" = "vlc.desktop";
-        "video/3gpp-tt" = "vlc.desktop";
-        "video/3gpp" = "vlc.desktop";
-        "video/3gpp2" = "vlc.desktop";
-        "video/AV1" = "vlc.desktop";
-        "video/BMPEG" = "vlc.desktop";
-        "video/BT656" = "vlc.desktop";
-        "video/CelB" = "vlc.desktop";
-        "video/DV" = "vlc.desktop";
-        "video/encaprtp" = "vlc.desktop";
-        "video/evc" = "vlc.desktop";
-        "video/FFV1" = "vlc.desktop";
-        "video/flexfec" = "vlc.desktop";
-        "video/H261" = "vlc.desktop";
-        "video/H263-1998" = "vlc.desktop";
-        "video/H263-2000" = "vlc.desktop";
-        "video/H263" = "vlc.desktop";
-        "video/H264-RCDO" = "vlc.desktop";
-        "video/H264-SVC" = "vlc.desktop";
-        "video/H264" = "vlc.desktop";
-        "video/H265" = "vlc.desktop";
-        "video/H266" = "vlc.desktop";
-        "video/iso.segment" = "vlc.desktop";
-        "video/JPEG" = "vlc.desktop";
-        "video/jpeg2000-scl" = "vlc.desktop";
-        "video/jpeg2000" = "vlc.desktop";
-        "video/jxsv" = "vlc.desktop";
-        "video/lottie+json" = "vlc.desktop";
-        "video/matroska-3d" = "vlc.desktop";
-        "video/matroska" = "vlc.desktop";
-        "video/mj2" = "vlc.desktop";
-        "video/MP1S" = "vlc.desktop";
-        "video/MP2P" = "vlc.desktop";
-        "video/MP2T" = "vlc.desktop";
-        "video/mp4" = "vlc.desktop";
-        "video/MP4V-ES" = "vlc.desktop";
-        "video/mpeg" = "vlc.desktop";
-        "video/mpeg4-generic" = "vlc.desktop";
-        "video/MPV" = "vlc.desktop";
-        "video/nv" = "vlc.desktop";
-        "video/ogg" = "vlc.desktop";
-        "video/parityfec" = "vlc.desktop";
-        "video/pointer" = "vlc.desktop";
-        "video/quicktime" = "vlc.desktop";
-        "video/raptorfec" = "vlc.desktop";
-        "video/raw" = "vlc.desktop";
-        "video/rtp-enc-aescm128" = "vlc.desktop";
-        "video/rtploopback" = "vlc.desktop";
-        "video/rtx" = "vlc.desktop";
-        "video/scip" = "vlc.desktop";
-        "video/smpte291" = "vlc.desktop";
-        "video/SMPTE292M" = "vlc.desktop";
-        "video/ulpfec" = "vlc.desktop";
-        "video/vc1" = "vlc.desktop";
-        "video/vc2" = "vlc.desktop";
-        "video/vnd.blockfact.factv" = "vlc.desktop";
-        "video/vnd.CCTV" = "vlc.desktop";
-        "video/vnd.dece.hd" = "vlc.desktop";
-        "video/vnd.dece.mobile" = "vlc.desktop";
-        "video/vnd.dece.mp4" = "vlc.desktop";
-        "video/vnd.dece.pd" = "vlc.desktop";
-        "video/vnd.dece.sd" = "vlc.desktop";
-        "video/vnd.dece.video" = "vlc.desktop";
-        "video/vnd.directv.mpeg-tts" = "vlc.desktop";
-        "video/vnd.directv.mpeg" = "vlc.desktop";
-        "video/vnd.dlna.mpeg-tts" = "vlc.desktop";
-        "video/vnd.dvb.file" = "vlc.desktop";
-        "video/vnd.fvt" = "vlc.desktop";
-        "video/vnd.hns.video" = "vlc.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "vlc.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "vlc.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "vlc.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "vlc.desktop";
-        "video/vnd.iptvforum.ttsavc" = "vlc.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "vlc.desktop";
-        "video/vnd.motorola.video" = "vlc.desktop";
-        "video/vnd.motorola.videop" = "vlc.desktop";
-        "video/vnd.mpegurl" = "vlc.desktop";
-        "video/vnd.ms-playready.media.pyv" = "vlc.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "vlc.desktop";
-        "video/vnd.nokia.mp4vr" = "vlc.desktop";
-        "video/vnd.nokia.videovoip" = "vlc.desktop";
-        "video/vnd.objectvideo" = "vlc.desktop";
-        "video/vnd.planar" = "vlc.desktop";
-        "video/vnd.radgamettools.bink" = "vlc.desktop";
-        "video/vnd.radgamettools.smacker" = "vlc.desktop";
-        "video/vnd.sealed.mpeg1" = "vlc.desktop";
-        "video/vnd.sealed.mpeg4" = "vlc.desktop";
-        "video/vnd.sealed.swf" = "vlc.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "vlc.desktop";
-        "video/vnd.uvvu.mp4" = "vlc.desktop";
-        "video/vnd.vivo" = "vlc.desktop";
-        "video/vnd.youtube.yt" = "vlc.desktop";
-        "video/VP8" = "vlc.desktop";
-        "video/VP9" = "vlc.desktop";
-        "video/x-matroska" = "vlc.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "org.kde.haruna.desktop";
+        "video/3gpp-tt" = "org.kde.haruna.desktop";
+        "video/3gpp" = "org.kde.haruna.desktop";
+        "video/3gpp2" = "org.kde.haruna.desktop";
+        "video/AV1" = "org.kde.haruna.desktop";
+        "video/BMPEG" = "org.kde.haruna.desktop";
+        "video/BT656" = "org.kde.haruna.desktop";
+        "video/CelB" = "org.kde.haruna.desktop";
+        "video/DV" = "org.kde.haruna.desktop";
+        "video/encaprtp" = "org.kde.haruna.desktop";
+        "video/evc" = "org.kde.haruna.desktop";
+        "video/FFV1" = "org.kde.haruna.desktop";
+        "video/flexfec" = "org.kde.haruna.desktop";
+        "video/H261" = "org.kde.haruna.desktop";
+        "video/H263-1998" = "org.kde.haruna.desktop";
+        "video/H263-2000" = "org.kde.haruna.desktop";
+        "video/H263" = "org.kde.haruna.desktop";
+        "video/H264-RCDO" = "org.kde.haruna.desktop";
+        "video/H264-SVC" = "org.kde.haruna.desktop";
+        "video/H264" = "org.kde.haruna.desktop";
+        "video/H265" = "org.kde.haruna.desktop";
+        "video/H266" = "org.kde.haruna.desktop";
+        "video/iso.segment" = "org.kde.haruna.desktop";
+        "video/JPEG" = "org.kde.haruna.desktop";
+        "video/jpeg2000-scl" = "org.kde.haruna.desktop";
+        "video/jpeg2000" = "org.kde.haruna.desktop";
+        "video/jxsv" = "org.kde.haruna.desktop";
+        "video/lottie+json" = "org.kde.haruna.desktop";
+        "video/matroska-3d" = "org.kde.haruna.desktop";
+        "video/matroska" = "org.kde.haruna.desktop";
+        "video/mj2" = "org.kde.haruna.desktop";
+        "video/MP1S" = "org.kde.haruna.desktop";
+        "video/MP2P" = "org.kde.haruna.desktop";
+        "video/MP2T" = "org.kde.haruna.desktop";
+        "video/mp4" = "org.kde.haruna.desktop";
+        "video/MP4V-ES" = "org.kde.haruna.desktop";
+        "video/mpeg" = "org.kde.haruna.desktop";
+        "video/mpeg4-generic" = "org.kde.haruna.desktop";
+        "video/MPV" = "org.kde.haruna.desktop";
+        "video/nv" = "org.kde.haruna.desktop";
+        "video/ogg" = "org.kde.haruna.desktop";
+        "video/parityfec" = "org.kde.haruna.desktop";
+        "video/pointer" = "org.kde.haruna.desktop";
+        "video/quicktime" = "org.kde.haruna.desktop";
+        "video/raptorfec" = "org.kde.haruna.desktop";
+        "video/raw" = "org.kde.haruna.desktop";
+        "video/rtp-enc-aescm128" = "org.kde.haruna.desktop";
+        "video/rtploopback" = "org.kde.haruna.desktop";
+        "video/rtx" = "org.kde.haruna.desktop";
+        "video/scip" = "org.kde.haruna.desktop";
+        "video/smpte291" = "org.kde.haruna.desktop";
+        "video/SMPTE292M" = "org.kde.haruna.desktop";
+        "video/ulpfec" = "org.kde.haruna.desktop";
+        "video/vc1" = "org.kde.haruna.desktop";
+        "video/vc2" = "org.kde.haruna.desktop";
+        "video/vnd.blockfact.factv" = "org.kde.haruna.desktop";
+        "video/vnd.CCTV" = "org.kde.haruna.desktop";
+        "video/vnd.dece.hd" = "org.kde.haruna.desktop";
+        "video/vnd.dece.mobile" = "org.kde.haruna.desktop";
+        "video/vnd.dece.mp4" = "org.kde.haruna.desktop";
+        "video/vnd.dece.pd" = "org.kde.haruna.desktop";
+        "video/vnd.dece.sd" = "org.kde.haruna.desktop";
+        "video/vnd.dece.video" = "org.kde.haruna.desktop";
+        "video/vnd.directv.mpeg-tts" = "org.kde.haruna.desktop";
+        "video/vnd.directv.mpeg" = "org.kde.haruna.desktop";
+        "video/vnd.dlna.mpeg-tts" = "org.kde.haruna.desktop";
+        "video/vnd.dvb.file" = "org.kde.haruna.desktop";
+        "video/vnd.fvt" = "org.kde.haruna.desktop";
+        "video/vnd.hns.video" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.ttsavc" = "org.kde.haruna.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "org.kde.haruna.desktop";
+        "video/vnd.motorola.video" = "org.kde.haruna.desktop";
+        "video/vnd.motorola.videop" = "org.kde.haruna.desktop";
+        "video/vnd.mpegurl" = "org.kde.haruna.desktop";
+        "video/vnd.ms-playready.media.pyv" = "org.kde.haruna.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "org.kde.haruna.desktop";
+        "video/vnd.nokia.mp4vr" = "org.kde.haruna.desktop";
+        "video/vnd.nokia.videovoip" = "org.kde.haruna.desktop";
+        "video/vnd.objectvideo" = "org.kde.haruna.desktop";
+        "video/vnd.planar" = "org.kde.haruna.desktop";
+        "video/vnd.radgamettools.bink" = "org.kde.haruna.desktop";
+        "video/vnd.radgamettools.smacker" = "org.kde.haruna.desktop";
+        "video/vnd.sealed.mpeg1" = "org.kde.haruna.desktop";
+        "video/vnd.sealed.mpeg4" = "org.kde.haruna.desktop";
+        "video/vnd.sealed.swf" = "org.kde.haruna.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "org.kde.haruna.desktop";
+        "video/vnd.uvvu.mp4" = "org.kde.haruna.desktop";
+        "video/vnd.vivo" = "org.kde.haruna.desktop";
+        "video/vnd.youtube.yt" = "org.kde.haruna.desktop";
+        "video/VP8" = "org.kde.haruna.desktop";
+        "video/VP9" = "org.kde.haruna.desktop";
+        "video/x-matroska" = "org.kde.haruna.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -3963,6 +3985,8 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
+      plasmaManagerFlake.homeModules.plasma-manager
+
       {
         home = {
           enableNixpkgsReleaseCheck = true;
@@ -4149,6 +4173,10 @@ in
             };
           };
 
+          plasma = {
+            enable = true;
+          };
+
           keepassxc = {
             enable = true;
             package = (
@@ -4309,10 +4337,34 @@ in
                   ])
                   ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
                     {
+                      name = "arb-editor";
+                      publisher = "Google";
+                      version = "0.2.2";
+                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
+                    }
+                    {
+                      name = "pubspec-assist";
+                      publisher = "jeroen-meijer";
+                      version = "2.3.2";
+                      sha256 = "+Mkcbeq7b+vkuf2/LYT10mj46sULixLNKGpCEk1Eu/0=";
+                    }
+                    {
                       name = "unique-lines";
                       publisher = "bibhasdn";
                       version = "1.0.0";
                       sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
+                    }
+                    {
+                      name = "vscode-ollama";
+                      publisher = "warm3snow";
+                      version = "1.2.1";
+                      sha256 = "rp7F0KU17BG1e18oB1/law0hnnxAn2MxqB3fvYcYXMA=";
+                    }
+                    {
+                      name = "vscode-serial-monitor";
+                      publisher = "ms-vscode";
+                      version = "0.13.251128001";
+                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
                     {
                       name = "vscode-sort";
@@ -4325,24 +4377,6 @@ in
                       publisher = "richie5um2";
                       version = "1.20.0";
                       sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
-                    }
-                    {
-                      name = "pubspec-assist";
-                      publisher = "jeroen-meijer";
-                      version = "2.3.2";
-                      sha256 = "+Mkcbeq7b+vkuf2/LYT10mj46sULixLNKGpCEk1Eu/0=";
-                    }
-                    {
-                      name = "arb-editor";
-                      publisher = "Google";
-                      version = "0.2.2";
-                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
-                    }
-                    {
-                      name = "vscode-serial-monitor";
-                      publisher = "ms-vscode";
-                      version = "0.13.251128001";
-                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
                   ];
 
