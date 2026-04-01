@@ -2052,7 +2052,11 @@ in
       ];
     };
 
-    partition-manager.enable = true;
+    partition-manager = {
+      enable = true;
+      # package = pkgs.kdePackages.partitionmanager;
+    };
+
     k3b.enable = true;
 
     system-config-printer.enable = true;
@@ -2852,11 +2856,6 @@ in
         config.home-manager.users.root.programs.dircolors.package
         config.services.phpfpm.phpPackage
       ]
-      # ++ config.home-manager.users.root.programs.brave.nativeMessagingHosts # Duplicate
-      # ++ config.home-manager.users.root.programs.chromium.dictionaries
-      # ++ config.home-manager.users.root.programs.chromium.nativeMessagingHosts # Duplicate
-      # ++ config.home-manager.users.root.programs.lutris.protonPackages
-      # ++ config.services.pipewire.wireplumber.extraLv2Packages # Duplicate
       ++ config.boot.extraModulePackages
       ++ config.fonts.packages
       ++ config.hardware.graphics.extraPackages
@@ -3332,15 +3331,11 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
+      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/chromium";
     };
 
     sessionVariables = {
       NIXOS_OZONE_WL = "1";
-
-      GTK_IM_MODULE = "ibus";
-      QT_IM_MODULE = "wayland;ibus";
-      XMODIFIERS = "@im=ibus";
     };
 
     shellAliases = {
@@ -3829,7 +3824,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "com.brave.Browser.desktop";
+        "application/pdf" = "librewolf.desktop";
 
         "font/collection" = "org.gnome.font-viewer.desktop";
         "font/otf" = "org.gnome.font-viewer.desktop";
@@ -3851,8 +3846,8 @@ in
         "application/x-bittorrent" = "org.kde.ktorrent.desktop";
         "x-scheme-handler/magnet" = "org.kde.ktorrent.desktop";
 
-        "x-scheme-handler/http" = "com.brave.Browser.desktop";
-        "x-scheme-handler/https" = "com.brave.Browser.desktop";
+        "x-scheme-handler/http" = "librewolf.desktop";
+        "x-scheme-handler/https" = "librewolf.desktop";
 
         "x-scheme-handler/mailto" = "org.kde.kmail2.desktop";
       };
@@ -4194,28 +4189,52 @@ in
             # settings = { };
           };
 
-          chromium = {
+          librewolf = {
             enable = true;
-            package = (
-              pkgs.brave.override {
-                enableVideoAcceleration = true;
-                enableVulkan = false; # Breaks VA-API
-                libvaSupport = true;
-                pulseSupport = true;
-                vulkanSupport = false; # Breaks VA-API
-                # commandLineArgs = "";
-              }
-            );
-            dictionaries = with pkgs.hunspellDictsChromium; [
-              en_US
-              en-us
+            package = pkgs.librewolf;
+
+            nativeMessagingHosts = [
+              config.home-manager.users.root.programs.keepassxc.package
+              pkgs.kdePackages.plasma-browser-integration
             ];
 
-            nativeMessagingHosts = with pkgs; [
+            languagePacks = [
+              "ar"
+              "bn"
+              "en-US"
+              "ru"
+            ];
+
+            settings = {
+              "browser.safebrowsing.blockedURIs.enabled" = true;
+              "browser.safebrowsing.downloads.enabled" = true;
+              "browser.safebrowsing.malware.enabled" = true;
+              "browser.safebrowsing.phishing.enabled" = true;
+              "browser.sessionstore.resume_from_crash" = false;
+
+              "general.autoScroll" = false;
+
+              "identity.fxaccounts.enabled" = false;
+
+              "middlemouse.paste" = true;
+
+              "privacy.resistFingerprinting.letterboxing" = false;
+              "privacy.resistFingerprinting" = false;
+
+              "security.OCSP.require" = false;
+
+              "webgl.disabled" = false;
+            };
+          };
+
+          chromium = {
+            enable = true;
+            package = pkgs.ungoogled-chromium;
+
+            nativeMessagingHosts = [
               config.home-manager.users.root.programs.keepassxc.package
             ];
           };
-          brave.nativeMessagingHosts = config.home-manager.users.root.programs.chromium.nativeMessagingHosts;
 
           vscode = {
             enable = true;
@@ -4341,6 +4360,18 @@ in
                       publisher = "Google";
                       version = "0.2.2";
                       sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
+                    }
+                    {
+                      name = "blackbox";
+                      publisher = "Blackboxapp";
+                      version = "2.8.53";
+                      sha256 = "gg54oehLDkvrroYvomsKSkAcGrVuddj8ZtybeyLFpY0=";
+                    }
+                    {
+                      name = "blackboxagent";
+                      publisher = "Blackboxapp";
+                      version = "3.6.63";
+                      sha256 = "tpKxJYjWruoraODQAxKnNmqDlIeu576DG07S0e2X7bE=";
                     }
                     {
                       name = "pubspec-assist";
