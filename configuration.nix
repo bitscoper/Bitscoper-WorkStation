@@ -2194,12 +2194,10 @@ in
     systemPackages =
       with pkgs;
       [
-        # certbot-full # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
-        # winboat # Build Failure
         # xfstests # FIXME: Build Failure
         aapt
         above
@@ -2252,6 +2250,7 @@ in
         cdrkit
         celestia
         celt
+        certbot-full
         certdump
         chart-testing
         clinfo
@@ -2322,7 +2321,6 @@ in
         fh
         file
         fileinfo
-        filezilla
         flake-checker
         flare-floss
         flutter
@@ -2587,7 +2585,6 @@ in
         testdisk-qt # qphotorec
         texliveFull
         time
-        tiny-rdm
         tpm2-abrmd
         tpm2-openssl
         tpm2-pkcs11-abrmd
@@ -2635,6 +2632,7 @@ in
         whatfiles
         which
         whois
+        winboat
         wl-clipboard
         wordbook
         worldpainter
@@ -2779,15 +2777,11 @@ in
             doCheck = false;
           })
         )
-        # (gnss-sdr.override {
-        #   enableRawUdp = true;
-        #   enableOsmosdr = false; # FIXME: Build Failure
-        # }) # FIXME: Build Failure
         (kicad.override {
-          addons = with pkgs.kicadAddons; [
-            kikit
-            kikit-library
-          ];
+          # addons = with pkgs.kicadAddons; [
+          #   kikit
+          #   kikit-library
+          # ]; # FIXME: Build Failure
           withNgspice = true;
           withScripting = true;
           with3d = true;
@@ -4360,18 +4354,6 @@ in
                       publisher = "Google";
                       version = "0.2.2";
                       sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
-                    }
-                    {
-                      name = "blackbox";
-                      publisher = "Blackboxapp";
-                      version = "2.8.53";
-                      sha256 = "gg54oehLDkvrroYvomsKSkAcGrVuddj8ZtybeyLFpY0=";
-                    }
-                    {
-                      name = "blackboxagent";
-                      publisher = "Blackboxapp";
-                      version = "3.6.63";
-                      sha256 = "tpKxJYjWruoraODQAxKnNmqDlIeu576DG07S0e2X7bE=";
                     }
                     {
                       name = "pubspec-assist";
