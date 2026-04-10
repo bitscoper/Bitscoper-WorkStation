@@ -797,6 +797,30 @@ in
         runAsRoot = true;
       };
     };
+
+    virtualbox.host = {
+      enable = true;
+      package = (
+        pkgs.virtualboxKvm.override {
+          enable32bitGuests = true;
+          enableHardening = true;
+          enableKvm = true;
+          enableWebService = true;
+          headless = false;
+          javaBindings = true;
+          pulseSupport = true;
+          pythonBindings = true;
+        }
+      );
+      enableExtensionPack = true;
+      enableKvm = true;
+      headless = false;
+      enableHardening = true;
+
+      enableWebService = true;
+      addNetworkInterface = false; # KVM Only Supports NAT Networking
+    };
+
     spiceUSBRedirection.enable = true;
 
     podman = {
@@ -2510,6 +2534,7 @@ in
         p7zip
         paper-clip
         parted
+        pbzx
         pciutils
         pdf4qt
         pe-bear
@@ -2546,6 +2571,7 @@ in
         rpi-imager
         rpmextract
         rtl-sdr-librtlsdr
+        rubyPackages.cocoapods
         rustc
         sbc
         sbom2dot
@@ -2638,6 +2664,7 @@ in
         worldpainter
         wpprobe
         x2goclient
+        xar
         xdg-dbus-proxy
         xdg-user-dirs
         xdg-utils
