@@ -916,6 +916,10 @@ in
         enable = true;
       };
     }; # Custom Service Unit File due to Errors
+
+    tmpfiles.rules = [
+      "d /var/lib/swtpm-localca 0750 tss root -"
+    ];
   };
 
   services = {
@@ -2229,8 +2233,9 @@ in
         acpica-tools
         acpidump-all
         addlicense
-        agi # FIXME: Cannot find libswt
+        agi # FIXME: Cannot Find libswt # Run with steam-run
         aircrack-ng
+        airgorah
         alac
         alsa-plugins
         alsa-tools
@@ -2247,7 +2252,6 @@ in
         arduino-cli
         arduino-ide
         arduino-language-server
-        armitage
         asciicam
         asciinema
         asciinema-agg
@@ -2266,7 +2270,6 @@ in
         btop
         btrfs-assistant
         btrfs-progs
-        bulk_extractor
         bustle
         butt
         calligraphy
@@ -2279,7 +2282,6 @@ in
         chart-testing
         clinfo
         cloc
-        cm256cc
         cmake
         cmake-language-server
         cmatrix
@@ -2307,6 +2309,7 @@ in
         ddcui
         ddcutil
         ddrescue
+        ddrescueview
         diffoci
         dig
         disktui
@@ -2407,6 +2410,7 @@ in
         input-leap
         interception-tools
         iotop-c
+        iw # Required by Airgorah
         jellyfin-desktop
         jfsutils
         jmc2obj
@@ -2494,10 +2498,10 @@ in
         mermaid-cli
         mesa-demos
         metadata-cleaner
-        metasploit
         mfcuk
         mfoc
         minikube
+        mixxx
         monkeys-audio
         motion
         mousai
@@ -2554,6 +2558,7 @@ in
         protonup-qt
         ps
         psmisc
+        python3Packages.tkinter
         qemu-user
         qemu-utils
         qjackctl
@@ -2658,7 +2663,6 @@ in
         whatfiles
         which
         whois
-        winboat
         wl-clipboard
         wordbook
         worldpainter
@@ -2671,6 +2675,7 @@ in
         xfsdump
         xfsprogs
         xoscope
+        xterm # Required by Airgorah
         xvidcore
         yaml-language-server
         yara-x
