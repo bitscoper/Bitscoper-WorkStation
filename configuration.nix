@@ -386,15 +386,14 @@ in
     inputMethod = {
       enable = true;
 
-      type = "ibus";
-      ibus = {
-        engines = with pkgs.ibus-engines; [
-          (openbangla-keyboard.override {
-            withIbusSupport = true;
-          })
+      type = "fcitx5";
+      fcitx5 = {
+        addons = with pkgs; [
+          fcitx5-openbangla-keyboard
         ];
-
         waylandFrontend = true;
+
+        ignoreUserConfig = false;
       };
 
       enableGtk3 = true;
@@ -1393,22 +1392,24 @@ in
         22
       ];
 
-      banner = config.networking.fqdn;
-
       authorizedKeysInHomedir = true;
 
-      settings = {
-        PermitRootLogin = "yes";
-        PasswordAuthentication = true;
-        X11Forwarding = false;
-        StrictModes = true;
-        UseDns = true;
-        LogLevel = "ERROR";
-      };
+      settings =
+        let
+          banner = pkgs.writeText "opesshBanner.txt" "${config.networking.fqdn}";
+        in
+        {
+          Banner = toString banner;
+          LogLevel = "ERROR";
+          PasswordAuthentication = true;
+          PermitRootLogin = "yes";
+          StrictModes = true;
+          UseDns = true;
+          X11Forwarding = false;
+        };
 
       openFirewall = true;
     };
-    sshd.enable = true;
 
     cockpit = {
       enable = true;
@@ -1636,27 +1637,35 @@ in
 
     dovecot2 = {
       enable = true;
-
-      enableImap = true;
-      enableLmtp = true;
-      enablePop3 = false;
-      protocols = [
-        "imap"
-        "lmtp"
-      ];
-      enableQuota = true;
-      quotaPort = "12340";
-
-      enableDHE = true;
-      sslServerCert = tlsCertificateFile;
-      sslServerKey = tlsCertificatePrivateKeyFile;
-      sslCACert = tlsCACertificateFile;
+      package = (
+        pkgs.dovecot.override {
+          withLDAP = true;
+          withPCRE2 = true;
+          withUnwind = true;
+          withMySQL = true;
+          withPgSQL = true;
+          withSQLite = true;
+        }
+      );
 
       enablePAM = true;
       showPAMFailure = true;
       createMailUser = true;
 
-      # pluginSettings = {};
+      settings = {
+        dovecot_config_version = config.services.dovecot2.package.version;
+        dovecot_storage_version = config.services.dovecot2.package.version;
+
+        protocols = {
+          imap = true;
+          lmtp = true;
+          pop3 = true;
+        };
+
+        ssl_server_cert_file = tlsCertificateFile;
+        ssl_server_key_file = tlsCertificatePrivateKeyFile;
+        ssl_server_ca_file = tlsCACertificateFile;
+      };
     };
 
     icecast = {
@@ -1940,7 +1949,7 @@ in
 
         user = {
           name = "Abdullah As-Sadeed";
-          email = "bitscoper@protonmail.com";
+          email = "bitscoper@tutanota.com";
         };
       };
     };
@@ -2224,6 +2233,7 @@ in
       [
         # dart # flutter adds the compatible version
         # debase # FIXME: Build Failure
+        # freesmlauncher # Overlay from Flake # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
@@ -2353,7 +2363,6 @@ in
         flutter
         fontfor
         freecad
-        freesmlauncher # Overlay from Flake
         fritzing
         fstl
         gawk
@@ -2554,7 +2563,6 @@ in
         procps
         profile-cleaner
         progress
-        proton-vpn
         protonup-qt
         ps
         psmisc
@@ -2626,6 +2634,7 @@ in
         trufflehog
         trustymail
         tsukae
+        tutanota-desktop
         udftools
         uefi-firmware-parser
         ugit
@@ -2890,7 +2899,7 @@ in
       ++ config.home-manager.users.root.programs.gh.extensions
       ++ config.home-manager.users.root.programs.lutris.extraPackages
       ++ config.home-manager.users.root.programs.lutris.winePackages
-      ++ config.i18n.inputMethod.ibus.engines
+      ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
       ++ config.services.cockpit.plugins
@@ -2993,6 +3002,9 @@ in
         dynamic-workspaces
         eventviews
         extra-cmake-modules
+        fcitx5-configtool
+        fcitx5-qt
+        fcitx5-with-addons
         ffmpegthumbs
         filelight
         frameworkintegration
@@ -3161,7 +3173,6 @@ in
         libgravatar
         libiodata
         libkcddb
-        libkcompactdisc
         libkdcraw
         libkdepim
         libkexiv2
@@ -3257,7 +3268,6 @@ in
         qtwebsockets
         qtwebview
         quazip
-        qwlroots
         qxlsx
         signon-kwallet-extension
         signond
