@@ -151,17 +151,17 @@ in
       };
     };
 
-    kernelPackages = pkgs.linuxKernel.packages.linux_6_19;
+    kernelPackages = pkgs.linuxKernel.packages.linux_7_0;
 
     extraModulePackages = with config.boot.kernelPackages; [
       # apfs # FIXME: Build Failure
+      # zfs_unstable # FIXME: Build Failure
       cpupower
       mm-tools
       openafs
       tmon
       turbostat
       usbip
-      zfs_unstable
     ];
 
     hardwareScan = true;
@@ -2242,6 +2242,8 @@ in
         acl
         acpica-tools
         acpidump-all
+        act
+        actionlint
         addlicense
         agi # FIXME: Cannot Find libswt # Run with steam-run
         aircrack-ng
@@ -2897,8 +2899,8 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
       ++ config.home-manager.users.root.programs.gh.extensions
-      ++ config.home-manager.users.root.programs.lutris.extraPackages
-      ++ config.home-manager.users.root.programs.lutris.winePackages
+      # ++ config.home-manager.users.root.programs.lutris.extraPackages
+      # ++ config.home-manager.users.root.programs.lutris.winePackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
@@ -2992,8 +2994,6 @@ in
         baloo-widgets
         bluedevil
         bluez-qt
-        breeze-gtk
-        breeze-icons
         calendarsupport
         colord-kde
         dolphin
@@ -3913,7 +3913,7 @@ in
     enable = true;
 
     platformTheme = "kde";
-    style = "breeze";
+    # style = "";
   };
 
   documentation = {
@@ -4078,18 +4078,39 @@ in
           colorScheme = "dark";
 
           theme = {
-            name = "Breeze-Dark";
-            package = pkgs.kdePackages.breeze-gtk;
+            name = "WhiteSur-Dark-blue";
+            package = (
+              pkgs.whitesur-gtk-theme.override {
+                altVariants = [
+                  "normal"
+                ];
+                colorVariants = [
+                  "dark"
+                ];
+                opacityVariants = [
+                  "normal"
+                ];
+                themeVariants = [
+                  "blue"
+                ];
+                schemeVariants = [
+                  "standard"
+                ];
+                iconVariant = "simple";
+                roundedMaxWindow = false;
+                darkerColor = false;
+              }
+            );
           };
 
           iconTheme = {
-            name = "breeze-dark";
-            package = pkgs.kdePackages.breeze-icons;
+            name = "WhiteSur-dark";
+            package = pkgs.whitesur-icon-theme;
           };
 
           cursorTheme = {
-            name = "breeze_cursors";
-            package = pkgs.kdePackages.breeze;
+            name = "WhiteSur-cursors";
+            package = pkgs.whitesur-cursors;
             size = builtins.floor (design_factor * 1.50); # 24
           };
 
@@ -4105,8 +4126,8 @@ in
 
           platformTheme.name = "kde";
           style = {
-            name = "Breeze";
-            package = pkgs.kdePackages.breeze;
+            name = "WhiteSur-dark";
+            package = pkgs.whitesur-kde;
           };
         };
 
@@ -4398,6 +4419,12 @@ in
                       sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
                     }
                     {
+                      name = "github-local-actions";
+                      publisher = "SanjulaGanepola";
+                      version = "1.2.5";
+                      sha256 = "gc3iOB/ibu4YBRdeyE6nmG72RbAsV0WIhiD8x2HNCfY=";
+                    }
+                    {
                       name = "pubspec-assist";
                       publisher = "jeroen-meijer";
                       version = "2.3.2";
@@ -4443,24 +4470,24 @@ in
             };
           };
 
-          lutris = {
-            enable = true;
-            package = pkgs.lutris;
+          # lutris = {
+          #   enable = true;
+          #   package = pkgs.lutris;
 
-            extraPackages = with pkgs; [
-              gamemode
-              gamescope
-              mangohud
-              protontricks
-              winetricks
-            ];
-            winePackages = with pkgs; [
-              wineWow64Packages.waylandFull
-            ];
-            protonPackages = with pkgs; [
-              proton-ge-bin
-            ];
-          };
+          #   extraPackages = with pkgs; [
+          #     gamemode
+          #     gamescope
+          #     mangohud
+          #     protontricks
+          #     winetricks
+          #   ];
+          #   winePackages = with pkgs; [
+          #     wineWow64Packages.waylandFull
+          #   ];
+          #   protonPackages = with pkgs; [
+          #     proton-ge-bin
+          #   ];
+          # }; # FIXME: Build Failure
 
           wofi = {
             enable = true;
