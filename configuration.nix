@@ -350,6 +350,7 @@ in
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
+        "ventoy-qt5-1.1.12"
       ];
     };
 
@@ -1021,7 +1022,7 @@ in
     };
 
     smartd = {
-      enable = true;
+      enable = false; # FIXME: Fails to Start
 
       autodetect = true;
 
@@ -1708,7 +1709,7 @@ in
         environmentFile = pkgs.writeText "sharkey.env" "";
       in
       {
-        enable = true;
+        enable = false; # FIXME: Fails to Start
         package = pkgs.sharkey;
 
         setupPostgresql = true;
@@ -2324,6 +2325,7 @@ in
         ddrescueview
         diffoci
         dig
+        discord # Unfree
         disktui
         dive
         dmg2img
@@ -2354,6 +2356,7 @@ in
         eyedropper
         f2fs-tools
         fastfetch
+        fastlane
         fdk_aac
         fdroidcl
         fdt-viewer
@@ -2685,6 +2688,7 @@ in
         xdg-utils
         xfsdump
         xfsprogs
+        xonotic
         xoscope
         xterm # Required by Airgorah
         xvidcore
@@ -2877,6 +2881,11 @@ in
           pipewireSupport = true;
           pulseaudioSupport = true;
           waylandSupport = true;
+        })
+        (ventoy-full-qt.override {
+          withXfs = true;
+          withExt4 = true;
+          withNtfs = true;
         })
         (virt-viewer.override {
           spiceSupport = true;
