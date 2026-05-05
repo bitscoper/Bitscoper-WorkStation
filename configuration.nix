@@ -18,9 +18,10 @@ let
         config = config.nixpkgs.config;
       };
 
-  homeManager = builtins.getFlake "github:nix-community/home-manager/master";
+  homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  snapdFlake = builtins.getFlake "github:nix-community/nix-snapd/main";
   plasmaManagerFlake = builtins.getFlake "github:nix-community/plasma-manager/trunk";
-  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
+  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -120,9 +121,11 @@ let
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
 in
 {
-  imports = [
-    homeManager.nixosModules.home-manager
+  _class = "nixos";
 
+  imports = [
+    homeManagerFlake.nixosModules.home-manager
+    snapdFlake.nixosModules.default
     ./hardware-configuration.nix
     ./secrets.nix
   ];
@@ -155,7 +158,7 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [
       # apfs # FIXME: Build Failure
-      # zfs_unstable # FIXME: Build Failure
+      # zfs # FIXME: Build Failure
       cpupower
       mm-tools
       openafs
@@ -1775,6 +1778,20 @@ in
       allowNetworking = true;
       checkConfig = true;
     };
+
+    flatpak = {
+      enable = true;
+      package = (
+        pkgs.flatpak.override {
+          withDconf = true;
+          withMan = true;
+          withPolkit = true;
+          withSystemd = true;
+        }
+      );
+    };
+
+    snap.enable = true;
   };
 
   programs = {
@@ -2158,17 +2175,17 @@ in
       gdb = true;
     };
 
-    wireshark = {
-      enable = true;
-      package = (
-        pkgs.wireshark.override {
-          withQt = true;
-        }
-      );
+    # wireshark = {
+    #   enable = true;
+    #   package = (
+    #     pkgs.wireshark.override {
+    #       withQt = true;
+    #     }
+    #   );
 
-      dumpcap.enable = true;
-      usbmon.enable = true;
-    };
+    #   dumpcap.enable = true;
+    #   usbmon.enable = true;
+    # }; # FIXME: Build Failure
 
     kdeconnect = {
       enable = true;
@@ -2233,8 +2250,6 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
-        # debase # FIXME: Build Failure
-        # freesmlauncher # Overlay from Flake # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
@@ -2269,6 +2284,7 @@ in
         asciinema
         asciinema-agg
         asciinema-scenario
+        aurea
         autopsy
         avrdude
         banner
@@ -2323,6 +2339,7 @@ in
         ddcutil
         ddrescue
         ddrescueview
+        debase
         diffoci
         dig
         discord # Unfree
@@ -2365,9 +2382,12 @@ in
         fileinfo
         flake-checker
         flare-floss
+        flatpak-builder
+        flatpak-xdg-utils
         flutter
         fontfor
         freecad
+        freesmlauncher # Overlay from Flake
         fritzing
         fstl
         gawk
@@ -2664,6 +2684,7 @@ in
         vulkan-tools
         wafw00f
         wakeonlan
+        warehouse
         wayback_machine_downloader
         wayback-machine-archiver
         waycheck
@@ -2825,10 +2846,10 @@ in
           })
         )
         (kicad.override {
-          # addons = with pkgs.kicadAddons; [
-          #   kikit
-          #   kikit-library
-          # ]; # FIXME: Build Failure
+          addons = with pkgs.kicadAddons; [
+            kikit
+            kikit-library
+          ];
           withNgspice = true;
           withScripting = true;
           with3d = true;
@@ -2908,8 +2929,8 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
       ++ config.home-manager.users.root.programs.gh.extensions
-      # ++ config.home-manager.users.root.programs.lutris.extraPackages
-      # ++ config.home-manager.users.root.programs.lutris.winePackages
+      ++ config.home-manager.users.root.programs.lutris.extraPackages
+      ++ config.home-manager.users.root.programs.lutris.winePackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
@@ -2923,11 +2944,11 @@ in
       ++ config.virtualisation.podman.extraRuntimes
       ++ config.xdg.portal.extraPortals
       ++ (with ghidra-extensions; [
-        # gnudisassembler # FIXME: Build Failure
         findcrypt
         ghidra-delinker-extension
         ghidra-golanganalyzerextension
         ghidraninja-ghidra-scripts
+        gnudisassembler
         lightkeeper
         machinelearning
         ret-sync
@@ -2977,9 +2998,7 @@ in
       ])
       ++ (with kdePackages; [
         # maplibre-native-qt # Build Failure
-        # plasma-vault # Build Failure
         # waylib # Build Failure
-        # wayqt # Build Failure
         accessibility-inspector
         accounts-qt
         akonadi
@@ -3016,6 +3035,7 @@ in
         fcitx5-with-addons
         ffmpegthumbs
         filelight
+        flatpak-kcm
         frameworkintegration
         futuresql
         glaxnimate
@@ -3227,6 +3247,7 @@ in
         plasma-pa
         plasma-systemmonitor
         plasma-thunderbolt
+        plasma-vault
         plasma-wayland-protocols
         plasma-workspace
         plasma-workspace-wallpapers
@@ -3297,6 +3318,7 @@ in
         wallpaper-engine-plugin
         wayland
         wayland-protocols
+        wayqt
         zanshin
       ])
       ++ (with kubernetes-helmPlugins; [
@@ -4302,7 +4324,7 @@ in
             ];
           };
 
-          vscode = {
+          vscodium = {
             enable = true;
             package = pkgs.vscodium;
             mutableExtensionsDir = false;
@@ -4479,24 +4501,24 @@ in
             };
           };
 
-          # lutris = {
-          #   enable = true;
-          #   package = pkgs.lutris;
+          lutris = {
+            enable = true;
+            package = stableNixPackages.lutris-free;
 
-          #   extraPackages = with pkgs; [
-          #     gamemode
-          #     gamescope
-          #     mangohud
-          #     protontricks
-          #     winetricks
-          #   ];
-          #   winePackages = with pkgs; [
-          #     wineWow64Packages.waylandFull
-          #   ];
-          #   protonPackages = with pkgs; [
-          #     proton-ge-bin
-          #   ];
-          # }; # FIXME: Build Failure
+            extraPackages = with pkgs; [
+              gamemode
+              gamescope
+              mangohud
+              protontricks
+              winetricks
+            ];
+            winePackages = with pkgs; [
+              wineWow64Packages.waylandFull
+            ];
+            protonPackages = with pkgs; [
+              proton-ge-bin
+            ];
+          };
 
           wofi = {
             enable = true;
