@@ -20,8 +20,8 @@ let
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   snapdFlake = builtins.getFlake "github:nix-community/nix-snapd/main";
-  plasmaManagerFlake = builtins.getFlake "github:nix-community/plasma-manager/trunk";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
+  catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -38,6 +38,7 @@ let
       "35"
       "36"
       "36.1"
+      "37.0"
     ];
     useGoogleAPIs = false;
     useGoogleTVAddOns = false;
@@ -47,6 +48,7 @@ let
       "latest"
       "35.0.0"
       "36.1.0"
+      "37.0.0"
     ];
 
     includeNDK = true;
@@ -110,8 +112,7 @@ let
       ''
         mkdir -p $out
         ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/private.key
-        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/private.key -out $out/certificate.crt -days 36500 \
-          -subj "/CN=$CN"
+        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/private.key -out $out/certificate.crt -days 36500 -subj "/CN=$CN"
         cat $out/private.key $out/certificate.crt > $out/concatenated.pem
         cp $out/certificate.crt $out/ca.crt
       '';
@@ -126,6 +127,7 @@ in
   imports = [
     homeManagerFlake.nixosModules.home-manager
     snapdFlake.nixosModules.default
+    catppuccinThemeFlake.nixosModules.catppuccin
     ./hardware-configuration.nix
     ./secrets.nix
   ];
@@ -135,15 +137,36 @@ in
 
     loader = {
       efi.canTouchEfiVariables = true;
-      timeout = 1;
 
-      systemd-boot = {
+      grub = {
         enable = true;
-        consoleMode = "max";
-        configurationLimit = null;
 
-        memtest86.enable = true;
+        efiSupport = true;
+        zfsSupport = true;
+        enableCryptodisk = true;
+
+        fsIdentifier = "uuid";
+        device = "nodev";
+
+        gfxmodeEfi = "1920x1080,auto";
+        gfxpayloadEfi = "keep";
+
+        configurationLimit = 100;
+        extraEntriesBeforeNixOS = false;
+        useOSProber = true;
+
+        memtest86 = {
+          enable = true;
+
+          params = [
+            "btrace"
+          ];
+        };
+
+        forceInstall = false;
       };
+
+      timeout = 2; # 2 Seconds
     };
 
     kernel = {
@@ -246,13 +269,12 @@ in
     plymouth = {
       enable = true;
 
-      themePackages = [
-        (pkgs.kdePackages.breeze-plymouth.override {
-          osName = config.system.nixos.distroName;
-          osVersion = "${config.system.nixos.release} (${config.system.nixos.codeName})";
+      themePackages = with pkgs; [
+        (catppuccin-plymouth.override {
+          variant = config.catppuccin.flavor;
         })
       ];
-      theme = "breeze";
+      theme = "catppuccin-${config.catppuccin.flavor}";
 
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
@@ -264,10 +286,8 @@ in
 
   zramSwap = {
     enable = true;
-    algorithm = "zstd";
+    algorithm = config.boot.tmp.zramSettings.compression-algorithm;
   };
-
-  # swapDevices = { };
 
   time = {
     timeZone = "Asia/Dhaka";
@@ -335,6 +355,11 @@ in
       sandbox = true;
       auto-optimise-store = true;
 
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
+
       cores = 0; # 0 = All
       max-jobs = 1;
     };
@@ -353,7 +378,7 @@ in
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
-        "ventoy-qt5-1.1.12"
+        "ventoy-gtk3-1.1.12"
       ];
     };
 
@@ -407,7 +432,6 @@ in
 
   networking = {
     enableIPv6 = true;
-    useDHCP = lib.mkForce true;
 
     domain = "local";
     hostName = "Bitscoper-WorkStation";
@@ -418,6 +442,9 @@ in
       userControlled = true;
       enableHardening = true;
     };
+
+    useDHCP = false; # Managed by NetworkManager
+    dhcpcd.enable = false;
 
     networkmanager = {
       enable = true;
@@ -444,6 +471,9 @@ in
         macAddress = "permanent";
       };
 
+      dhcp = "internal";
+      dns = "systemd-resolved";
+
       logLevel = "WARN";
     };
 
@@ -452,7 +482,9 @@ in
 
       allowPing = true;
 
-      allowedTCPPorts = [ ];
+      allowedTCPPorts = [
+        config.home-manager.users.root.services.wayvnc.settings.port
+      ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
@@ -461,8 +493,10 @@ in
     };
 
     nameservers = [
-      "1.1.1.3#one.one.one.one"
-      "1.0.0.3#one.one.one.one"
+      "9.9.9.9#dns.quad9.net"
+      "149.112.112.112#dns.quad9.net"
+      "2620:fe::fe#dns.quad9.net"
+      "2620:fe::9#dns.quad9.net"
     ];
 
     timeServers = [
@@ -480,6 +514,40 @@ in
     tpm2.enable = true;
 
     lockKernelModules = false;
+
+    rtkit.enable = true;
+
+    sudo = {
+      enable = true;
+      package = (
+        pkgs.sudo.override {
+          withInsults = false; # Includes Profanity
+        }
+      );
+
+      execWheelOnly = true;
+      wheelNeedsPassword = true;
+    };
+
+    polkit = {
+      enable = true;
+      package = (
+        pkgs.polkit.override {
+          useSystemd = true;
+        }
+      );
+
+      adminIdentities = [
+        "unix-group:wheel"
+      ];
+
+      debug = false;
+    };
+
+    soteria = {
+      enable = true;
+      package = pkgs.soteria;
+    };
 
     pam = {
       mount = {
@@ -503,12 +571,61 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-            # package = pkgs.kdePackages.kwallet-pam;
+          enableGnomeKeyring = true;
 
-            forceRun = true;
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
           };
+
+          showMotd = true;
+        };
+
+        cockpit = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        sshd = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        hyprlock = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
 
           gnupg = {
             enable = true;
@@ -526,6 +643,14 @@ in
           logFailures = true;
           nodelay = false;
 
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
           showMotd = true;
         };
 
@@ -536,41 +661,18 @@ in
           logFailures = true;
           nodelay = false;
 
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
           showMotd = true;
         };
       };
     };
-
-    sudo = {
-      enable = true;
-      package = (
-        pkgs.sudo.override {
-          withInsults = true;
-        }
-      );
-
-      execWheelOnly = true;
-      wheelNeedsPassword = true;
-    };
-
-    polkit = {
-      enable = true;
-      package = (
-        pkgs.polkit.override {
-          useSystemd = true;
-        }
-      );
-
-      adminIdentities = [
-        "unix-group:wheel"
-      ];
-
-      # extraConfig = '''';
-
-      debug = false;
-    };
-
-    rtkit.enable = true;
 
     wrappers = {
       spice-client-glib-usb-acl-helper.source = "${
@@ -647,7 +749,7 @@ in
         }
       );
 
-      hsphfpd.enable = false; # Conflicts wwth WirePlumber
+      hsphfpd.enable = false; # Conflicts with WirePlumber
 
       powerOnBoot = true;
 
@@ -725,7 +827,9 @@ in
           withSystemd = true;
         }
       );
-      # extraBackends = with pkgs; [ ];
+      # extraBackends = with pkgs; [
+
+      # ];
       snapshot = false;
 
       openFirewall = true;
@@ -745,7 +849,7 @@ in
           enableCeph = true;
           enableGlusterfs = true;
           enableIscsi = true;
-          enableXen = true;
+          enableXen = false;
           enableZfs = true;
         }
       );
@@ -753,7 +857,7 @@ in
       qemu = {
         # package = (
         #   pkgs.qemu_full.override {
-        #     alsaSupport = true;
+        #     alsaSupport = false;
         #     canokeySupport = false; # Marked as Broken
         #     capstoneSupport = true;
         #     cephSupport = true;
@@ -763,14 +867,14 @@ in
         #     glusterfsSupport = true;
         #     gtkSupport = true;
         #     guestAgentSupport = true;
-        #     jackSupport = true;
+        #     jackSupport = false;
         #     libiscsiSupport = true;
         #     ncursesSupport = true;
         #     numaSupport = true;
         #     openGLSupport = true;
         #     pipewireSupport = true;
         #     pluginsSupport = true;
-        #     pulseSupport = true;
+        #     pulseSupport = false;
         #     rutabagaSupport = true;
         #     sdlSupport = true;
         #     seccompSupport = true;
@@ -783,7 +887,7 @@ in
         #     valgrindSupport = true;
         #     virglSupport = true;
         #     vncSupport = true;
-        #     xenSupport = true;
+        #     xenSupport = false;
         #   }
         # ); # FIXME: Missing Binaries
         package = pkgs.qemu;
@@ -801,36 +905,14 @@ in
       };
     };
 
-    virtualbox.host = {
-      enable = true;
-      package = (
-        pkgs.virtualboxKvm.override {
-          enable32bitGuests = true;
-          enableHardening = true;
-          enableKvm = true;
-          enableWebService = true;
-          headless = false;
-          javaBindings = true;
-          pulseSupport = true;
-          pythonBindings = true;
-        }
-      );
-      enableExtensionPack = true;
-      enableKvm = true;
-      headless = false;
-      enableHardening = true;
-
-      enableWebService = true;
-      addNetworkInterface = false; # KVM Only Supports NAT Networking
-    };
-
     spiceUSBRedirection.enable = true;
 
     podman = {
       enable = true;
       package = pkgs.podman;
+      # extraPackages = with pkgs; [
 
-      # extraPackages = with pkgs; [ ];
+      # ];
       extraRuntimes = with pkgs; [
         runc
       ];
@@ -886,14 +968,6 @@ in
       }
     );
 
-    coredump = {
-      enable = true;
-
-      extraConfig = ''
-        Storage=journal
-      '';
-    };
-
     packages = with pkgs; [
       (hardinfo2.override {
         printingSupport = true;
@@ -921,6 +995,7 @@ in
     }; # Custom Service Unit File due to Errors
 
     tmpfiles.rules = [
+      "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
       "d /var/lib/swtpm-localca 0750 tss root -"
     ];
   };
@@ -931,6 +1006,24 @@ in
 
       servers = config.networking.timeServers;
       fallbackServers = config.networking.timeServers;
+    };
+
+    resolved = {
+      enable = true;
+
+      settings = {
+        Resolve = {
+          DNSSEC = true;
+          DNSOverTLS = true;
+
+          DNS = config.networking.nameservers;
+          FallbackDNS = [ ];
+
+          Domains = [
+            "~."
+          ];
+        };
+      };
     };
 
     fwupd = {
@@ -1040,8 +1133,6 @@ in
     zram-generator = {
       enable = true;
       package = pkgs.zram-generator;
-
-      # settings = { };
     };
 
     dbus = {
@@ -1054,7 +1145,9 @@ in
 
       implementation = "broker";
 
-      # Packages = with pkgs; [ ];
+      packages = with pkgs; [
+        gnome2.GConf
+      ];
     };
 
     accounts-daemon.enable = true;
@@ -1071,23 +1164,31 @@ in
     displayManager = {
       enable = true;
 
-      plasma-login-manager = {
+      ly = {
         enable = true;
-        package = pkgs.kdePackages.plasma-login-manager;
+        package = pkgs.ly;
 
-        # settings = { };
+        x11Support = false;
       };
+
+      defaultSession = "hyprland-uwsm";
 
       autoLogin.enable = false;
 
       logToJournal = true;
     };
 
-    desktopManager.plasma6 = {
-      enable = true;
+    gnome = {
+      gnome-keyring.enable = true;
 
-      enableQt5Integration = true;
-      notoPackage = fontPreferences.package;
+      gcr-ssh-agent = {
+        enable = true;
+        package = (
+          pkgs.gcr_4.override {
+            systemdSupport = true;
+          }
+        );
+      };
     };
 
     pipewire = {
@@ -1284,7 +1385,6 @@ in
                 imagick
                 imap
                 mailparse
-                memcached
                 mysqli
                 mysqlnd
                 openssl
@@ -1448,58 +1548,6 @@ in
       openFirewall = true;
     };
 
-    bind = {
-      enable = false;
-      package = (
-        pkgs.bind.override {
-          enableGSSAPI = true;
-          enablePython = true;
-        }
-      );
-
-      listenOn = [
-        "any"
-      ];
-      ipv4Only = false;
-      listenOnIpv6 = [
-        "any"
-      ];
-      listenOnPort = 53;
-      listenOnIpv6Port = config.services.bind.listenOnPort;
-
-      cacheNetworks = [
-        "127.0.0.0/24"
-        "::1/128"
-      ];
-
-      extraOptions = ''
-        recursion no;
-      '';
-    };
-
-    memcached = {
-      enable = true;
-
-      enableUnixSocket = true;
-      listen = "*";
-      port = 11211;
-
-      maxMemory = 64; # Megabytes
-      maxConnections = 256;
-    };
-
-    redis = {
-      package = (
-        pkgs.valkey.override {
-          tlsSupport = false; # Marked Broken
-          useSystemJemalloc = true;
-          withSystemd = true;
-        }
-      );
-
-      vmOverCommit = true;
-    };
-
     postgresql = {
       enable = true;
       package = (
@@ -1579,27 +1627,6 @@ in
       '';
     };
 
-    meilisearch =
-      let
-        masterKeyFile = pkgs.writeText "meilisearchMasterKey.txt" "${config.secrets.password_1}${config.secrets.password_1}"; # Duplicated to meet the minimum 16-byte requirement
-      in
-      {
-        enable = true;
-        package = pkgs.meilisearch;
-
-        listenAddress = "0.0.0.0";
-        listenPort = 7700;
-
-        masterKeyFile = masterKeyFile;
-
-        settings = {
-          env = "production";
-          experimental_enable_metrics = true;
-
-          log_level = "WARN";
-        };
-      };
-
     postfix = {
       enable = true;
 
@@ -1635,8 +1662,6 @@ in
 
       domains = "csl:${config.networking.fqdn}";
       selector = "default";
-
-      # settings = { };
     }; # Marked as Insecure
 
     dovecot2 = {
@@ -1644,11 +1669,11 @@ in
       package = (
         pkgs.dovecot.override {
           withLDAP = true;
-          withPCRE2 = true;
-          withUnwind = true;
           withMySQL = true;
+          withPCRE2 = true;
           withPgSQL = true;
           withSQLite = true;
+          withUnwind = true;
         }
       );
 
@@ -1705,47 +1730,6 @@ in
         </logging>
         <server-id>${config.networking.fqdn}</server-id>
       ''; # <loglevel>2</loglevel> = Warn
-    };
-
-    sharkey =
-      let
-        environmentFile = pkgs.writeText "sharkey.env" "";
-      in
-      {
-        enable = false; # FIXME: Fails to Start
-        package = pkgs.sharkey;
-
-        setupPostgresql = true;
-        setupRedis = false; # FIXME: Conflicts
-        setupMeilisearch = true;
-
-        settings = {
-          id = "ulid";
-
-          fulltextSearch.provider = "meilisearch";
-
-          mediaDirectory = "/var/lib/sharkey/";
-
-          url = "http://${config.networking.fqdn}/";
-          socket = "/run/sharkey/sharkey.sock";
-          address = "0.0.0.0";
-          port = 3000;
-        };
-
-        environmentFiles = [
-          environmentFile
-        ];
-
-        openFirewall = true;
-      }; # FIXME: Fails to Start
-
-    jellyfin = {
-      enable = true;
-      package = pkgs.jellyfin;
-
-      transcoding.enableSubtitleExtraction = true;
-
-      openFirewall = true;
     };
 
     ollama = {
@@ -1862,21 +1846,6 @@ in
       binfmt = true;
     };
 
-    zoxide = {
-      enable = true;
-      package = (
-        pkgs.zoxide.override {
-          withFzf = true;
-        }
-      );
-
-      enableBashIntegration = true;
-
-      flags = [
-        "--cmd cd"
-      ];
-    };
-
     direnv = {
       enable = true;
       package = pkgs.direnv;
@@ -1887,6 +1856,85 @@ in
       enableBashIntegration = true;
 
       silent = false;
+    };
+
+    zoxide = {
+      enable = true;
+      package = (
+        pkgs.zoxide.override {
+          withFzf = false;
+        }
+      );
+
+      enableBashIntegration = true;
+
+      flags = [
+        "--cmd cd"
+      ];
+    };
+
+    yazi = {
+      enable = true;
+      package = pkgs.yazi;
+
+      plugins = with pkgs.yaziPlugins; {
+        inherit
+          chmod
+          clipboard
+          compress
+          convert
+          diff
+          drag
+          lazygit
+          mount
+          rsync
+          smart-filter
+          smart-paste
+          sudo
+          time-travel
+          vcs-files
+          wl-clipboard
+          ;
+      };
+
+      settings = {
+        yazi = {
+          mgr = {
+            sort_by = "natural";
+            sort_sensitive = true;
+            sort_reverse = false;
+            sort_dir_first = true;
+            sort_translit = false;
+            linemode = "mtime";
+            show_hidden = true;
+            show_symlink = true;
+          };
+
+          preview = {
+            wrap = "yes";
+            image_quality = 90; # Highest is 90
+          };
+
+          input = {
+            cursor_blink = true;
+          };
+
+          confirm = {
+            cursor_blink = true;
+          };
+
+          pick = {
+            cursor_blink = true;
+          };
+
+          which = {
+            sort_by = "key";
+            sort_sensitive = true;
+            sort_reverse = false;
+            sort_translit = false;
+          };
+        }; # yazi.toml
+      };
     };
 
     gnupg = {
@@ -1905,7 +1953,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-qt.override {
+          pkgs.pinentry-curses.override {
             withLibsecret = true;
           }
         );
@@ -1923,7 +1971,7 @@ in
         }
       );
 
-      startAgent = true;
+      startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
       agentTimeout = null;
     };
 
@@ -1953,17 +2001,7 @@ in
       config = {
         init.defaultBranch = "main";
 
-        credential.helper = "${
-          (pkgs.gitFull.override {
-            guiSupport = true;
-            sendEmailSupport = true;
-            svnSupport = true;
-            withLibsecret = true;
-            withManual = true;
-            withpcre2 = true;
-            withSsh = true;
-          })
-        }/bin/git-credential-libsecret";
+        credential.helper = "${config.programs.git.package}/bin/git-credential-libsecret";
 
         user = {
           name = "Abdullah As-Sadeed";
@@ -2016,13 +2054,42 @@ in
       ];
     };
 
+    uwsm = {
+      enable = true;
+      package = (
+        pkgs.uwsm.override {
+          fumonSupport = true;
+          uuctlSupport = true;
+          uwsmAppSupport = true;
+        }
+      );
+    };
+
     xwayland.enable = true;
+
+    hyprland = {
+      enable = true;
+      package = (
+        pkgs.hyprland.override {
+          debug = false;
+          enableXWayland = true;
+          withSystemd = true;
+          wrapRuntimeDeps = true;
+        }
+      );
+      portalPackage = (
+        pkgs.xdg-desktop-portal-hyprland.override {
+          debug = false;
+        }
+      );
+
+      withUWSM = true;
+      xwayland.enable = true;
+    };
 
     gamemode = {
       enable = true;
-
       enableRenice = true;
-      # settings = { };
     };
 
     dconf = {
@@ -2032,27 +2099,6 @@ in
           lockAll = true;
 
           settings = {
-            "com/github/huluti/Curtail" = {
-              file-attributes = true;
-              metadata = false;
-              new-file = true;
-              recursive = true;
-            };
-
-            "com/github/tenderowl/frog" = {
-              telemetry = false;
-            };
-
-            "io/gitlab/adhami3310/Converter" = {
-              show-less-popular = true;
-            };
-
-            # "org/gnome/desktop/interface" = {
-            #   cursor-theme = config.home-manager.users.root.gtk.cursorTheme.name;
-            #   gtk-theme = config.home-manager.users.root.gtk.theme.name;
-            #   icon-theme = config.home-manager.users.root.gtk.iconTheme.name;
-            # };
-
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
@@ -2098,21 +2144,69 @@ in
               removedev = true;
               unapplied-dev = true;
             };
-
-            "system/locale" = {
-              region = "en_US.UTF-8";
-            };
           };
         }
       ];
     };
 
-    partition-manager = {
+    foot = {
       enable = true;
-      # package = pkgs.kdePackages.partitionmanager;
+      package = pkgs.foot;
+
+      enableBashIntegration = true;
+
+      settings = {
+        main = {
+          term = "foot";
+          login-shell = "no";
+
+          dpi-aware = "yes";
+          initial-window-mode = "windowed";
+          initial-color-theme = "dark";
+          pad = "${toString (design_factor * 2)}x0x0x0 center-when-maximized-and-fullscreen"; # 32
+
+          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
+          box-drawings-uses-font-glyphs = "yes";
+          horizontal-letter-offset = 0;
+          vertical-letter-offset = 0;
+
+          selection-target = "primary";
+        };
+
+        tweak = {
+          sixel = "yes";
+          surface-bit-depth = "16-bit";
+          font-monospace-warn = "yes";
+        };
+
+        security.osc52 = "enabled";
+
+        url = {
+          osc8-underline = "always";
+        };
+
+        bell = {
+          system = "yes";
+        };
+
+        scrollback = {
+          indicator-position = "relative";
+          indicator-format = "line";
+        };
+
+        cursor = {
+          style = "beam";
+          unfocused-style = "hollow";
+          blink = "yes";
+        };
+
+        mouse = {
+          hide-when-typing = "no";
+        };
+      };
     };
 
-    k3b.enable = true;
+    seahorse.enable = true;
 
     system-config-printer.enable = true;
 
@@ -2125,22 +2219,19 @@ in
       );
     };
 
-    kde-pim = {
+    wayvnc = {
       enable = true;
-
-      kontact = true;
-      kmail = true;
-      merkuro = false;
+      package = pkgs.wayvnc;
     };
 
     obs-studio = {
       enable = true;
       package = (
         pkgs.obs-studio.override {
-          alsaSupport = true;
+          alsaSupport = false;
           browserSupport = true;
           pipewireSupport = true;
-          pulseaudioSupport = true;
+          pulseaudioSupport = false;
           scriptingSupport = true;
           withFdk = true;
         }
@@ -2175,21 +2266,11 @@ in
       gdb = true;
     };
 
-    # wireshark = {
-    #   enable = true;
-    #   package = (
-    #     pkgs.wireshark.override {
-    #       withQt = true;
-    #     }
-    #   );
-
-    #   dumpcap.enable = true;
-    #   usbmon.enable = true;
-    # }; # FIXME: Build Failure
-
-    kdeconnect = {
+    localsend = {
       enable = true;
-      # package = pkgs.kdePackages.kdeconnect-kde;
+      package = pkgs.jocalsend;
+
+      openFirewall = true;
     };
   };
 
@@ -2253,6 +2334,7 @@ in
         # reiser4progs # Marked as Broken
         # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
+        aalib
         aapt
         above
         acl
@@ -2271,6 +2353,7 @@ in
         alsa-utils-nhlt
         android-backup-extractor
         androidComposition.androidsdk # Custom Composition # Unfree
+        ansilove
         anydesk # Unfree
         apfsprogs
         apitrace
@@ -2280,12 +2363,18 @@ in
         arduino-cli
         arduino-ide
         arduino-language-server
+        ascii
+        ascii-draw
+        ascii-image-converter
         asciicam
-        asciinema
+        asciinema_3
         asciinema-agg
-        asciinema-scenario
+        asciiquarium-transparent
+        asnmap
+        astroterm
         aurea
         autopsy
+        avbroot
         avrdude
         banner
         bash-language-server
@@ -2294,26 +2383,29 @@ in
         binutils
         binwalk
         bleachbit
-        bluetuith
+        bluetui
         bluez-tools
-        btop
+        brightnessctl
         btrfs-assistant
+        btrfs-heatmap
         btrfs-progs
         bustle
         butt
         calligraphy
-        cava
+        cbonsai
         cdrkit
         celestia
         celt
         certbot-full
         certdump
         chart-testing
+        cicero-tui
         clinfo
+        cliphist
         cloc
+        clock-rs
         cmake
         cmake-language-server
-        cmatrix
         codec2
         codevis
         collision
@@ -2323,7 +2415,7 @@ in
         constrict
         cramfsprogs
         cron
-        crow-translate
+        crosspipe
         cryptsetup
         ctop
         cups-pk-helper
@@ -2331,6 +2423,7 @@ in
         curtail
         cve-bin-tool
         d-spy
+        daemon
         darktable
         dbeaver-bin
         dconf-editor
@@ -2360,6 +2453,7 @@ in
         easyeda2kicad
         ebook2cw
         efibootmgr
+        efivar
         egypt
         elf-dissector
         emblem
@@ -2370,13 +2464,15 @@ in
         exfatprogs
         exiftool
         extract-dtb
-        eyedropper
         f2fs-tools
         fastfetch
         fastlane
+        fd
         fdk_aac
         fdroidcl
         fdt-viewer
+        ferrishot
+        ffpb
         fh
         file
         fileinfo
@@ -2385,23 +2481,25 @@ in
         flatpak-builder
         flatpak-xdg-utils
         flutter
+        font-manager
         fontfor
         freecad
         freesmlauncher # Overlay from Flake
         fritzing
         fstl
+        gama-tui
         gawk
         gcc
         gdb
         ghostunnel
         gimp3-with-plugins
+        git-big-picture
         git-filter-repo
         git-repo
         github-changelog-generator
+        glib
+        globe-cli
         gnome-firmware
-        gnome-font-viewer
-        gnome-frog
-        gnome-multi-writer
         gnome-nettool
         gnugrep
         gnumake
@@ -2418,16 +2516,16 @@ in
         groovy
         gsm
         gtk-vnc
+        gtt
         guestfs-tools
         gzip
-        haruna
         hashcat
         hashcat-utils
         hashes
         hdparm
-        heaptrack
         helm-dashboard
         helm-ls
+        hexpatch
         hfsprogs
         hieroglyphic
         host
@@ -2435,38 +2533,45 @@ in
         hugo
         hw-probe
         hydra-check
+        hyprgraphics
+        hyprland-protocols
+        hyprland-qt-support
+        hyprland-qtutils
+        hyprland-workspaces-tui
+        hyprls
+        hyprpicker
+        hyprshutdown
+        hyprtoolkit
+        hyprutils
+        hyprwayland-scanner
+        hyprwire
         i2c-tools
         iaito
         iftop
+        ifuse
         indent
+        inetutils
         inkscape-with-extensions
         inotify-tools
         input-leap
         interception-tools
         iotop-c
         iw # Required by Airgorah
-        jellyfin-desktop
         jfsutils
         jmc2obj
         jmol
         john
         johnny
         jq
-        json-tui
         jxrlib
-        kdiff3
         kernel-hardening-checker
         kernelshark
         kexec-tools
-        kgeotag
-        kid3-kde
         killall
         kind
         kmod
         kotlin
         kotlin-language-server
-        krename
-        ktimetracker
         kubectl
         kubectl-ai
         kubectl-convert
@@ -2487,15 +2592,13 @@ in
         kubernetes-helm
         kubernetes-metrics-server
         kubeshark
-        kubetui
-        labplot
-        letterpress
         libaom
         libarchive
         libde265
         libfreeaptx
         libhsts
         libilbc
+        libimobiledevice
         libinput
         liblc3
         libnotify
@@ -2508,6 +2611,7 @@ in
         libvpx
         linux-exploit-suggester
         linuxConsoleTools
+        llmfit
         logdy
         logtop
         lorem
@@ -2524,25 +2628,33 @@ in
         lziprecover
         macchanger
         mailcap
+        mapscii
         massdns
         mcaselector
         md-lsp
+        md-tui
         media-downloader
         memtier-benchmark
+        meow
         mermaid-cli
         mesa-demos
+        metadata
         metadata-cleaner
         mfcuk
         mfoc
         minikube
         mixxx
+        mmtui
         monkeys-audio
         motion
         mousai
+        moxnotify
         mt-st
         mtools
         mtr-gui
         musescore
+        ncdu
+        nemu
         nethogs
         nikto
         nilfs-utils
@@ -2551,6 +2663,7 @@ in
         nix-info
         nixd
         nixfmt
+        nixmate
         nixpkgs-reviewFull
         nmap
         ntfs3g
@@ -2559,6 +2672,7 @@ in
         nurl
         nvme-cli
         obexftp
+        oha
         onionshare-gui
         onlyoffice-desktopeditors
         openai-whisper
@@ -2569,33 +2683,36 @@ in
         openjpeg
         openobex
         openssl
+        oterm
+        otree
         p7zip
         paper-clip
         parted
         pbzx
         pciutils
-        pdf4qt
+        pdfarranger
         pe-bear
         pev
         pg_top
+        pipes
         pkg-config
         platformio
+        play
+        playerctl
         podman-compose
-        podman-desktop
         podman-tui
         poop # POOP = Performance Optimizer Observation Platform
         postgres-language-server
         procps
         profile-cleaner
         progress
-        protonup-qt
+        protocol
+        protonup-rs
         ps
         psmisc
         python3Packages.tkinter
         qemu-user
         qemu-utils
-        qjackctl
-        qpwgraph
         qr-backup
         qsstv
         qtrvsim
@@ -2622,6 +2739,7 @@ in
         shellclear
         sherlock
         sipvicious
+        sl
         sleuthkit
         smag
         smartmontools
@@ -2637,16 +2755,15 @@ in
         stenc
         streamlit
         subfinder
-        subtitlecomposer
         svt-av1
         switcheroo
         symlinks
         systemctl-tui
         systemd-lsp
-        systemdgenie
+        tdf
         telegraph
         terminaltexteffects
-        testdisk-qt # qphotorec
+        termshark
         texliveFull
         time
         tpm2-abrmd
@@ -2654,11 +2771,15 @@ in
         tpm2-pkcs11-abrmd
         tpm2-tools
         tpm2-tss
+        traceroute
         traitor
+        tray-tui
         tree
+        treegen
         trufflehog
         trustymail
         tsukae
+        ttl
         tutanota-desktop
         udftools
         uefi-firmware-parser
@@ -2666,6 +2787,8 @@ in
         undollar
         unhide
         unhide-gui
+        uni2ascii
+        unimatrix
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
@@ -2675,6 +2798,7 @@ in
         usbutils
         util-linux
         valgrind
+        vex-tui
         video2x
         virt-top
         virt-v2v
@@ -2685,12 +2809,14 @@ in
         wafw00f
         wakeonlan
         warehouse
+        wavemon
         wayback_machine_downloader
         wayback-machine-archiver
         waycheck
         waydroid-helper
         wayland-utils
         waylevel
+        weathr
         webcamize
         webfontkitgenerator
         websocat
@@ -2698,10 +2824,16 @@ in
         whatfiles
         which
         whois
+        whosthere
+        wifitui
+        windowtolayer
+        wiremix
         wl-clipboard
+        wofi-emoji
         wordbook
         worldpainter
         wpprobe
+        wvkbd # wvkbd-mobintl
         x2goclient
         xar
         xdg-dbus-proxy
@@ -2716,10 +2848,13 @@ in
         yaml-language-server
         yara-x
         yoshimi
+        yq
+        yuview
         zenity
         zenmap
         zfs
         zip
+        zizmor
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -2727,18 +2862,18 @@ in
           gssSupport = true;
           http2Support = true;
           http3Support = true;
-          websocketSupport = true;
           idnSupport = true;
           opensslSupport = true;
           pslSupport = true;
           rtmpSupport = true;
           scpSupport = true;
+          websocketSupport = true;
           zlibSupport = true;
           zstdSupport = true;
         })
         (
           (ffmpeg-full.override {
-            withAlsa = true;
+            withAlsa = false;
             withAom = true;
             withAribb24 = true;
             withAribcaption = true;
@@ -2770,7 +2905,7 @@ in
             withHarfbuzz = true;
             withIconv = true;
             withIlbc = true;
-            withJack = true;
+            withJack = false;
             withJxl = true;
             withKvazaar = true;
             withLadspa = true;
@@ -2793,7 +2928,7 @@ in
             withOpenmpt = true;
             withOpus = true;
             withPlacebo = true;
-            withPulse = true;
+            withPulse = false;
             withQrencode = true;
             withQuirc = true;
             withRav1e = true;
@@ -2846,14 +2981,14 @@ in
           })
         )
         (kicad.override {
+          with3d = true;
+          withI18n = true;
+          withNgspice = true;
+          withScripting = true;
           addons = with pkgs.kicadAddons; [
             kikit
             kikit-library
           ];
-          withNgspice = true;
-          withScripting = true;
-          with3d = true;
-          withI18n = true;
         })
         (python315FreeThreading.override {
           bluezSupport = true;
@@ -2866,6 +3001,14 @@ in
           withOpenssl = true;
           withReadline = true;
           withSqlite = true;
+        })
+        (qbittorrent.override {
+          guiSupport = true;
+          trackerSearch = true;
+          webuiSupport = true;
+        })
+        (qmplay2-qt6.override {
+          qtVersion = "6";
         })
         (sdrpp.override {
           airspy_source = true;
@@ -2891,8 +3034,15 @@ in
           spyserver_source = true;
           usrp_source = true;
         })
-        (pkgs.spice-gtk.override {
+        (spice-gtk.override {
           withPolkit = true;
+        })
+        (testdisk-qt.override {
+          enableExtFs = true;
+          enableNtfs = true;
+        }) # qphotorec
+        (tigervnc.override {
+          waylandSupport = true;
         })
         (tor-browser.override {
           audioSupport = true;
@@ -2900,13 +3050,13 @@ in
           libvaSupport = true;
           mediaSupport = true;
           pipewireSupport = true;
-          pulseaudioSupport = true;
+          pulseaudioSupport = false;
           waylandSupport = true;
         })
-        (ventoy-full-qt.override {
-          withXfs = true;
+        (ventoy-full-gtk.override {
           withExt4 = true;
           withNtfs = true;
+          withXfs = true;
         })
         (virt-viewer.override {
           spiceSupport = true;
@@ -2918,9 +3068,9 @@ in
         (wget2.override {
           sslSupport = true;
         })
-        plasmaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.rc2nix
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
+        config.home-manager.users.root.services.udiskie.package
         config.services.phpfpm.phpPackage
       ]
       ++ config.boot.extraModulePackages
@@ -2973,21 +3123,21 @@ in
           webrtcAudioProcessingSupport = true;
         })
         (gst-plugins-base.override {
-          enableAlsa = true;
+          enableAlsa = false;
           enableCdparanoia = true;
           enableDocumentation = true;
           enableWayland = true;
         })
         (gst-plugins-good.override {
           enableDocumentation = true;
-          enableJack = true;
+          enableJack = false;
           enableWayland = true;
           gtkSupport = true;
           qt6Support = true;
         })
         (gst-plugins-ugly.override {
-          enableGplPlugins = true;
           enableDocumentation = true;
+          enableGplPlugins = true;
         })
         (gst-vaapi.override {
           enableDocumentation = true;
@@ -2995,331 +3145,6 @@ in
         (gstreamer.override {
           enableDocumentation = true;
         })
-      ])
-      ++ (with kdePackages; [
-        # maplibre-native-qt # Build Failure
-        # waylib # Build Failure
-        accessibility-inspector
-        accounts-qt
-        akonadi
-        akonadi-calendar
-        akonadi-calendar-tools
-        akonadi-contacts
-        akonadi-import-wizard
-        akonadi-mime
-        akonadi-search
-        akonadiconsole
-        akregator
-        alpaka
-        applet-window-buttons6
-        ark
-        attica
-        audex
-        audiocd-kio
-        audiotube
-        aurorae
-        baloo
-        baloo-widgets
-        bluedevil
-        bluez-qt
-        calendarsupport
-        colord-kde
-        dolphin
-        dolphin-plugins
-        drkonqi
-        dynamic-workspaces
-        eventviews
-        extra-cmake-modules
-        fcitx5-configtool
-        fcitx5-qt
-        fcitx5-with-addons
-        ffmpegthumbs
-        filelight
-        flatpak-kcm
-        frameworkintegration
-        futuresql
-        glaxnimate
-        gwenview
-        incidenceeditor
-        isoimagewriter
-        kaccounts-integration
-        kaccounts-providers
-        kactivitymanagerd
-        kaddressbook
-        kalarm
-        kalzium
-        kamera
-        kamoso
-        karchive
-        karousel
-        kasts
-        kauth
-        kbackup
-        kbookmarks
-        kcachegrind
-        kcalc
-        kcalendarcore
-        kcalutils
-        kcharselect
-        kcmutils
-        kcodecs
-        kcolorchooser
-        kcolorpicker
-        kcolorscheme
-        kcompletion
-        kconfig
-        kconfigwidgets
-        kcontacts
-        kcoreaddons
-        kcrash
-        kcron
-        kdav
-        kdbusaddons
-        kde-gtk-config
-        kde-inotify-survey
-        kdebugsettings
-        kdeclarative
-        kdecoration
-        kded
-        kdegraphics-mobipocket
-        kdegraphics-thumbnailers
-        kdenetwork-filesharing
-        kdenlive
-        kdepim-addons
-        kdepim-runtime
-        kdeplasma-addons
-        kdesdk-kio
-        kdesdk-thumbnailers
-        kdesu
-        kdf
-        kdiagram
-        kdialog
-        keysmith
-        kfilemetadata
-        kfind
-        kgamma
-        kget
-        kglobalaccel
-        kglobalacceld
-        kgpg
-        kgraphviewer
-        kguiaddons
-        khelpcenter
-        kholidays
-        ki18n
-        kiconthemes
-        kidentitymanagement
-        kidletime
-        kig
-        kimageformats
-        kimagemapeditor
-        kimap
-        kinfocenter
-        kio
-        kio-admin
-        kio-extras
-        kio-extras-kf5
-        kio-fuse
-        kio-gdrive
-        kio-zeroconf
-        kitemviews
-        kjobwidgets
-        kjournald
-        kldap
-        kleopatra
-        kmag
-        kmahjongg
-        kmail-account-wizard
-        kmailtransport
-        kmbox
-        kmenuedit
-        kmime
-        kmousetool
-        kmouth
-        kmplot
-        knotifications
-        knotifyconfig
-        kolourpaint
-        kompare
-        konsole
-        kontactinterface
-        kontrast
-        konversation
-        kopeninghours
-        korganizer
-        kpackage
-        kparts
-        kpeople
-        kpimtextedit
-        kpipewire
-        kpkpass
-        kpmcore
-        kqtquickcharts
-        kquickcharts
-        kquickimageedit
-        krdc
-        krdp
-        krecorder
-        krfb
-        krohnkite
-        kronometer
-        kruler
-        krunner
-        ksanecore
-        kscreen
-        kscreenlocker
-        kservice
-        ksmtp
-        ksshaskpass
-        kstars
-        kstatusnotifieritem
-        ksvg
-        ksystemlog
-        ksystemstats
-        ktextaddons
-        ktexttemplate
-        ktextwidgets
-        ktimer
-        ktnef
-        ktorrent
-        kubrick
-        kunifiedpush
-        kunitconversion
-        kup
-        kwallet
-        kwalletmanager
-        kwave
-        kwayland
-        kwayland-integration
-        kweather
-        kweathercore
-        kwidgetsaddons
-        kwin
-        kwindowsystem
-        kwrited
-        kzones
-        layer-shell-qt
-        libgravatar
-        libiodata
-        libkcddb
-        libkdcraw
-        libkdepim
-        libkexiv2
-        libkgapi
-        libkleo
-        libkomparediff2
-        libksane
-        libkscreen
-        libksieve
-        libksysguard
-        libktorrent
-        libplasma
-        libqaccessibilityclient
-        libqglviewer
-        lokalize
-        mailcommon
-        mailimporter
-        marble
-        markdownpart
-        massif-visualizer
-        mbox-importer
-        messagelib
-        mimetreeparser
-        mlt
-        modemmanager-qt
-        networkmanager-qt
-        okteta
-        okular
-        phonon
-        pim-data-exporter
-        pim-sieve-editor
-        pimcommon
-        plasma-activities
-        plasma-activities-stats
-        plasma-browser-integration
-        plasma-desktop
-        plasma-dialer
-        plasma-disks
-        plasma-firewall
-        plasma-integration
-        plasma-keyboard
-        plasma-nm
-        plasma-pa
-        plasma-systemmonitor
-        plasma-thunderbolt
-        plasma-vault
-        plasma-wayland-protocols
-        plasma-workspace
-        plasma-workspace-wallpapers
-        plasmatube
-        plymouth-kcm
-        polkit-kde-agent-1
-        polkit-qt-1
-        poppler
-        powerdevil
-        print-manager
-        prison
-        pulseaudio-qt
-        qca
-        qcoro
-        qcustomplot
-        qgpgme
-        qhotkey
-        qrca
-        qt-color-widgets
-        qt3d
-        qt6gtk2
-        qtbase
-        qtcharts
-        qtconnectivity
-        qtgraphs
-        qtgrpc
-        qtimageformats
-        qtkeychain
-        qtlocation
-        qtmultimedia
-        qtnetworkauth
-        qtpositioning
-        qtremoteobjects
-        qtsensors
-        qtserialbus
-        qtserialport
-        qtshadertools
-        qtspeech
-        qtspell
-        qtsvg
-        qttools
-        qttranslations
-        qtutilities
-        qtvirtualkeyboard
-        qtwayland
-        qtwebchannel
-        qtwebengine
-        qtwebsockets
-        qtwebview
-        quazip
-        qxlsx
-        signon-kwallet-extension
-        signond
-        skanpage
-        solid
-        sonnet
-        spacebar
-        spectacle
-        step
-        svgpart
-        sweeper
-        syndication
-        syntax-highlighting
-        systemsettings
-        taglib
-        timed
-        tokodon
-        wallpaper-engine-plugin
-        wayland
-        wayland-protocols
-        wayqt
-        zanshin
       ])
       ++ (with kubernetes-helmPlugins; [
         helm-diff
@@ -3367,12 +3192,6 @@ in
         xxd
       ]);
 
-    plasma6.excludePackages = with pkgs.kdePackages; [
-      discover
-      elisa
-      kate
-    ];
-
     wordlist = {
       enable = true;
       lists = {
@@ -3398,18 +3217,16 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/chromium";
+      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
     };
 
-    sessionVariables = {
-      NIXOS_OZONE_WL = "1";
-    };
+    # sessionVariables = { };
 
     shellAliases = {
       unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
       bind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/bind'";
 
-      clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
+      clean_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
     };
 
     # extraInit = '''';
@@ -3421,6 +3238,53 @@ in
   };
 
   xdg = {
+    sounds.enable = true;
+    icons.enable = true;
+    menus.enable = true;
+
+    autostart.enable = true;
+
+    terminal-exec = {
+      enable = true;
+      package = pkgs.xdg-terminal-exec;
+
+      settings = {
+        default = [
+          "foot.desktop"
+        ];
+      };
+    };
+
+    portal = {
+      enable = true;
+      extraPortals = with pkgs; [
+        xdg-desktop-portal-gtk
+        (pkgs.xdg-desktop-portal-hyprland.override {
+          debug = false;
+        })
+      ];
+
+      xdgOpenUsePortal = true;
+
+      config = {
+        common = {
+          default = [
+            "hyprland"
+            "gtk"
+          ];
+
+          "org.freedesktop.impl.portal.FileChooser" = [
+            "gtk"
+          ];
+
+          "org.freedesktop.impl.portal.Secret" = [
+            "gnome-keyring"
+          ];
+        };
+
+      };
+    };
+
     mime = {
       enable = true;
 
@@ -3430,7 +3294,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "org.kde.dolphin.desktop";
+        "inode/directory" = "yazi.desktop";
 
         "text/1d-interleaved-parityfec" = "codium.desktop";
         "text/cache-manifest" = "codium.desktop";
@@ -3530,351 +3394,351 @@ in
         "text/xml" = "codium.desktop";
         "text/xml-external-parsed-entity" = "codium.desktop";
 
-        "image/aces" = "org.kde.gwenview.desktopp";
-        "image/apng" = "org.kde.gwenview.desktopp";
-        "image/avci" = "org.kde.gwenview.desktopp";
-        "image/avcs" = "org.kde.gwenview.desktopp";
-        "image/avif" = "org.kde.gwenview.desktopp";
-        "image/bmp" = "org.kde.gwenview.desktopp";
-        "image/cgm" = "org.kde.gwenview.desktopp";
-        "image/dicom-rle" = "org.kde.gwenview.desktopp";
-        "image/dpx" = "org.kde.gwenview.desktopp";
-        "image/emf" = "org.kde.gwenview.desktopp";
-        "image/fits" = "org.kde.gwenview.desktopp";
-        "image/g3fax" = "org.kde.gwenview.desktopp";
-        "image/gif" = "org.kde.gwenview.desktopp";
-        "image/heic-sequence" = "org.kde.gwenview.desktopp";
-        "image/heic" = "org.kde.gwenview.desktopp";
-        "image/heif-sequence" = "org.kde.gwenview.desktopp";
-        "image/heif" = "org.kde.gwenview.desktopp";
-        "image/hej2k" = "org.kde.gwenview.desktopp";
-        "image/hsj2" = "org.kde.gwenview.desktopp";
-        "image/ief" = "org.kde.gwenview.desktopp";
-        "image/j2c" = "org.kde.gwenview.desktopp";
-        "image/jaii" = "org.kde.gwenview.desktopp";
-        "image/jais" = "org.kde.gwenview.desktopp";
-        "image/jls" = "org.kde.gwenview.desktopp";
-        "image/jp2" = "org.kde.gwenview.desktopp";
-        "image/jpeg" = "org.kde.gwenview.desktopp";
-        "image/jph" = "org.kde.gwenview.desktopp";
-        "image/jphc" = "org.kde.gwenview.desktopp";
-        "image/jpm" = "org.kde.gwenview.desktopp";
-        "image/jpx" = "org.kde.gwenview.desktopp";
-        "image/jxl" = "org.kde.gwenview.desktopp";
-        "image/jxr" = "org.kde.gwenview.desktopp";
-        "image/jxrA" = "org.kde.gwenview.desktopp";
-        "image/jxrS" = "org.kde.gwenview.desktopp";
-        "image/jxs" = "org.kde.gwenview.desktopp";
-        "image/jxsc" = "org.kde.gwenview.desktopp";
-        "image/jxsi" = "org.kde.gwenview.desktopp";
-        "image/jxss" = "org.kde.gwenview.desktopp";
-        "image/ktx" = "org.kde.gwenview.desktopp";
-        "image/ktx2" = "org.kde.gwenview.desktopp";
-        "image/naplps" = "org.kde.gwenview.desktopp";
-        "image/png" = "org.kde.gwenview.desktopp";
-        "image/prs.btif" = "org.kde.gwenview.desktopp";
-        "image/prs.pti" = "org.kde.gwenview.desktopp";
-        "image/pwg-raster" = "org.kde.gwenview.desktopp";
-        "image/svg+xml" = "org.kde.gwenview.desktopp";
-        "image/t38" = "org.kde.gwenview.desktopp";
-        "image/tiff-fx" = "org.kde.gwenview.desktopp";
-        "image/tiff" = "org.kde.gwenview.desktopp";
-        "image/vnd.adobe.photoshop" = "org.kde.gwenview.desktopp";
-        "image/vnd.airzip.accelerator.azv" = "org.kde.gwenview.desktopp";
-        "image/vnd.blockfact.facti" = "org.kde.gwenview.desktopp";
-        "image/vnd.clip" = "org.kde.gwenview.desktopp";
-        "image/vnd.cns.inf2" = "org.kde.gwenview.desktopp";
-        "image/vnd.dece.graphic" = "org.kde.gwenview.desktopp";
-        "image/vnd.djvu" = "org.kde.gwenview.desktopp";
-        "image/vnd.dvb.subtitle" = "org.kde.gwenview.desktopp";
-        "image/vnd.dwg" = "org.kde.gwenview.desktopp";
-        "image/vnd.dxf" = "org.kde.gwenview.desktopp";
-        "image/vnd.fastbidsheet" = "org.kde.gwenview.desktopp";
-        "image/vnd.fpx" = "org.kde.gwenview.desktopp";
-        "image/vnd.fst" = "org.kde.gwenview.desktopp";
-        "image/vnd.fujixerox.edmics-mmr" = "org.kde.gwenview.desktopp";
-        "image/vnd.fujixerox.edmics-rlc" = "org.kde.gwenview.desktopp";
-        "image/vnd.globalgraphics.pgb" = "org.kde.gwenview.desktopp";
-        "image/vnd.microsoft.icon" = "org.kde.gwenview.desktopp";
-        "image/vnd.mix" = "org.kde.gwenview.desktopp";
-        "image/vnd.mozilla.apng" = "org.kde.gwenview.desktopp";
-        "image/vnd.ms-modi" = "org.kde.gwenview.desktopp";
-        "image/vnd.net-fpx" = "org.kde.gwenview.desktopp";
-        "image/vnd.pco.b16" = "org.kde.gwenview.desktopp";
-        "image/vnd.radiance" = "org.kde.gwenview.desktopp";
-        "image/vnd.sealed.png" = "org.kde.gwenview.desktopp";
-        "image/vnd.sealedmedia.softseal.gif" = "org.kde.gwenview.desktopp";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.kde.gwenview.desktopp";
-        "image/vnd.svf" = "org.kde.gwenview.desktopp";
-        "image/vnd.tencent.tap" = "org.kde.gwenview.desktopp";
-        "image/vnd.valve.source.texture" = "org.kde.gwenview.desktopp";
-        "image/vnd.wap.wbmp" = "org.kde.gwenview.desktopp";
-        "image/vnd.xiff" = "org.kde.gwenview.desktopp";
-        "image/vnd.zbrush.pcx" = "org.kde.gwenview.desktopp";
-        "image/webp" = "org.kde.gwenview.desktopp";
-        "image/wmf" = "org.kde.gwenview.desktopp";
-        "image/x-emf" = "org.kde.gwenview.desktopp";
-        "image/x-wmf" = "org.kde.gwenview.desktopp";
+        "image/aces" = "imv.desktop";
+        "image/apng" = "imv.desktop";
+        "image/avci" = "imv.desktop";
+        "image/avcs" = "imv.desktop";
+        "image/avif" = "imv.desktop";
+        "image/bmp" = "imv.desktop";
+        "image/cgm" = "imv.desktop";
+        "image/dicom-rle" = "imv.desktop";
+        "image/dpx" = "imv.desktop";
+        "image/emf" = "imv.desktop";
+        "image/fits" = "imv.desktop";
+        "image/g3fax" = "imv.desktop";
+        "image/gif" = "imv.desktop";
+        "image/heic-sequence" = "imv.desktop";
+        "image/heic" = "imv.desktop";
+        "image/heif-sequence" = "imv.desktop";
+        "image/heif" = "imv.desktop";
+        "image/hej2k" = "imv.desktop";
+        "image/hsj2" = "imv.desktop";
+        "image/ief" = "imv.desktop";
+        "image/j2c" = "imv.desktop";
+        "image/jaii" = "imv.desktop";
+        "image/jais" = "imv.desktop";
+        "image/jls" = "imv.desktop";
+        "image/jp2" = "imv.desktop";
+        "image/jpeg" = "imv.desktop";
+        "image/jph" = "imv.desktop";
+        "image/jphc" = "imv.desktop";
+        "image/jpm" = "imv.desktop";
+        "image/jpx" = "imv.desktop";
+        "image/jxl" = "imv.desktop";
+        "image/jxr" = "imv.desktop";
+        "image/jxrA" = "imv.desktop";
+        "image/jxrS" = "imv.desktop";
+        "image/jxs" = "imv.desktop";
+        "image/jxsc" = "imv.desktop";
+        "image/jxsi" = "imv.desktop";
+        "image/jxss" = "imv.desktop";
+        "image/ktx" = "imv.desktop";
+        "image/ktx2" = "imv.desktop";
+        "image/naplps" = "imv.desktop";
+        "image/png" = "imv.desktop";
+        "image/prs.btif" = "imv.desktop";
+        "image/prs.pti" = "imv.desktop";
+        "image/pwg-raster" = "imv.desktop";
+        "image/svg+xml" = "imv.desktop";
+        "image/t38" = "imv.desktop";
+        "image/tiff-fx" = "imv.desktop";
+        "image/tiff" = "imv.desktop";
+        "image/vnd.adobe.photoshop" = "imv.desktop";
+        "image/vnd.airzip.accelerator.azv" = "imv.desktop";
+        "image/vnd.blockfact.facti" = "imv.desktop";
+        "image/vnd.clip" = "imv.desktop";
+        "image/vnd.cns.inf2" = "imv.desktop";
+        "image/vnd.dece.graphic" = "imv.desktop";
+        "image/vnd.djvu" = "imv.desktop";
+        "image/vnd.dvb.subtitle" = "imv.desktop";
+        "image/vnd.dwg" = "imv.desktop";
+        "image/vnd.dxf" = "imv.desktop";
+        "image/vnd.fastbidsheet" = "imv.desktop";
+        "image/vnd.fpx" = "imv.desktop";
+        "image/vnd.fst" = "imv.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "imv.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "imv.desktop";
+        "image/vnd.globalgraphics.pgb" = "imv.desktop";
+        "image/vnd.microsoft.icon" = "imv.desktop";
+        "image/vnd.mix" = "imv.desktop";
+        "image/vnd.mozilla.apng" = "imv.desktop";
+        "image/vnd.ms-modi" = "imv.desktop";
+        "image/vnd.net-fpx" = "imv.desktop";
+        "image/vnd.pco.b16" = "imv.desktop";
+        "image/vnd.radiance" = "imv.desktop";
+        "image/vnd.sealed.png" = "imv.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "imv.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "imv.desktop";
+        "image/vnd.svf" = "imv.desktop";
+        "image/vnd.tencent.tap" = "imv.desktop";
+        "image/vnd.valve.source.texture" = "imv.desktop";
+        "image/vnd.wap.wbmp" = "imv.desktop";
+        "image/vnd.xiff" = "imv.desktop";
+        "image/vnd.zbrush.pcx" = "imv.desktop";
+        "image/webp" = "imv.desktop";
+        "image/wmf" = "imv.desktop";
+        "image/x-emf" = "imv.desktop";
+        "image/x-wmf" = "imv.desktop";
 
-        "audio/1d-interleaved-parityfec" = "org.kde.haruna.desktop";
-        "audio/32kadpcm" = "org.kde.haruna.desktop";
-        "audio/3gpp" = "org.kde.haruna.desktop";
-        "audio/3gpp2" = "org.kde.haruna.desktop";
-        "audio/aac" = "org.kde.haruna.desktop";
-        "audio/ac3" = "org.kde.haruna.desktop";
-        "audio/AMR-WB" = "org.kde.haruna.desktop";
-        "audio/amr-wb+" = "org.kde.haruna.desktop";
-        "audio/AMR" = "org.kde.haruna.desktop";
-        "audio/aptx" = "org.kde.haruna.desktop";
-        "audio/asc" = "org.kde.haruna.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "org.kde.haruna.desktop";
-        "audio/ATRAC-X" = "org.kde.haruna.desktop";
-        "audio/ATRAC3" = "org.kde.haruna.desktop";
-        "audio/basic" = "org.kde.haruna.desktop";
-        "audio/BV16" = "org.kde.haruna.desktop";
-        "audio/BV32" = "org.kde.haruna.desktop";
-        "audio/clearmode" = "org.kde.haruna.desktop";
-        "audio/CN" = "org.kde.haruna.desktop";
-        "audio/DAT12" = "org.kde.haruna.desktop";
-        "audio/dls" = "org.kde.haruna.desktop";
-        "audio/dsr-es201108" = "org.kde.haruna.desktop";
-        "audio/dsr-es202050" = "org.kde.haruna.desktop";
-        "audio/dsr-es202211" = "org.kde.haruna.desktop";
-        "audio/dsr-es202212" = "org.kde.haruna.desktop";
-        "audio/DV" = "org.kde.haruna.desktop";
-        "audio/DVI4" = "org.kde.haruna.desktop";
-        "audio/eac3" = "org.kde.haruna.desktop";
-        "audio/encaprtp" = "org.kde.haruna.desktop";
-        "audio/EVRC-QCP" = "org.kde.haruna.desktop";
-        "audio/EVRC" = "org.kde.haruna.desktop";
-        "audio/EVRC0" = "org.kde.haruna.desktop";
-        "audio/EVRC1" = "org.kde.haruna.desktop";
-        "audio/EVRCB" = "org.kde.haruna.desktop";
-        "audio/EVRCB0" = "org.kde.haruna.desktop";
-        "audio/EVRCB1" = "org.kde.haruna.desktop";
-        "audio/EVRCNW" = "org.kde.haruna.desktop";
-        "audio/EVRCNW0" = "org.kde.haruna.desktop";
-        "audio/EVRCNW1" = "org.kde.haruna.desktop";
-        "audio/EVRCWB" = "org.kde.haruna.desktop";
-        "audio/EVRCWB0" = "org.kde.haruna.desktop";
-        "audio/EVRCWB1" = "org.kde.haruna.desktop";
-        "audio/EVS" = "org.kde.haruna.desktop";
-        "audio/flac" = "org.kde.haruna.desktop";
-        "audio/flexfec" = "org.kde.haruna.desktop";
-        "audio/fwdred" = "org.kde.haruna.desktop";
-        "audio/G711-0" = "org.kde.haruna.desktop";
-        "audio/G719" = "org.kde.haruna.desktop";
-        "audio/G722" = "org.kde.haruna.desktop";
-        "audio/G7221" = "org.kde.haruna.desktop";
-        "audio/G723" = "org.kde.haruna.desktop";
-        "audio/G726-16" = "org.kde.haruna.desktop";
-        "audio/G726-24" = "org.kde.haruna.desktop";
-        "audio/G726-32" = "org.kde.haruna.desktop";
-        "audio/G726-40" = "org.kde.haruna.desktop";
-        "audio/G728" = "org.kde.haruna.desktop";
-        "audio/G729" = "org.kde.haruna.desktop";
-        "audio/G7291" = "org.kde.haruna.desktop";
-        "audio/G729D" = "org.kde.haruna.desktop";
-        "audio/G729E" = "org.kde.haruna.desktop";
-        "audio/GSM-EFR" = "org.kde.haruna.desktop";
-        "audio/GSM-HR-08" = "org.kde.haruna.desktop";
-        "audio/GSM" = "org.kde.haruna.desktop";
-        "audio/iLBC" = "org.kde.haruna.desktop";
-        "audio/ip-mr_v2.5" = "org.kde.haruna.desktop";
-        "audio/L16" = "org.kde.haruna.desktop";
-        "audio/L20" = "org.kde.haruna.desktop";
-        "audio/L24" = "org.kde.haruna.desktop";
-        "audio/L8" = "org.kde.haruna.desktop";
-        "audio/LPC" = "org.kde.haruna.desktop";
-        "audio/matroska" = "org.kde.haruna.desktop";
-        "audio/MELP" = "org.kde.haruna.desktop";
-        "audio/MELP1200" = "org.kde.haruna.desktop";
-        "audio/MELP2400" = "org.kde.haruna.desktop";
-        "audio/MELP600" = "org.kde.haruna.desktop";
-        "audio/mhas" = "org.kde.haruna.desktop";
-        "audio/midi-clip" = "org.kde.haruna.desktop";
-        "audio/mobile-xmf" = "org.kde.haruna.desktop";
-        "audio/mp4" = "org.kde.haruna.desktop";
-        "audio/MP4A-LATM" = "org.kde.haruna.desktop";
-        "audio/mpa-robust" = "org.kde.haruna.desktop";
-        "audio/MPA" = "org.kde.haruna.desktop";
-        "audio/mpeg" = "org.kde.haruna.desktop";
-        "audio/mpeg4-generic" = "org.kde.haruna.desktop";
-        "audio/ogg" = "org.kde.haruna.desktop";
-        "audio/opus" = "org.kde.haruna.desktop";
-        "audio/parityfec" = "org.kde.haruna.desktop";
-        "audio/PCMA-WB" = "org.kde.haruna.desktop";
-        "audio/PCMA" = "org.kde.haruna.desktop";
-        "audio/PCMU-WB" = "org.kde.haruna.desktop";
-        "audio/PCMU" = "org.kde.haruna.desktop";
-        "audio/prs.sid" = "org.kde.haruna.desktop";
-        "audio/QCELP" = "org.kde.haruna.desktop";
-        "audio/raptorfec" = "org.kde.haruna.desktop";
-        "audio/RED" = "org.kde.haruna.desktop";
-        "audio/rtp-enc-aescm128" = "org.kde.haruna.desktop";
-        "audio/rtp-midi" = "org.kde.haruna.desktop";
-        "audio/rtploopback" = "org.kde.haruna.desktop";
-        "audio/rtx" = "org.kde.haruna.desktop";
-        "audio/scip" = "org.kde.haruna.desktop";
-        "audio/SMV-QCP" = "org.kde.haruna.desktop";
-        "audio/SMV" = "org.kde.haruna.desktop";
-        "audio/SMV0" = "org.kde.haruna.desktop";
-        "audio/sofa" = "org.kde.haruna.desktop";
-        "audio/soundfont" = "org.kde.haruna.desktop";
-        "audio/sp-midi" = "org.kde.haruna.desktop";
-        "audio/speex" = "org.kde.haruna.desktop";
-        "audio/t140c" = "org.kde.haruna.desktop";
-        "audio/t38" = "org.kde.haruna.desktop";
-        "audio/telephone-event" = "org.kde.haruna.desktop";
-        "audio/TETRA_ACELP_BB" = "org.kde.haruna.desktop";
-        "audio/TETRA_ACELP" = "org.kde.haruna.desktop";
-        "audio/tone" = "org.kde.haruna.desktop";
-        "audio/TSVCIS" = "org.kde.haruna.desktop";
-        "audio/UEMCLIP" = "org.kde.haruna.desktop";
-        "audio/ulpfec" = "org.kde.haruna.desktop";
-        "audio/usac" = "org.kde.haruna.desktop";
-        "audio/VDVI" = "org.kde.haruna.desktop";
-        "audio/VMR-WB" = "org.kde.haruna.desktop";
-        "audio/vnd.3gpp.iufp" = "org.kde.haruna.desktop";
-        "audio/vnd.4SB" = "org.kde.haruna.desktop";
-        "audio/vnd.audiokoz" = "org.kde.haruna.desktop";
-        "audio/vnd.blockfact.facta" = "org.kde.haruna.desktop";
-        "audio/vnd.CELP" = "org.kde.haruna.desktop";
-        "audio/vnd.cisco.nse" = "org.kde.haruna.desktop";
-        "audio/vnd.cmles.radio-events" = "org.kde.haruna.desktop";
-        "audio/vnd.cns.anp1" = "org.kde.haruna.desktop";
-        "audio/vnd.cns.inf1" = "org.kde.haruna.desktop";
-        "audio/vnd.dece.audio" = "org.kde.haruna.desktop";
-        "audio/vnd.digital-winds" = "org.kde.haruna.desktop";
-        "audio/vnd.dlna.adts" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.heaac.1" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.heaac.2" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.mlp" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.mps" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.pl2" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.pl2x" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.pl2z" = "org.kde.haruna.desktop";
-        "audio/vnd.dolby.pulse.1" = "org.kde.haruna.desktop";
-        "audio/vnd.dra" = "org.kde.haruna.desktop";
-        "audio/vnd.dts.hd" = "org.kde.haruna.desktop";
-        "audio/vnd.dts.uhd" = "org.kde.haruna.desktop";
-        "audio/vnd.dts" = "org.kde.haruna.desktop";
-        "audio/vnd.dvb.file" = "org.kde.haruna.desktop";
-        "audio/vnd.everad.plj" = "org.kde.haruna.desktop";
-        "audio/vnd.hns.audio" = "org.kde.haruna.desktop";
-        "audio/vnd.lucent.voice" = "org.kde.haruna.desktop";
-        "audio/vnd.ms-playready.media.pya" = "org.kde.haruna.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "org.kde.haruna.desktop";
-        "audio/vnd.nortel.vbk" = "org.kde.haruna.desktop";
-        "audio/vnd.nuera.ecelp4800" = "org.kde.haruna.desktop";
-        "audio/vnd.nuera.ecelp7470" = "org.kde.haruna.desktop";
-        "audio/vnd.nuera.ecelp9600" = "org.kde.haruna.desktop";
-        "audio/vnd.octel.sbc" = "org.kde.haruna.desktop";
-        "audio/vnd.presonus.multitrack" = "org.kde.haruna.desktop";
-        "audio/vnd.qcelp" = "org.kde.haruna.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "org.kde.haruna.desktop";
-        "audio/vnd.rip" = "org.kde.haruna.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "org.kde.haruna.desktop";
-        "audio/vnd.vmx.cvsd" = "org.kde.haruna.desktop";
-        "audio/vorbis-config" = "org.kde.haruna.desktop";
-        "audio/vorbis" = "org.kde.haruna.desktop";
+        "audio/1d-interleaved-parityfec" = "QMPlay2.desktop";
+        "audio/32kadpcm" = "QMPlay2.desktop";
+        "audio/3gpp" = "QMPlay2.desktop";
+        "audio/3gpp2" = "QMPlay2.desktop";
+        "audio/aac" = "QMPlay2.desktop";
+        "audio/ac3" = "QMPlay2.desktop";
+        "audio/AMR-WB" = "QMPlay2.desktop";
+        "audio/amr-wb+" = "QMPlay2.desktop";
+        "audio/AMR" = "QMPlay2.desktop";
+        "audio/aptx" = "QMPlay2.desktop";
+        "audio/asc" = "QMPlay2.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "QMPlay2.desktop";
+        "audio/ATRAC-X" = "QMPlay2.desktop";
+        "audio/ATRAC3" = "QMPlay2.desktop";
+        "audio/basic" = "QMPlay2.desktop";
+        "audio/BV16" = "QMPlay2.desktop";
+        "audio/BV32" = "QMPlay2.desktop";
+        "audio/clearmode" = "QMPlay2.desktop";
+        "audio/CN" = "QMPlay2.desktop";
+        "audio/DAT12" = "QMPlay2.desktop";
+        "audio/dls" = "QMPlay2.desktop";
+        "audio/dsr-es201108" = "QMPlay2.desktop";
+        "audio/dsr-es202050" = "QMPlay2.desktop";
+        "audio/dsr-es202211" = "QMPlay2.desktop";
+        "audio/dsr-es202212" = "QMPlay2.desktop";
+        "audio/DV" = "QMPlay2.desktop";
+        "audio/DVI4" = "QMPlay2.desktop";
+        "audio/eac3" = "QMPlay2.desktop";
+        "audio/encaprtp" = "QMPlay2.desktop";
+        "audio/EVRC-QCP" = "QMPlay2.desktop";
+        "audio/EVRC" = "QMPlay2.desktop";
+        "audio/EVRC0" = "QMPlay2.desktop";
+        "audio/EVRC1" = "QMPlay2.desktop";
+        "audio/EVRCB" = "QMPlay2.desktop";
+        "audio/EVRCB0" = "QMPlay2.desktop";
+        "audio/EVRCB1" = "QMPlay2.desktop";
+        "audio/EVRCNW" = "QMPlay2.desktop";
+        "audio/EVRCNW0" = "QMPlay2.desktop";
+        "audio/EVRCNW1" = "QMPlay2.desktop";
+        "audio/EVRCWB" = "QMPlay2.desktop";
+        "audio/EVRCWB0" = "QMPlay2.desktop";
+        "audio/EVRCWB1" = "QMPlay2.desktop";
+        "audio/EVS" = "QMPlay2.desktop";
+        "audio/flac" = "QMPlay2.desktop";
+        "audio/flexfec" = "QMPlay2.desktop";
+        "audio/fwdred" = "QMPlay2.desktop";
+        "audio/G711-0" = "QMPlay2.desktop";
+        "audio/G719" = "QMPlay2.desktop";
+        "audio/G722" = "QMPlay2.desktop";
+        "audio/G7221" = "QMPlay2.desktop";
+        "audio/G723" = "QMPlay2.desktop";
+        "audio/G726-16" = "QMPlay2.desktop";
+        "audio/G726-24" = "QMPlay2.desktop";
+        "audio/G726-32" = "QMPlay2.desktop";
+        "audio/G726-40" = "QMPlay2.desktop";
+        "audio/G728" = "QMPlay2.desktop";
+        "audio/G729" = "QMPlay2.desktop";
+        "audio/G7291" = "QMPlay2.desktop";
+        "audio/G729D" = "QMPlay2.desktop";
+        "audio/G729E" = "QMPlay2.desktop";
+        "audio/GSM-EFR" = "QMPlay2.desktop";
+        "audio/GSM-HR-08" = "QMPlay2.desktop";
+        "audio/GSM" = "QMPlay2.desktop";
+        "audio/iLBC" = "QMPlay2.desktop";
+        "audio/ip-mr_v2.5" = "QMPlay2.desktop";
+        "audio/L16" = "QMPlay2.desktop";
+        "audio/L20" = "QMPlay2.desktop";
+        "audio/L24" = "QMPlay2.desktop";
+        "audio/L8" = "QMPlay2.desktop";
+        "audio/LPC" = "QMPlay2.desktop";
+        "audio/matroska" = "QMPlay2.desktop";
+        "audio/MELP" = "QMPlay2.desktop";
+        "audio/MELP1200" = "QMPlay2.desktop";
+        "audio/MELP2400" = "QMPlay2.desktop";
+        "audio/MELP600" = "QMPlay2.desktop";
+        "audio/mhas" = "QMPlay2.desktop";
+        "audio/midi-clip" = "QMPlay2.desktop";
+        "audio/mobile-xmf" = "QMPlay2.desktop";
+        "audio/mp4" = "QMPlay2.desktop";
+        "audio/MP4A-LATM" = "QMPlay2.desktop";
+        "audio/mpa-robust" = "QMPlay2.desktop";
+        "audio/MPA" = "QMPlay2.desktop";
+        "audio/mpeg" = "QMPlay2.desktop";
+        "audio/mpeg4-generic" = "QMPlay2.desktop";
+        "audio/ogg" = "QMPlay2.desktop";
+        "audio/opus" = "QMPlay2.desktop";
+        "audio/parityfec" = "QMPlay2.desktop";
+        "audio/PCMA-WB" = "QMPlay2.desktop";
+        "audio/PCMA" = "QMPlay2.desktop";
+        "audio/PCMU-WB" = "QMPlay2.desktop";
+        "audio/PCMU" = "QMPlay2.desktop";
+        "audio/prs.sid" = "QMPlay2.desktop";
+        "audio/QCELP" = "QMPlay2.desktop";
+        "audio/raptorfec" = "QMPlay2.desktop";
+        "audio/RED" = "QMPlay2.desktop";
+        "audio/rtp-enc-aescm128" = "QMPlay2.desktop";
+        "audio/rtp-midi" = "QMPlay2.desktop";
+        "audio/rtploopback" = "QMPlay2.desktop";
+        "audio/rtx" = "QMPlay2.desktop";
+        "audio/scip" = "QMPlay2.desktop";
+        "audio/SMV-QCP" = "QMPlay2.desktop";
+        "audio/SMV" = "QMPlay2.desktop";
+        "audio/SMV0" = "QMPlay2.desktop";
+        "audio/sofa" = "QMPlay2.desktop";
+        "audio/soundfont" = "QMPlay2.desktop";
+        "audio/sp-midi" = "QMPlay2.desktop";
+        "audio/speex" = "QMPlay2.desktop";
+        "audio/t140c" = "QMPlay2.desktop";
+        "audio/t38" = "QMPlay2.desktop";
+        "audio/telephone-event" = "QMPlay2.desktop";
+        "audio/TETRA_ACELP_BB" = "QMPlay2.desktop";
+        "audio/TETRA_ACELP" = "QMPlay2.desktop";
+        "audio/tone" = "QMPlay2.desktop";
+        "audio/TSVCIS" = "QMPlay2.desktop";
+        "audio/UEMCLIP" = "QMPlay2.desktop";
+        "audio/ulpfec" = "QMPlay2.desktop";
+        "audio/usac" = "QMPlay2.desktop";
+        "audio/VDVI" = "QMPlay2.desktop";
+        "audio/VMR-WB" = "QMPlay2.desktop";
+        "audio/vnd.3gpp.iufp" = "QMPlay2.desktop";
+        "audio/vnd.4SB" = "QMPlay2.desktop";
+        "audio/vnd.audiokoz" = "QMPlay2.desktop";
+        "audio/vnd.blockfact.facta" = "QMPlay2.desktop";
+        "audio/vnd.CELP" = "QMPlay2.desktop";
+        "audio/vnd.cisco.nse" = "QMPlay2.desktop";
+        "audio/vnd.cmles.radio-events" = "QMPlay2.desktop";
+        "audio/vnd.cns.anp1" = "QMPlay2.desktop";
+        "audio/vnd.cns.inf1" = "QMPlay2.desktop";
+        "audio/vnd.dece.audio" = "QMPlay2.desktop";
+        "audio/vnd.digital-winds" = "QMPlay2.desktop";
+        "audio/vnd.dlna.adts" = "QMPlay2.desktop";
+        "audio/vnd.dolby.heaac.1" = "QMPlay2.desktop";
+        "audio/vnd.dolby.heaac.2" = "QMPlay2.desktop";
+        "audio/vnd.dolby.mlp" = "QMPlay2.desktop";
+        "audio/vnd.dolby.mps" = "QMPlay2.desktop";
+        "audio/vnd.dolby.pl2" = "QMPlay2.desktop";
+        "audio/vnd.dolby.pl2x" = "QMPlay2.desktop";
+        "audio/vnd.dolby.pl2z" = "QMPlay2.desktop";
+        "audio/vnd.dolby.pulse.1" = "QMPlay2.desktop";
+        "audio/vnd.dra" = "QMPlay2.desktop";
+        "audio/vnd.dts.hd" = "QMPlay2.desktop";
+        "audio/vnd.dts.uhd" = "QMPlay2.desktop";
+        "audio/vnd.dts" = "QMPlay2.desktop";
+        "audio/vnd.dvb.file" = "QMPlay2.desktop";
+        "audio/vnd.everad.plj" = "QMPlay2.desktop";
+        "audio/vnd.hns.audio" = "QMPlay2.desktop";
+        "audio/vnd.lucent.voice" = "QMPlay2.desktop";
+        "audio/vnd.ms-playready.media.pya" = "QMPlay2.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "QMPlay2.desktop";
+        "audio/vnd.nortel.vbk" = "QMPlay2.desktop";
+        "audio/vnd.nuera.ecelp4800" = "QMPlay2.desktop";
+        "audio/vnd.nuera.ecelp7470" = "QMPlay2.desktop";
+        "audio/vnd.nuera.ecelp9600" = "QMPlay2.desktop";
+        "audio/vnd.octel.sbc" = "QMPlay2.desktop";
+        "audio/vnd.presonus.multitrack" = "QMPlay2.desktop";
+        "audio/vnd.qcelp" = "QMPlay2.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "QMPlay2.desktop";
+        "audio/vnd.rip" = "QMPlay2.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "QMPlay2.desktop";
+        "audio/vnd.vmx.cvsd" = "QMPlay2.desktop";
+        "audio/vorbis-config" = "QMPlay2.desktop";
+        "audio/vorbis" = "QMPlay2.desktop";
 
-        "video/1d-interleaved-parityfec" = "org.kde.haruna.desktop";
-        "video/3gpp-tt" = "org.kde.haruna.desktop";
-        "video/3gpp" = "org.kde.haruna.desktop";
-        "video/3gpp2" = "org.kde.haruna.desktop";
-        "video/AV1" = "org.kde.haruna.desktop";
-        "video/BMPEG" = "org.kde.haruna.desktop";
-        "video/BT656" = "org.kde.haruna.desktop";
-        "video/CelB" = "org.kde.haruna.desktop";
-        "video/DV" = "org.kde.haruna.desktop";
-        "video/encaprtp" = "org.kde.haruna.desktop";
-        "video/evc" = "org.kde.haruna.desktop";
-        "video/FFV1" = "org.kde.haruna.desktop";
-        "video/flexfec" = "org.kde.haruna.desktop";
-        "video/H261" = "org.kde.haruna.desktop";
-        "video/H263-1998" = "org.kde.haruna.desktop";
-        "video/H263-2000" = "org.kde.haruna.desktop";
-        "video/H263" = "org.kde.haruna.desktop";
-        "video/H264-RCDO" = "org.kde.haruna.desktop";
-        "video/H264-SVC" = "org.kde.haruna.desktop";
-        "video/H264" = "org.kde.haruna.desktop";
-        "video/H265" = "org.kde.haruna.desktop";
-        "video/H266" = "org.kde.haruna.desktop";
-        "video/iso.segment" = "org.kde.haruna.desktop";
-        "video/JPEG" = "org.kde.haruna.desktop";
-        "video/jpeg2000-scl" = "org.kde.haruna.desktop";
-        "video/jpeg2000" = "org.kde.haruna.desktop";
-        "video/jxsv" = "org.kde.haruna.desktop";
-        "video/lottie+json" = "org.kde.haruna.desktop";
-        "video/matroska-3d" = "org.kde.haruna.desktop";
-        "video/matroska" = "org.kde.haruna.desktop";
-        "video/mj2" = "org.kde.haruna.desktop";
-        "video/MP1S" = "org.kde.haruna.desktop";
-        "video/MP2P" = "org.kde.haruna.desktop";
-        "video/MP2T" = "org.kde.haruna.desktop";
-        "video/mp4" = "org.kde.haruna.desktop";
-        "video/MP4V-ES" = "org.kde.haruna.desktop";
-        "video/mpeg" = "org.kde.haruna.desktop";
-        "video/mpeg4-generic" = "org.kde.haruna.desktop";
-        "video/MPV" = "org.kde.haruna.desktop";
-        "video/nv" = "org.kde.haruna.desktop";
-        "video/ogg" = "org.kde.haruna.desktop";
-        "video/parityfec" = "org.kde.haruna.desktop";
-        "video/pointer" = "org.kde.haruna.desktop";
-        "video/quicktime" = "org.kde.haruna.desktop";
-        "video/raptorfec" = "org.kde.haruna.desktop";
-        "video/raw" = "org.kde.haruna.desktop";
-        "video/rtp-enc-aescm128" = "org.kde.haruna.desktop";
-        "video/rtploopback" = "org.kde.haruna.desktop";
-        "video/rtx" = "org.kde.haruna.desktop";
-        "video/scip" = "org.kde.haruna.desktop";
-        "video/smpte291" = "org.kde.haruna.desktop";
-        "video/SMPTE292M" = "org.kde.haruna.desktop";
-        "video/ulpfec" = "org.kde.haruna.desktop";
-        "video/vc1" = "org.kde.haruna.desktop";
-        "video/vc2" = "org.kde.haruna.desktop";
-        "video/vnd.blockfact.factv" = "org.kde.haruna.desktop";
-        "video/vnd.CCTV" = "org.kde.haruna.desktop";
-        "video/vnd.dece.hd" = "org.kde.haruna.desktop";
-        "video/vnd.dece.mobile" = "org.kde.haruna.desktop";
-        "video/vnd.dece.mp4" = "org.kde.haruna.desktop";
-        "video/vnd.dece.pd" = "org.kde.haruna.desktop";
-        "video/vnd.dece.sd" = "org.kde.haruna.desktop";
-        "video/vnd.dece.video" = "org.kde.haruna.desktop";
-        "video/vnd.directv.mpeg-tts" = "org.kde.haruna.desktop";
-        "video/vnd.directv.mpeg" = "org.kde.haruna.desktop";
-        "video/vnd.dlna.mpeg-tts" = "org.kde.haruna.desktop";
-        "video/vnd.dvb.file" = "org.kde.haruna.desktop";
-        "video/vnd.fvt" = "org.kde.haruna.desktop";
-        "video/vnd.hns.video" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.ttsavc" = "org.kde.haruna.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "org.kde.haruna.desktop";
-        "video/vnd.motorola.video" = "org.kde.haruna.desktop";
-        "video/vnd.motorola.videop" = "org.kde.haruna.desktop";
-        "video/vnd.mpegurl" = "org.kde.haruna.desktop";
-        "video/vnd.ms-playready.media.pyv" = "org.kde.haruna.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "org.kde.haruna.desktop";
-        "video/vnd.nokia.mp4vr" = "org.kde.haruna.desktop";
-        "video/vnd.nokia.videovoip" = "org.kde.haruna.desktop";
-        "video/vnd.objectvideo" = "org.kde.haruna.desktop";
-        "video/vnd.planar" = "org.kde.haruna.desktop";
-        "video/vnd.radgamettools.bink" = "org.kde.haruna.desktop";
-        "video/vnd.radgamettools.smacker" = "org.kde.haruna.desktop";
-        "video/vnd.sealed.mpeg1" = "org.kde.haruna.desktop";
-        "video/vnd.sealed.mpeg4" = "org.kde.haruna.desktop";
-        "video/vnd.sealed.swf" = "org.kde.haruna.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "org.kde.haruna.desktop";
-        "video/vnd.uvvu.mp4" = "org.kde.haruna.desktop";
-        "video/vnd.vivo" = "org.kde.haruna.desktop";
-        "video/vnd.youtube.yt" = "org.kde.haruna.desktop";
-        "video/VP8" = "org.kde.haruna.desktop";
-        "video/VP9" = "org.kde.haruna.desktop";
-        "video/x-matroska" = "org.kde.haruna.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "QMPlay2.desktop";
+        "video/3gpp-tt" = "QMPlay2.desktop";
+        "video/3gpp" = "QMPlay2.desktop";
+        "video/3gpp2" = "QMPlay2.desktop";
+        "video/AV1" = "QMPlay2.desktop";
+        "video/BMPEG" = "QMPlay2.desktop";
+        "video/BT656" = "QMPlay2.desktop";
+        "video/CelB" = "QMPlay2.desktop";
+        "video/DV" = "QMPlay2.desktop";
+        "video/encaprtp" = "QMPlay2.desktop";
+        "video/evc" = "QMPlay2.desktop";
+        "video/FFV1" = "QMPlay2.desktop";
+        "video/flexfec" = "QMPlay2.desktop";
+        "video/H261" = "QMPlay2.desktop";
+        "video/H263-1998" = "QMPlay2.desktop";
+        "video/H263-2000" = "QMPlay2.desktop";
+        "video/H263" = "QMPlay2.desktop";
+        "video/H264-RCDO" = "QMPlay2.desktop";
+        "video/H264-SVC" = "QMPlay2.desktop";
+        "video/H264" = "QMPlay2.desktop";
+        "video/H265" = "QMPlay2.desktop";
+        "video/H266" = "QMPlay2.desktop";
+        "video/iso.segment" = "QMPlay2.desktop";
+        "video/JPEG" = "QMPlay2.desktop";
+        "video/jpeg2000-scl" = "QMPlay2.desktop";
+        "video/jpeg2000" = "QMPlay2.desktop";
+        "video/jxsv" = "QMPlay2.desktop";
+        "video/lottie+json" = "QMPlay2.desktop";
+        "video/matroska-3d" = "QMPlay2.desktop";
+        "video/matroska" = "QMPlay2.desktop";
+        "video/mj2" = "QMPlay2.desktop";
+        "video/MP1S" = "QMPlay2.desktop";
+        "video/MP2P" = "QMPlay2.desktop";
+        "video/MP2T" = "QMPlay2.desktop";
+        "video/mp4" = "QMPlay2.desktop";
+        "video/MP4V-ES" = "QMPlay2.desktop";
+        "video/mpeg" = "QMPlay2.desktop";
+        "video/mpeg4-generic" = "QMPlay2.desktop";
+        "video/MPV" = "QMPlay2.desktop";
+        "video/nv" = "QMPlay2.desktop";
+        "video/ogg" = "QMPlay2.desktop";
+        "video/parityfec" = "QMPlay2.desktop";
+        "video/pointer" = "QMPlay2.desktop";
+        "video/quicktime" = "QMPlay2.desktop";
+        "video/raptorfec" = "QMPlay2.desktop";
+        "video/raw" = "QMPlay2.desktop";
+        "video/rtp-enc-aescm128" = "QMPlay2.desktop";
+        "video/rtploopback" = "QMPlay2.desktop";
+        "video/rtx" = "QMPlay2.desktop";
+        "video/scip" = "QMPlay2.desktop";
+        "video/smpte291" = "QMPlay2.desktop";
+        "video/SMPTE292M" = "QMPlay2.desktop";
+        "video/ulpfec" = "QMPlay2.desktop";
+        "video/vc1" = "QMPlay2.desktop";
+        "video/vc2" = "QMPlay2.desktop";
+        "video/vnd.blockfact.factv" = "QMPlay2.desktop";
+        "video/vnd.CCTV" = "QMPlay2.desktop";
+        "video/vnd.dece.hd" = "QMPlay2.desktop";
+        "video/vnd.dece.mobile" = "QMPlay2.desktop";
+        "video/vnd.dece.mp4" = "QMPlay2.desktop";
+        "video/vnd.dece.pd" = "QMPlay2.desktop";
+        "video/vnd.dece.sd" = "QMPlay2.desktop";
+        "video/vnd.dece.video" = "QMPlay2.desktop";
+        "video/vnd.directv.mpeg-tts" = "QMPlay2.desktop";
+        "video/vnd.directv.mpeg" = "QMPlay2.desktop";
+        "video/vnd.dlna.mpeg-tts" = "QMPlay2.desktop";
+        "video/vnd.dvb.file" = "QMPlay2.desktop";
+        "video/vnd.fvt" = "QMPlay2.desktop";
+        "video/vnd.hns.video" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.ttsavc" = "QMPlay2.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "QMPlay2.desktop";
+        "video/vnd.motorola.video" = "QMPlay2.desktop";
+        "video/vnd.motorola.videop" = "QMPlay2.desktop";
+        "video/vnd.mpegurl" = "QMPlay2.desktop";
+        "video/vnd.ms-playready.media.pyv" = "QMPlay2.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "QMPlay2.desktop";
+        "video/vnd.nokia.mp4vr" = "QMPlay2.desktop";
+        "video/vnd.nokia.videovoip" = "QMPlay2.desktop";
+        "video/vnd.objectvideo" = "QMPlay2.desktop";
+        "video/vnd.planar" = "QMPlay2.desktop";
+        "video/vnd.radgamettools.bink" = "QMPlay2.desktop";
+        "video/vnd.radgamettools.smacker" = "QMPlay2.desktop";
+        "video/vnd.sealed.mpeg1" = "QMPlay2.desktop";
+        "video/vnd.sealed.mpeg4" = "QMPlay2.desktop";
+        "video/vnd.sealed.swf" = "QMPlay2.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "QMPlay2.desktop";
+        "video/vnd.uvvu.mp4" = "QMPlay2.desktop";
+        "video/vnd.vivo" = "QMPlay2.desktop";
+        "video/vnd.youtube.yt" = "QMPlay2.desktop";
+        "video/VP8" = "QMPlay2.desktop";
+        "video/VP9" = "QMPlay2.desktop";
+        "video/x-matroska" = "QMPlay2.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -3891,50 +3755,33 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "librewolf.desktop";
+        "application/pdf" = "com.brave.Browser.desktop";
 
-        "font/collection" = "org.gnome.font-viewer.desktop";
-        "font/otf" = "org.gnome.font-viewer.desktop";
-        "font/sfnt" = "org.gnome.font-viewer.desktop";
-        "font/ttf" = "org.gnome.font-viewer.desktop";
-        "font/woff" = "org.gnome.font-viewer.desktop";
-        "font/woff2" = "org.gnome.font-viewer.desktop";
+        "font/collection" = "com.github.FontManager.FontViewer.desktop";
+        "font/otf" = "com.github.FontManager.FontViewer.desktop";
+        "font/sfnt" = "com.github.FontManager.FontViewer.desktop";
+        "font/ttf" = "com.github.FontManager.FontViewer.desktop";
+        "font/woff" = "com.github.FontManager.FontViewer.desktop";
+        "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
-        "application/gzip" = "org.kde.ark.desktop";
-        "application/vnd.rar" = "org.kde.ark.desktop";
-        "application/x-7z-compressed" = "org.kde.ark.desktop";
-        "application/x-arj" = "org.kde.ark.desktop";
-        "application/x-bzip2" = "org.kde.ark.desktop";
-        "application/x-gtar" = "org.kde.ark.desktop";
-        "application/x-rar-compressed " = "org.kde.ark.desktop"; # More common than "application/vnd.rar"
-        "application/x-tar" = "org.kde.ark.desktop";
-        "application/zip" = "org.kde.ark.desktop";
+        "application/gzip" = "yazi.desktop";
+        "application/vnd.rar" = "yazi.desktop";
+        "application/x-7z-compressed" = "yazi.desktop";
+        "application/x-arj" = "yazi.desktop";
+        "application/x-bzip2" = "yazi.desktop";
+        "application/x-gtar" = "yazi.desktop";
+        "application/x-rar-compressed " = "yazi.desktop"; # More common than "application/vnd.rar"
+        "application/x-tar" = "yazi.desktop";
+        "application/zip" = "yazi.desktop";
 
-        "application/x-bittorrent" = "org.kde.ktorrent.desktop";
-        "x-scheme-handler/magnet" = "org.kde.ktorrent.desktop";
+        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
+        "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
-        "x-scheme-handler/http" = "librewolf.desktop";
-        "x-scheme-handler/https" = "librewolf.desktop";
+        "x-scheme-handler/http" = "com.brave.Browser.desktop";
+        "x-scheme-handler/https" = "com.brave.Browser.desktop";
 
-        "x-scheme-handler/mailto" = "org.kde.kmail2.desktop";
+        "x-scheme-handler/mailto" = "tutanota-desktop.desktop";
       };
-    };
-
-    icons.enable = true;
-    sounds.enable = true;
-
-    menus.enable = true;
-    autostart.enable = true;
-
-    terminal-exec.enable = true;
-
-    portal = {
-      enable = true;
-      extraPortals = with pkgs; [
-        kdePackages.xdg-desktop-portal-kde
-      ];
-
-      xdgOpenUsePortal = false; # Opening Programs
     };
   };
 
@@ -3942,9 +3789,6 @@ in
 
   qt = {
     enable = true;
-
-    platformTheme = "kde";
-    # style = "";
   };
 
   documentation = {
@@ -4013,7 +3857,6 @@ in
         "hardinfo2"
         "i2c"
         "input"
-        "jellyfin"
         "kvm"
         "libvirtd"
         "lp"
@@ -4033,10 +3876,51 @@ in
         "uucp"
         "video"
         "wheel"
-        "wireshark"
       ];
 
       useDefaultShell = true;
+    };
+  };
+
+  catppuccin = {
+    enable = true;
+
+    enableReleaseCheck = true;
+    cache.enable = true;
+
+    flavor = "mocha";
+    accent = "lavender";
+
+    grub = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+    };
+
+    tty = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+    };
+
+    plymouth.enable = false;
+
+    cursors = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+    };
+
+    gtk.icon.enable = false;
+
+    fcitx5 = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      enableRounded = true;
     };
   };
 
@@ -4047,7 +3931,7 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
-      plasmaManagerFlake.homeModules.plasma-manager
+      catppuccinThemeFlake.homeModules.catppuccin
 
       {
         home = {
@@ -4058,15 +3942,14 @@ in
             enableBashIntegration = true;
           };
 
+          preferXdgDirectories = true;
+
           pointerCursor = {
-            name = config.home-manager.users.root.gtk.cursorTheme.name;
-            package = config.home-manager.users.root.gtk.cursorTheme.package;
-            size = config.home-manager.users.root.gtk.cursorTheme.size;
+            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
+            size = builtins.floor (design_factor * 1.50); # 24
 
             gtk.enable = true;
           };
-
-          preferXdgDirectories = true;
 
           # sessionSearchVariables = { };
 
@@ -4080,7 +3963,357 @@ in
 
           enableDebugInfo = false;
 
-          stateVersion = "26.05";
+          stateVersion = config.system.stateVersion;
+        };
+
+        wayland.windowManager.hyprland = {
+          enable = config.programs.hyprland.enable;
+          package = config.programs.hyprland.package;
+
+          systemd = {
+            enable = false;
+
+            enableXdgAutostart = true;
+
+            variables = [
+              "--all"
+            ];
+          };
+
+          plugins = with pkgs.hyprlandPlugins; [
+            # xtra-dispatchers # FIXME: Build Failure
+          ];
+
+          xwayland.enable = true;
+
+          sourceFirst = true;
+
+          settings = {
+            env = [
+              "NIXOS_OZONE_WL, 1"
+
+              "ADW_DISABLE_PORTAL, 1"
+
+              "XCURSOR_THEME, ${config.home-manager.users.root.home.pointerCursor.name}"
+              "XCURSOR_SIZE, ${toString config.home-manager.users.root.home.pointerCursor.size}"
+            ];
+
+            monitor = [
+              # Name, Resolution, Position, Scale, Transform-Parameter, Transform
+              ", highres, auto, 1, transform, 0"
+              "eDP-1, highres, auto, 1, transform, 0"
+              "HDMI-A-1, highres, auto, 1, transform, 1"
+            ];
+
+            exec-once = [
+              "pidof moxnotify || uwsm-app -- moxnotify"
+              "pidof soteria || uwsm-app -- soteria" # Fallback
+              "uwsm-app -- wl-paste --type text --watch cliphist store"
+              "uwsm-app -- wl-paste --type image --watch cliphist store"
+              "adb start-server"
+              "windowtolayer xdg-terminal-exec -- asciiquarium --transparent"
+            ];
+
+            bind = [
+              "SUPER, L, exec, loginctl lock-session"
+              "SUPER CTRL, L, exec, uwsm-app -- wleave"
+
+              "SUPER, 1, workspace, 1"
+              "SUPER, 2, workspace, 2"
+              "SUPER, 3, workspace, 3"
+              "SUPER, 4, workspace, 4"
+              "SUPER, 5, workspace, 5"
+              "SUPER, 6, workspace, 6"
+              "SUPER, 7, workspace, 7"
+              "SUPER, 8, workspace, 8"
+              "SUPER, 9, workspace, 9"
+              "SUPER, 0, workspace, 10"
+              "SUPER, mouse_down, workspace, e+1"
+              "SUPER, mouse_up, workspace, e-1"
+              "SUPER, S, togglespecialworkspace, magic"
+
+              "SUPER, left, movefocus, l"
+              "SUPER, right, movefocus, r"
+              "SUPER, up, movefocus, u"
+              "SUPER, down, movefocus, d"
+
+              "SUPER SHIFT, 1, movetoworkspace, 1"
+              "SUPER SHIFT, 2, movetoworkspace, 2"
+              "SUPER SHIFT, 3, movetoworkspace, 3"
+              "SUPER SHIFT, 4, movetoworkspace, 4"
+              "SUPER SHIFT, 5, movetoworkspace, 5"
+              "SUPER SHIFT, 6, movetoworkspace, 6"
+              "SUPER SHIFT, 7, movetoworkspace, 7"
+              "SUPER SHIFT, 8, movetoworkspace, 8"
+              "SUPER SHIFT, 9, movetoworkspace, 9"
+              "SUPER SHIFT, 0, movetoworkspace, 10"
+              "SUPER SHIFT, S, movetoworkspace, special:magic"
+              "SUPER SHIFT ALT, 1, movetoworkspacesilent, 1"
+              "SUPER SHIFT ALT, 2, movetoworkspacesilent, 2"
+              "SUPER SHIFT ALT, 3, movetoworkspacesilent, 3"
+              "SUPER SHIFT ALT, 4, movetoworkspacesilent, 4"
+              "SUPER SHIFT ALT, 5, movetoworkspacesilent, 5"
+              "SUPER SHIFT ALT, 6, movetoworkspacesilent, 6"
+              "SUPER SHIFT ALT, 7, movetoworkspacesilent, 7"
+              "SUPER SHIFT ALT, 8, movetoworkspacesilent, 8"
+              "SUPER SHIFT ALT, 9, movetoworkspacesilent, 9"
+              "SUPER SHIFT ALT, 0, movetoworkspacesilent, 10"
+              "SUPER SHIFT ALT, S, movetoworkspacesilent, special:magic"
+
+              "SUPER SHIFT, T, togglesplit," # FIXME: Not Working
+              "SUPER SHIFT, F, togglefloating,"
+              ", F11, fullscreen, 0"
+              "SUPER, Q, killactive,"
+
+              ", PRINT, exec, uwsm-app -- ferrishot"
+
+              "SUPER, RETURN, exec, uwsm-app -- wofi --show drun --disable-history | xargs -r uwsm-app --"
+              "SUPER ALT, RETURN, exec, uwsm-app -- wofi --show run --disable-history | xargs -r uwsm-app --"
+
+              "SUPER, SPACE, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
+
+              "SUPER, T, exec, uwsm-app -- xdg-terminal-exec"
+
+              ", XF86Explorer, exec, uwsm-app -- xdg-terminal-exec -- yazi"
+              "SUPER, F, exec, uwsm-app -- xdg-terminal-exec -- yazi"
+
+              "SUPER CTRL, B, exec, uwsm-app -- xdg-terminal-exec -- bluetui"
+              "SUPER CTRL, N, exec, uwsm-app -- xdg-terminal-exec -- wifitui tui"
+              "SUPER CTRL ALT, N, exec, uwsm-app -- xdg-terminal-exec -- nmtui"
+
+              "SUPER CTRL, A, exec, uwsm-app -- xdg-terminal-exec -- wiremix"
+
+              "SUPER, Y, exec, uwsm-app -- xdg-terminal-exec -- --hold cal --year"
+              "SUPER ALT, Y, exec, uwsm-app -- xdg-terminal-exec -- clock-rs --blink"
+
+              "SUPER, K, exec, uwsm-app -- keepassxc"
+              "SUPER ALT, K, exec, uwsm-app -- keepassxc --lock"
+
+              "SUPER, U, exec, uwsm-app -- xdg-terminal-exec -- btop"
+
+              "SUPER, W, exec, uwsm-app -- brave"
+              "SUPER ALT, W, exec, uwsm-app -- brave --incognito"
+
+              ", XF86Mail, exec, uwsm-app -- tutanota-desktop"
+              "SUPER, M, exec, uwsm-app -- tutanota-desktop"
+
+              "SUPER, E, exec, uwsm-app -- codium"
+
+              "SUPER, D, exec, uwsm-app -- dbeaver"
+
+              "SUPER, O, exec, uwsm-app -- xdg-terminal-exec -- oterm"
+            ];
+
+            bindm = [
+              "SUPER, mouse:272, movewindow"
+              "SUPER, mouse:273, resizewindow"
+            ]; # Mouse
+
+            bindl = [
+              ", XF86AudioPlay, exec, playerctl play-pause"
+              ", XF86AudioPause, exec, playerctl play-pause"
+              ", XF86AudioStop, exec, playerctl stop"
+              ", XF86AudioPrev, exec, playerctl previous"
+              ", XF86AudioNext, exec, playerctl next"
+
+              ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+              ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+            ]; # Will also work when locked
+
+            bindel = [
+              ", XF86MonBrightnessUp, exec, brightnessctl s 1%+"
+              ", XF86MonBrightnessDown, exec, brightnessctl s 1%-"
+
+              ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+"
+              ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-"
+            ]; # Repeat and will work when locked
+
+            general = {
+              allow_tearing = false;
+
+              gaps_workspaces = 0;
+
+              layout = "dwindle";
+
+              gaps_in = 1;
+              gaps_out = "0, 0, 0, 0"; # Top, Right, Bottom, Left
+
+              border_size = 0;
+
+              no_focus_fallback = false;
+
+              resize_on_border = true;
+              hover_icon_on_border = true;
+
+              snap = {
+                enabled = true;
+                border_overlap = false;
+              };
+            };
+
+            ecosystem = {
+              no_update_news = false;
+            };
+
+            misc = {
+              disable_autoreload = false;
+
+              allow_session_lock_restore = true;
+
+              key_press_enables_dpms = true;
+              mouse_move_enables_dpms = true;
+
+              vfr = true;
+              vrr = 1;
+
+              mouse_move_focuses_monitor = true;
+
+              disable_hyprland_logo = true;
+              force_default_wallpaper = 1;
+              disable_splash_rendering = true;
+
+              font_family = fontPreferences.name.sans_serif;
+
+              close_special_on_empty = true;
+
+              animate_mouse_windowdragging = false;
+              animate_manual_resizes = false;
+
+              exit_window_retains_fullscreen = false;
+
+              layers_hog_keyboard_focus = true;
+
+              focus_on_activate = false;
+
+              middle_click_paste = true;
+            };
+
+            dwindle = {
+              pseudotile = false;
+
+              use_active_for_splits = true;
+              force_split = 0; # Follows Mouse
+              smart_split = false;
+              preserve_split = true;
+
+              smart_resizing = true;
+            };
+
+            xwayland = {
+              enabled = true;
+              force_zero_scaling = true;
+              use_nearest_neighbor = true;
+            };
+
+            # windowrule = [
+            # ];
+
+            input = {
+              kb_layout = "us";
+
+              numlock_by_default = false;
+
+              follow_mouse = 1;
+              focus_on_close = 1;
+
+              left_handed = false;
+              natural_scroll = false;
+
+              touchpad = {
+                natural_scroll = true;
+
+                tap-to-click = true;
+                tap-and-drag = true;
+                drag_lock = true;
+
+                disable_while_typing = true;
+              };
+
+              touchdevice = {
+                enabled = true;
+              };
+
+              tablet = {
+                left_handed = false;
+              };
+            };
+
+            cursor = {
+              no_hardware_cursors = false;
+
+              sync_gsettings_theme = true;
+
+              persistent_warps = true;
+
+              no_warps = false;
+
+              hide_on_key_press = false;
+              hide_on_touch = true;
+            };
+
+            binds = {
+              disable_keybind_grabbing = true;
+              pass_mouse_when_bound = false;
+
+              window_direction_monitor_fallback = true;
+            };
+
+            gestures = {
+              # Touchpad
+              workspace_swipe_invert = true;
+
+              # Touchscreen
+              workspace_swipe_touch = false;
+              workspace_swipe_touch_invert = false;
+
+              workspace_swipe_create_new = true;
+              workspace_swipe_forever = true;
+            };
+
+            decoration = {
+              dim_special = 0.25;
+
+              rounding = builtins.floor (design_factor / 2); # 8
+
+              active_opacity = 1.0;
+              fullscreen_opacity = 1.0;
+              inactive_opacity = 1.0;
+
+              dim_inactive = false;
+              dim_strength = 0.0;
+
+              blur.enabled = false;
+              shadow.enabled = false;
+            };
+
+            animations = {
+              enabled = true;
+
+              bezier = [
+                "linear, 0, 0, 1, 1" # https://www.cssportal.com/css-cubic-bezier-generator/#0,0,1,1
+              ];
+
+              animation = [
+                "global, 1, 1.0, linear"
+                "border, 1, 1.0, linear"
+                "windows, 1, 1.0, linear"
+                "windowsIn, 1, 1.0, linear"
+                "windowsOut, 1, 1.0, linear"
+                "fadeIn, 1, 1.0, linear"
+                "fadeOut, 1, 1.0, linear"
+                "fade, 1, 1.0, linear"
+                "layers, 1, 1.0, linear"
+                "layersIn, 1, 1.0, linear"
+                "layersOut, 1, 1.0, linear"
+                "fadeLayersIn, 1, 1.0, linear"
+                "fadeLayersOut, 1, 1.0, linear"
+                "workspaces, 1, 1.0, linear"
+                "workspacesIn, 1, 1.0, linear"
+                "workspacesOut, 1, 1.0, linear"
+              ];
+              # Name, On/Off, Speed, Bezier
+            };
+          };
         };
 
         xdg = {
@@ -4091,7 +4324,6 @@ in
 
             associations = {
               added = config.xdg.mime.addedAssociations;
-
               removed = config.xdg.mime.removedAssociations;
             };
 
@@ -4100,6 +4332,18 @@ in
 
           configFile = {
             "mimeapps.list".force = true;
+
+            # "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
+            #   enable = true;
+            #   target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
+
+            #   source = builtins.fetchurl {
+            #     url = "https://github.com/catppuccin/qbittorrent/releases/latest/download/catppuccin-${config.catppuccin.flavor}.qbtheme";
+            #     sha256 = "1qamhay71jqzi6bq0f8gar55jz2hdwzsfj4d7r14msl1v2ggbpgn";
+            #   };
+
+            #   executable = null;
+            # };
           };
         };
 
@@ -4107,42 +4351,20 @@ in
           enable = true;
 
           colorScheme = "dark";
-
           theme = {
-            name = "WhiteSur-Dark-blue";
+            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard+normal";
             package = (
-              pkgs.whitesur-gtk-theme.override {
-                altVariants = [
+              pkgs.catppuccin-gtk.override {
+                accents = [
+                  config.catppuccin.accent
+                ];
+                size = "standard";
+                tweaks = [
                   "normal"
                 ];
-                colorVariants = [
-                  "dark"
-                ];
-                opacityVariants = [
-                  "normal"
-                ];
-                themeVariants = [
-                  "blue"
-                ];
-                schemeVariants = [
-                  "standard"
-                ];
-                iconVariant = "simple";
-                roundedMaxWindow = false;
-                darkerColor = false;
+                variant = config.catppuccin.flavor;
               }
             );
-          };
-
-          iconTheme = {
-            name = "WhiteSur-dark";
-            package = pkgs.whitesur-icon-theme;
-          };
-
-          cursorTheme = {
-            name = "WhiteSur-cursors";
-            package = pkgs.whitesur-cursors;
-            size = builtins.floor (design_factor * 1.50); # 24
           };
 
           font = {
@@ -4150,26 +4372,207 @@ in
             package = fontPreferences.package;
             size = fontPreferences.size;
           };
+
+          iconTheme = {
+            name = "Papirus-Dark";
+            package = (
+              pkgs.catppuccin-papirus-folders.override {
+                accent = config.catppuccin.accent;
+                flavor = config.catppuccin.flavor;
+              }
+            );
+          };
+
+          cursorTheme = {
+            name = config.home-manager.users.root.home.pointerCursor.name;
+            size = config.home-manager.users.root.home.pointerCursor.size;
+          };
+
+          gtk4 = {
+            enable = true;
+
+            colorScheme = config.home-manager.users.root.gtk.colorScheme;
+            theme = {
+              name = config.home-manager.users.root.gtk.theme.name;
+              package = config.home-manager.users.root.gtk.theme.package;
+            };
+
+            font = {
+              name = config.home-manager.users.root.gtk.font.name;
+              package = config.home-manager.users.root.gtk.font.package;
+              size = config.home-manager.users.root.gtk.font.size;
+            };
+
+            iconTheme = {
+              name = config.home-manager.users.root.gtk.iconTheme.name;
+              package = config.home-manager.users.root.gtk.iconTheme.package;
+            };
+
+            cursorTheme = {
+              name = config.home-manager.users.root.gtk.cursorTheme.name;
+              size = config.home-manager.users.root.gtk.cursorTheme.size;
+            };
+          };
+
+          gtk3 = {
+            enable = true;
+
+            colorScheme = config.home-manager.users.root.gtk.colorScheme;
+            theme = {
+              name = config.home-manager.users.root.gtk.theme.name;
+              package = config.home-manager.users.root.gtk.theme.package;
+            };
+
+            font = {
+              name = config.home-manager.users.root.gtk.font.name;
+              package = config.home-manager.users.root.gtk.font.package;
+              size = config.home-manager.users.root.gtk.font.size;
+            };
+
+            iconTheme = {
+              name = config.home-manager.users.root.gtk.iconTheme.name;
+              package = config.home-manager.users.root.gtk.iconTheme.package;
+            };
+
+            cursorTheme = {
+              name = config.home-manager.users.root.gtk.cursorTheme.name;
+              size = config.home-manager.users.root.gtk.cursorTheme.size;
+            };
+          };
+
+          gtk2 = {
+            enable = true;
+
+            theme = {
+              name = config.home-manager.users.root.gtk.theme.name;
+              package = config.home-manager.users.root.gtk.theme.package;
+            };
+
+            font = {
+              name = config.home-manager.users.root.gtk.font.name;
+              package = config.home-manager.users.root.gtk.font.package;
+              size = config.home-manager.users.root.gtk.font.size;
+            };
+
+            iconTheme = {
+              name = config.home-manager.users.root.gtk.iconTheme.name;
+              package = config.home-manager.users.root.gtk.iconTheme.package;
+            };
+
+            cursorTheme = {
+              name = config.home-manager.users.root.gtk.cursorTheme.name;
+              size = config.home-manager.users.root.gtk.cursorTheme.size;
+            };
+          };
         };
 
         qt = {
           enable = true;
 
-          platformTheme.name = "kde";
+          platformTheme = {
+            name = "qtct";
+          };
+
           style = {
-            name = "WhiteSur-dark";
-            package = pkgs.whitesur-kde;
+            name = "kvantum";
+          };
+
+          qt6ctSettings = {
+            Appearance = {
+              style = "kvantum-dark";
+              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+              standard_dialogs = "xdgdesktopportal";
+            };
+          };
+
+          qt5ctSettings = {
+            Appearance = {
+              style = config.home-manager.users.root.qt.qt6ctSettings.Appearance.style;
+              color_scheme_path = config.home-manager.users.root.qt.qt6ctSettings.Appearance.color_scheme_path;
+              standard_dialogs = config.home-manager.users.root.qt.qt6ctSettings.Appearance.standard_dialogs;
+            };
+          };
+
+          kvantum = {
+            enable = true;
+
+            settings = {
+              General = {
+                theme = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}";
+              };
+            };
           };
         };
 
         services = {
           poweralertd.enable = true;
 
-          kdeconnect = {
+          udiskie = {
             enable = true;
-            package = pkgs.kdePackages.kdeconnect-kde;
+            package = pkgs.udiskie;
 
-            indicator = true;
+            automount = true;
+            tray = "always";
+            notify = true;
+
+            settings = {
+              terminal = "${config.programs.foot.package}/bin/foot -D";
+              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
+
+              menu = "nested";
+
+              password_cache = 5; # 5 Minutes
+            };
+          };
+
+          syshud = {
+            enable = true;
+            package = pkgs.syshud;
+
+            settings = {
+              listeners = "keyboard,backlight,audio_in,audio_out";
+              position = "bottom";
+              orientation = "h";
+              show-percentage = true;
+              transition-time = 250;
+              timeout = 2; # 2 Seconds
+            };
+          };
+
+          hypridle = {
+            enable = true;
+            package = pkgs.hypridle;
+
+            settings = {
+              general = {
+                ignore_systemd_inhibit = false;
+                ignore_wayland_inhibit = false;
+                ignore_dbus_inhibit = false;
+
+                lock_cmd = "pidof hyprlock || uwsm-app -- hyprlock";
+              };
+
+              listener = [
+                {
+                  ignore_inhibit = false;
+
+                  timeout = 300; # 5 Minutes
+                  on-timeout = "loginctl lock-session";
+                }
+              ];
+            };
+          };
+
+          wayvnc = {
+            enable = config.programs.wayvnc.enable;
+            package = config.programs.wayvnc.package;
+
+            settings = {
+              address = "127.0.0.1";
+              port = 5901;
+            };
+
+            autoStart = true;
           };
         };
 
@@ -4189,6 +4592,11 @@ in
             };
           };
 
+          wleave = {
+            enable = true;
+            package = pkgs.wleave;
+          };
+
           dircolors = {
             enable = true;
             package = (
@@ -4201,6 +4609,83 @@ in
             enableBashIntegration = true;
           };
 
+          bat = {
+            enable = config.programs.bat.enable;
+            package = config.programs.bat.package;
+            extraPackages = config.programs.bat.extraPackages;
+          };
+
+          vivid = {
+            enable = true;
+            package = pkgs.vivid;
+
+            enableBashIntegration = true;
+
+            colorMode = "24-bit";
+            activeTheme = "catppuccin-${config.catppuccin.flavor}";
+          };
+
+          imv = {
+            enable = true;
+            package = pkgs.imv;
+          };
+
+          lazygit = {
+            enable = true;
+            package = pkgs.lazygit;
+
+            enableBashIntegration = true;
+          };
+
+          television = {
+            enable = true;
+            package = pkgs.television;
+
+            enableBashIntegration = true;
+          };
+
+          cava = {
+            enable = true;
+            package = pkgs.cava;
+          };
+
+          kodi = {
+            enable = true;
+            package = (
+              pkgs.kodi-wayland.override {
+                dbusSupport = true;
+                gbmSupport = true;
+                joystickSupport = true;
+                nfsSupport = true;
+                opticalSupport = true;
+                pipewireSupport = true;
+                pulseSupport = false;
+                rtmpSupport = true;
+                sambaSupport = true;
+                udevSupport = true;
+                usbSupport = false; # `usbSupport' and `udevSupport' cannot both be enabled at the same time.
+                vdpauSupport = true;
+                waylandSupport = true;
+                x11Support = false;
+              }
+            );
+          };
+
+          mangohud = {
+            enable = true;
+            package = pkgs.mangohud;
+          };
+
+          btop = {
+            enable = true;
+            package = pkgs.btop;
+          };
+
+          k9s = {
+            enable = true;
+            package = pkgs.k9s;
+          };
+
           kubecolor = {
             enable = true;
             package = pkgs.kubecolor;
@@ -4211,6 +4696,25 @@ in
               kubectl = pkgs.lib.getExe pkgs.kubectl;
               preset = "dark";
             };
+          };
+
+          git = {
+            enable = true;
+            package = config.programs.git.package;
+
+            lfs = {
+              enable = true;
+              package = config.programs.git.lfs.package;
+
+              skipSmudge = false;
+            };
+          };
+
+          delta = {
+            enable = true;
+            package = pkgs.delta;
+
+            enableGitIntegration = true;
           };
 
           gh = {
@@ -4235,9 +4739,12 @@ in
               git_protocol = "https";
 
               editor = "nano";
-
-              # aliases = { };
             };
+          };
+
+          gh-dash = {
+            enable = true;
+            package = pkgs.gh-dash;
           };
 
           yt-dlp = {
@@ -4256,8 +4763,108 @@ in
             };
           };
 
-          plasma = {
+          hyprlock = {
             enable = true;
+            package = pkgs.hyprlock;
+
+            sourceFirst = true;
+
+            # settings = {
+            #   general = {
+            #     immediate_render = true;
+            #     fractional_scaling = 2; # 2 = Automatic
+
+            #     text_trim = false;
+            #     hide_cursor = false;
+
+            #     ignore_empty_input = true;
+            #     fail_timeout = 2000; # ms
+            #   };
+
+            #   auth = {
+            #     pam = {
+            #       enabled = true;
+            #       module = "hyprlock";
+            #     };
+
+            #     fingerprint = {
+            #       enabled = true;
+
+            #       ready_message = "Scan Fingerprint";
+            #       present_message = "Scanning Fingerprint";
+
+            #       retry_delay = 250; # ms
+            #     };
+            #   };
+
+            #   background = [
+            #     {
+            #       monitor = ""; # "" = All
+            #       # path = wallpaper;
+            #     }
+            #   ];
+
+            #   label = [
+            #     {
+            #       monitor = ""; # "" = All
+            #       halign = "center";
+            #       valign = "top";
+            #       position = "0, -128";
+
+            #       text_align = "center";
+            #       font_family = fontPreferences.name.sans_serif;
+            #       # color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
+            #       font_size = design_factor * 4; # 64
+            #       text = "$TIME12";
+            #     }
+
+            #     {
+            #       monitor = ""; # "" = All
+            #       halign = "center";
+            #       valign = "center";
+            #       position = "0, 0";
+
+            #       text_align = "center";
+            #       font_family = fontPreferences.name.sans_serif;
+            #       # color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
+            #       font_size = design_factor;
+            #       text = "$DESC"; # Full Name
+            #     }
+            #   ];
+
+            #   input-field = [
+            #     {
+            #       monitor = ""; # "" = All
+            #       halign = "center";
+            #       valign = "bottom";
+            #       position = "0, 128";
+
+            #       size = "256, 48";
+            #       rounding = design_factor;
+            #       outline_thickness = 1;
+            #       # outer_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
+            #       shadow_passes = 0;
+            #       hide_input = false;
+            #       # inner_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
+            #       font_family = fontPreferences.name.sans_serif;
+            #       # font_color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
+            #       placeholder_text = "Enter Password";
+            #       dots_center = true;
+            #       dots_rounding = -1;
+
+            #       fade_on_empty = true;
+
+            #       invert_numlock = false;
+            #       # capslock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
+            #       # numlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
+            #       # bothlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
+
+            #       # check_color = convert_hex_color_code_to_rgba_color_code colors.hex.success;
+            #       # fail_color = convert_hex_color_code_to_rgba_color_code colors.hex.error;
+            #       fail_text = "$FAIL <b>($ATTEMPTS)</b>";
+            #     }
+            #   ];
+            # };
           };
 
           keepassxc = {
@@ -4273,56 +4880,26 @@ in
                 withKeePassYubiKey = true;
               }
             );
-
-            # settings = { };
-          };
-
-          librewolf = {
-            enable = true;
-            package = pkgs.librewolf;
-
-            nativeMessagingHosts = [
-              config.home-manager.users.root.programs.keepassxc.package
-              pkgs.kdePackages.plasma-browser-integration
-            ];
-
-            languagePacks = [
-              "ar"
-              "bn"
-              "en-US"
-              "ru"
-            ];
-
-            settings = {
-              "browser.safebrowsing.blockedURIs.enabled" = true;
-              "browser.safebrowsing.downloads.enabled" = true;
-              "browser.safebrowsing.malware.enabled" = true;
-              "browser.safebrowsing.phishing.enabled" = true;
-              "browser.sessionstore.resume_from_crash" = false;
-
-              "general.autoScroll" = false;
-
-              "identity.fxaccounts.enabled" = false;
-
-              "middlemouse.paste" = true;
-
-              "privacy.resistFingerprinting.letterboxing" = false;
-              "privacy.resistFingerprinting" = false;
-
-              "security.OCSP.require" = false;
-
-              "webgl.disabled" = false;
-            };
           };
 
           chromium = {
             enable = true;
-            package = pkgs.ungoogled-chromium;
+            package = (
+              pkgs.brave.override {
+                enableVideoAcceleration = true;
+                enableVulkan = false; # Enabling Breaks Va-API
+                libvaSupport = true;
+                pulseSupport = false;
+                vulkanSupport = false; # Enabling Breaks Va-API
+                commandLineArgs = "";
+              }
+            );
 
             nativeMessagingHosts = [
               config.home-manager.users.root.programs.keepassxc.package
             ];
           };
+          brave.nativeMessagingHosts = config.home-manager.users.root.programs.chromium.nativeMessagingHosts;
 
           vscodium = {
             enable = true;
@@ -4391,7 +4968,6 @@ in
                     usernamehw.errorlens
                     vincaslt.highlight-matching-tag
                     vscjava.vscode-gradle
-                    vscode-icons-team.vscode-icons
                     wmaurer.change-case
                     xdebug.php-debug
                     zainchen.json
@@ -4495,20 +5071,83 @@ in
 
                 enableUpdateCheck = true;
                 enableExtensionUpdateCheck = true;
+              };
+            };
+          };
 
-                # userSettings = { };
+          obs-studio = {
+            enable = config.programs.obs-studio.enable;
+            package = config.programs.obs-studio.package;
+            plugins = config.programs.obs-studio.plugins;
+          };
+
+          foot = {
+            enable = config.programs.foot.enable;
+            package = config.programs.foot.package;
+
+            settings = {
+              main = {
+                term = config.programs.foot.settings.main.term;
+                login-shell = config.programs.foot.settings.main.login-shell;
+
+                dpi-aware = config.programs.foot.settings.main.dpi-aware;
+                initial-window-mode = config.programs.foot.settings.main.initial-window-mode;
+                initial-color-theme = config.programs.foot.settings.main.initial-color-theme;
+                pad = config.programs.foot.settings.main.pad;
+
+                font = config.programs.foot.settings.main.font;
+                box-drawings-uses-font-glyphs = config.programs.foot.settings.main.box-drawings-uses-font-glyphs;
+                horizontal-letter-offset = config.programs.foot.settings.main.horizontal-letter-offset;
+                vertical-letter-offset = config.programs.foot.settings.main.vertical-letter-offset;
+
+                selection-target = config.programs.foot.settings.main.selection-target;
+              };
+
+              tweak = {
+                sixel = config.programs.foot.settings.tweak.sixel;
+                surface-bit-depth = config.programs.foot.settings.tweak.surface-bit-depth;
+                font-monospace-warn = config.programs.foot.settings.tweak.font-monospace-warn;
+              };
+
+              security.osc52 = config.programs.foot.settings.security.osc52;
+
+              url = {
+                osc8-underline = config.programs.foot.settings.url.osc8-underline;
+              };
+
+              bell = {
+                system = config.programs.foot.settings.bell.system;
+              };
+
+              scrollback = {
+                indicator-position = config.programs.foot.settings.scrollback.indicator-position;
+                indicator-format = config.programs.foot.settings.scrollback.indicator-format;
+              };
+
+              cursor = {
+                style = config.programs.foot.settings.cursor.style;
+                unfocused-style = config.programs.foot.settings.cursor.unfocused-style;
+                blink = config.programs.foot.settings.cursor.blink;
+              };
+
+              mouse = {
+                hide-when-typing = config.programs.foot.settings.mouse.hide-when-typing;
               };
             };
           };
 
           lutris = {
-            enable = true;
-            package = stableNixPackages.lutris-free;
+            enable = false; # FIXME: Build Failure
+            package = (
+              stableNixPackages.lutris-free.override {
+                steamSupport = false;
+              }
+            );
 
             extraPackages = with pkgs; [
+              config.home-manager.users.root.programs.mangohud.package
               gamemode
               gamescope
-              mangohud
               protontricks
               winetricks
             ];
@@ -4518,6 +5157,16 @@ in
             protonPackages = with pkgs; [
               proton-ge-bin
             ];
+          };
+
+          yazi = {
+            enable = config.programs.yazi.enable;
+            package = config.programs.yazi.package;
+            plugins = config.programs.yazi.plugins;
+
+            enableBashIntegration = true;
+
+            settings = config.programs.yazi.settings;
           };
 
           wofi = {
@@ -4546,6 +5195,8 @@ in
               insensitive = true;
 
               single_click = true;
+
+              term = "foot";
             };
 
             style = ''
@@ -4569,7 +5220,185 @@ in
               #img {
                 margin-right: 4px;
               }
-            ''; # FIXME: Window > Border Radius > Transperant Background
+            '';
+          };
+        };
+
+        catppuccin = {
+          enable = true;
+
+          enableReleaseCheck = true;
+          cache.enable = true;
+
+          flavor = config.catppuccin.flavor;
+          accent = config.catppuccin.accent;
+
+          cursors = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          bat = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          btop = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          k9s = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+
+            transparent = true;
+          };
+
+          cava = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+
+            transparent = true;
+          };
+
+          wleave = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            iconStyle = "wleave";
+          };
+
+          brave = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          delta = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          fcitx5 = {
+            enable = config.catppuccin.enable;
+            apply = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            enableRounded = true;
+          }; # TODO: Check
+
+          foot = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          television = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          vivid = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          gh-dash = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          gtk.icon.enable = false;
+
+          hyprland = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          }; # TODO:Check
+
+          hyprlock = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            useDefaultConfig = true;
+          };
+
+          hyprtoolkit = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          }; # TODO: Check
+
+          imv = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          kvantum = {
+            enable = config.catppuccin.enable;
+            assertStyle = true;
+            apply = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          lazygit = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          mangohud = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          obs = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          }; # Settings > Appearance > Theme, Style
+
+          qt5ct = {
+            enable = config.catppuccin.enable;
+            assertPlatformTheme = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          vscodium.profiles.default.enable = false; # FIXME: Make settings.json Writable
+
+          yazi = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
           };
         };
       }
