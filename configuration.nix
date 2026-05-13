@@ -19,6 +19,7 @@ let
       };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  nixvimFlake = builtins.getFlake "github:nix-community/nixvim/main";
   snapdFlake = builtins.getFlake "github:nix-community/nix-snapd/main";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
@@ -126,6 +127,7 @@ in
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
+    nixvimFlake.nixosModules.nixvim
     snapdFlake.nixosModules.default
     catppuccinThemeFlake.nixosModules.catppuccin
     ./hardware-configuration.nix
@@ -144,16 +146,17 @@ in
         efiSupport = true;
         zfsSupport = true;
         enableCryptodisk = true;
+        useOSProber = true;
 
         fsIdentifier = "uuid";
         device = "nodev";
 
         gfxmodeEfi = "1920x1080,auto";
         gfxpayloadEfi = "keep";
+        splashMode = "stretch";
 
         configurationLimit = 100;
         extraEntriesBeforeNixOS = false;
-        useOSProber = true;
 
         memtest86 = {
           enable = true;
@@ -1008,6 +1011,17 @@ in
       fallbackServers = config.networking.timeServers;
     };
 
+    cloudflare-warp = {
+      enable = true;
+      package = (
+        pkgs.cloudflare-warp.override {
+          headless = false;
+        }
+      );
+
+      openFirewall = true;
+    };
+
     resolved = {
       enable = true;
 
@@ -1821,6 +1835,11 @@ in
         ]);
     };
 
+    nautilus-open-any-terminal = {
+      enable = true;
+      terminal = "foot";
+    };
+
     appimage = {
       enable = true;
       package = (
@@ -1844,6 +1863,55 @@ in
       );
 
       binfmt = true;
+    };
+
+    nixvim = {
+      enable = true;
+      package = pkgs.neovim-unwrapped;
+      autowrapRuntimeDeps = false;
+      waylandSupport = true;
+      enableMan = false; # FIXME: Build Failure
+
+      defaultEditor = true;
+      viAlias = true;
+      vimAlias = true;
+
+      plugins = {
+        lsp = {
+          enable = true;
+
+          servers = {
+            lua_ls.enable = true;
+          };
+        };
+
+        lualine.enable = true;
+        luasnip.enable = true;
+        oil.enable = true;
+        telescope.enable = true;
+        treesitter.enable = true;
+
+        nvim-cmp = {
+          enable = true;
+
+          autoEnableSources = true;
+          sources = [
+            {
+              name = "nvim_lsp";
+            }
+            {
+              name = "path";
+            }
+            {
+              name = "buffer";
+            }
+          ];
+        };
+      };
+
+      colorschemes.catppuccin = {
+        enable = true;
+      };
     };
 
     direnv = {
@@ -2331,8 +2399,8 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
+        # freesmlauncher # Overlay from Flake # FIXME: Build Failure
         # reiser4progs # Marked as Broken
-        # rtl_fm_streamer # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
         aalib
         aapt
@@ -2343,9 +2411,7 @@ in
         act
         actionlint
         addlicense
-        agi # FIXME: Cannot Find libswt # Run with steam-run
         aircrack-ng
-        airgorah
         alac
         alsa-plugins
         alsa-tools
@@ -2356,7 +2422,6 @@ in
         ansilove
         anydesk # Unfree
         apfsprogs
-        apitrace
         apkeep
         apkleaks
         appimageupdate-qt
@@ -2367,7 +2432,7 @@ in
         ascii-draw
         ascii-image-converter
         asciicam
-        asciinema_3
+        asciinema
         asciinema-agg
         asciiquarium-transparent
         asnmap
@@ -2398,7 +2463,6 @@ in
         celt
         certbot-full
         certdump
-        chart-testing
         cicero-tui
         clinfo
         cliphist
@@ -2411,7 +2475,6 @@ in
         collision
         compose2nix
         concurrently
-        conmon
         constrict
         cramfsprogs
         cron
@@ -2425,7 +2488,7 @@ in
         d-spy
         daemon
         darktable
-        dbeaver-bin
+        dbgate
         dconf-editor
         dconf2nix
         ddcui
@@ -2440,9 +2503,7 @@ in
         dive
         dmg2img
         dmidecode
-        dnsmasq
         dnsrecon
-        docker-compose
         docker-compose-language-service
         docker-language-server
         dosfstools
@@ -2455,6 +2516,7 @@ in
         efibootmgr
         efivar
         egypt
+        element
         elf-dissector
         emblem
         esptool
@@ -2480,23 +2542,24 @@ in
         flare-floss
         flatpak-builder
         flatpak-xdg-utils
+        flawz
         flutter
         font-manager
         fontfor
+        fork-cleaner
         freecad
-        freesmlauncher # Overlay from Flake
         fritzing
         fstl
         gama-tui
         gawk
         gcc
         gdb
-        ghostunnel
         gimp3-with-plugins
         git-big-picture
         git-filter-repo
         git-repo
         github-changelog-generator
+        gitlogue
         glib
         globe-cli
         gnome-firmware
@@ -2523,8 +2586,6 @@ in
         hashcat-utils
         hashes
         hdparm
-        helm-dashboard
-        helm-ls
         hexpatch
         hfsprogs
         hieroglyphic
@@ -2553,15 +2614,11 @@ in
         inetutils
         inkscape-with-extensions
         inotify-tools
-        input-leap
         interception-tools
         iotop-c
-        iw # Required by Airgorah
         jfsutils
         jmc2obj
         jmol
-        john
-        johnny
         jq
         jxrlib
         kernel-hardening-checker
@@ -2573,25 +2630,10 @@ in
         kotlin
         kotlin-language-server
         kubectl
-        kubectl-ai
-        kubectl-convert
-        kubectl-doctor
-        kubectl-example
-        kubectl-explore
-        kubectl-graph
-        kubectl-images
-        kubectl-klock
-        kubectl-neat
-        kubectl-node-shell
-        kubectl-tree
-        kubectl-validate
-        kubectl-view-allocations
-        kubectl-view-secret
-        kubernetes-code-generator
         kubernetes-controller-tools
-        kubernetes-helm
-        kubernetes-metrics-server
         kubeshark
+        lazyjournal
+        lazyssh
         libaom
         libarchive
         libde265
@@ -2612,7 +2654,6 @@ in
         linux-exploit-suggester
         linuxConsoleTools
         llmfit
-        logdy
         logtop
         lorem
         lsb-release
@@ -2625,16 +2666,12 @@ in
         lyto
         lyx
         lzham
-        lziprecover
         macchanger
         mailcap
         mapscii
-        massdns
         mcaselector
         md-lsp
         md-tui
-        media-downloader
-        memtier-benchmark
         meow
         mermaid-cli
         mesa-demos
@@ -2646,17 +2683,18 @@ in
         mixxx
         mmtui
         monkeys-audio
-        motion
-        mousai
+        mousam
         moxnotify
         mt-st
         mtools
-        mtr-gui
         musescore
+        musikcube
+        mysqltuner
+        nautilus
+        nautilus-python
         ncdu
         nemu
         nethogs
-        nikto
         nilfs-utils
         ninja
         nix-diff
@@ -2685,7 +2723,6 @@ in
         openssl
         oterm
         otree
-        p7zip
         paper-clip
         parted
         pbzx
@@ -2694,6 +2731,9 @@ in
         pe-bear
         pev
         pg_top
+        pgbadger
+        pgmodeler
+        pgread
         pipes
         pkg-config
         platformio
@@ -2744,13 +2784,14 @@ in
         smag
         smartmontools
         sof-tools
+        songrec
         sound-theme-freedesktop
         soundconverter
         sox
         spytrap-adb
+        sqlit-tui
         sslscan
         steam-run-free
-        stegseek
         stellarium
         stenc
         streamlit
@@ -2763,14 +2804,11 @@ in
         tdf
         telegraph
         terminaltexteffects
+        termscp
         termshark
         texliveFull
         time
-        tpm2-abrmd
-        tpm2-openssl
-        tpm2-pkcs11-abrmd
         tpm2-tools
-        tpm2-tss
         traceroute
         traitor
         tray-tui
@@ -2803,7 +2841,6 @@ in
         virt-top
         virt-v2v
         vorbis-tools
-        vscode-js-debug
         vulkan-caps-viewer
         vulkan-tools
         wafw00f
@@ -2843,7 +2880,6 @@ in
         xfsprogs
         xonotic
         xoscope
-        xterm # Required by Airgorah
         xvidcore
         yaml-language-server
         yara-x
@@ -3792,7 +3828,7 @@ in
   };
 
   documentation = {
-    enable = true;
+    enable = false; # FIXME: Fails Building Nixvim
 
     dev.enable = true;
     doc.enable = true;
@@ -4007,6 +4043,7 @@ in
 
             exec-once = [
               "pidof moxnotify || uwsm-app -- moxnotify"
+              "pidof tray-tui || uwsm-app -- xdg-terminal-exec -- --title=\"Tray-TUI\" tray-tui"
               "pidof soteria || uwsm-app -- soteria" # Fallback
               "uwsm-app -- wl-paste --type text --watch cliphist store"
               "uwsm-app -- wl-paste --type image --watch cliphist store"
@@ -4016,7 +4053,7 @@ in
 
             bind = [
               "SUPER, L, exec, loginctl lock-session"
-              "SUPER CTRL, L, exec, uwsm-app -- wleave"
+              "SUPER CTRL, L, exec, uwsm-app -- wleave --service=false --show-keybinds=true --no-version-info=true"
 
               "SUPER, 1, workspace, 1"
               "SUPER, 2, workspace, 2"
@@ -4099,7 +4136,7 @@ in
 
               "SUPER, E, exec, uwsm-app -- codium"
 
-              "SUPER, D, exec, uwsm-app -- dbeaver"
+              "SUPER, D, exec, uwsm-app -- dbgate"
 
               "SUPER, O, exec, uwsm-app -- xdg-terminal-exec -- oterm"
             ];
@@ -4205,8 +4242,7 @@ in
               use_nearest_neighbor = true;
             };
 
-            # windowrule = [
-            # ];
+            # windowrule = [ ];
 
             input = {
               kb_layout = "us";
@@ -5297,7 +5333,7 @@ in
             accent = config.catppuccin.accent;
 
             enableRounded = true;
-          }; # TODO: Check
+          };
 
           foot = {
             enable = config.catppuccin.enable;
@@ -5392,7 +5428,7 @@ in
             accent = config.catppuccin.accent;
           };
 
-          vscodium.profiles.default.enable = false; # FIXME: Make settings.json Writable
+          vscodium.profiles = null;
 
           yazi = {
             enable = config.catppuccin.enable;
