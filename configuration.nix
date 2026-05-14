@@ -19,7 +19,9 @@ let
       };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
   nixvimFlake = builtins.getFlake "github:nix-community/nixvim/main";
+  tinyMediaManagerFlake = builtins.getFlake "github:gujial/tinyMediaManager-flake/master";
   snapdFlake = builtins.getFlake "github:nix-community/nix-snapd/main";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
@@ -354,13 +356,21 @@ in
         "pipe-operators"
       ];
 
-      require-sigs = true;
       sandbox = true;
       auto-optimise-store = true;
 
+      require-sigs = true;
+      trusted-substituters = config.nix.settings.substituters;
+      trusted-public-keys = [
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+      ];
       trusted-users = [
         "root"
         "@wheel"
+      ];
+
+      substituters = [
+        "https://hyprland.cachix.org"
       ];
 
       cores = 0; # 0 = All
@@ -388,6 +398,23 @@ in
     overlays = [
       (final: prev: {
         libvirt = stableNixPackages.libvirt;
+      })
+      (final: prev: {
+        hyprland = (
+          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
+            debug = false;
+            enableXWayland = true;
+            withSystemd = true;
+            wrapRuntimeDeps = true;
+          }
+        );
+      })
+      (final: prev: {
+        xdg-desktop-portal-hyprland =
+          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
+            {
+              debug = false;
+            };
       })
       freesmLauncherFlake.overlays.default
     ];
@@ -2091,23 +2118,7 @@ in
 
     usbtop.enable = true;
 
-    nano = {
-      enable = true;
-      package = (
-        pkgs.nano.override {
-          enableNls = true;
-        }
-      );
-
-      syntaxHighlight = true;
-
-      nanorc = ''
-        set linenumbers
-        set softwrap
-        set indicator
-        set autoindent
-      '';
-    };
+    nano.enable = false;
 
     bat = {
       enable = true;
@@ -2137,19 +2148,8 @@ in
 
     hyprland = {
       enable = true;
-      package = (
-        pkgs.hyprland.override {
-          debug = false;
-          enableXWayland = true;
-          withSystemd = true;
-          wrapRuntimeDeps = true;
-        }
-      );
-      portalPackage = (
-        pkgs.xdg-desktop-portal-hyprland.override {
-          debug = false;
-        }
-      );
+      package = pkgs.hyprland;
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
 
       withUWSM = true;
       xwayland.enable = true;
@@ -2599,7 +2599,6 @@ in
         hyprland-qt-support
         hyprland-qtutils
         hyprland-workspaces-tui
-        hyprls
         hyprpicker
         hyprshutdown
         hyprtoolkit
@@ -2808,6 +2807,7 @@ in
         termshark
         texliveFull
         time
+        tinyMediaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.default
         tpm2-tools
         traceroute
         traitor
@@ -3256,7 +3256,14 @@ in
       CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
     };
 
-    # sessionVariables = { };
+    sessionVariables = {
+      NIXOS_OZONE_WL = 1;
+
+      ADW_DISABLE_PORTAL = 1;
+
+      XCURSOR_THEME = config.home-manager.users.root.home.pointerCursor.name;
+      XCURSOR_SIZE = config.home-manager.users.root.home.pointerCursor.size;
+    };
 
     shellAliases = {
       unbind_i8042_driver = "sudo sh -c 'echo -n \"i8042\" > /sys/bus/platform/drivers/i8042/unbind'";
@@ -3294,10 +3301,8 @@ in
     portal = {
       enable = true;
       extraPortals = with pkgs; [
+        config.programs.hyprland.portalPackage
         xdg-desktop-portal-gtk
-        (pkgs.xdg-desktop-portal-hyprland.override {
-          debug = false;
-        })
       ];
 
       xdgOpenUsePortal = true;
@@ -3332,103 +3337,103 @@ in
       defaultApplications = {
         "inode/directory" = "yazi.desktop";
 
-        "text/1d-interleaved-parityfec" = "codium.desktop";
-        "text/cache-manifest" = "codium.desktop";
-        "text/calendar" = "codium.desktop";
-        "text/cql" = "codium.desktop";
-        "text/cql-expression" = "codium.desktop";
-        "text/cql-identifier" = "codium.desktop";
-        "text/css" = "codium.desktop";
-        "text/csv" = "codium.desktop";
-        "text/csv-schema" = "codium.desktop";
-        "text/directory" = "codium.desktop";
-        "text/dns" = "codium.desktop";
-        "text/ecmascript" = "codium.desktop";
-        "text/encaprtp" = "codium.desktop";
-        "text/enriched" = "codium.desktop";
-        "text/fhirpath" = "codium.desktop";
-        "text/flexfec" = "codium.desktop";
-        "text/fwdred" = "codium.desktop";
-        "text/gff3" = "codium.desktop";
-        "text/grammar-ref-list" = "codium.desktop";
-        "text/hl7v2" = "codium.desktop";
-        "text/html" = "codium.desktop";
-        "text/javascript" = "codium.desktop";
-        "text/jcr-cnd" = "codium.desktop";
-        "text/markdown" = "codium.desktop";
-        "text/mizar" = "codium.desktop";
-        "text/n3" = "codium.desktop";
-        "text/org" = "codium.desktop";
-        "text/parameters" = "codium.desktop";
-        "text/parityfec" = "codium.desktop";
-        "text/plain" = "codium.desktop";
-        "text/provenance-notation" = "codium.desktop";
-        "text/prs.fallenstein.rst" = "codium.desktop";
-        "text/prs.lines.tag" = "codium.desktop";
-        "text/prs.prop.logic" = "codium.desktop";
-        "text/prs.texi" = "codium.desktop";
-        "text/raptorfec" = "codium.desktop";
-        "text/RED" = "codium.desktop";
-        "text/rfc822-headers" = "codium.desktop";
-        "text/richtext" = "codium.desktop";
-        "text/rtf" = "codium.desktop";
-        "text/rtp-enc-aescm128" = "codium.desktop";
-        "text/rtploopback" = "codium.desktop";
-        "text/rtx" = "codium.desktop";
-        "text/SGML" = "codium.desktop";
-        "text/shaclc" = "codium.desktop";
-        "text/shex" = "codium.desktop";
-        "text/spdx" = "codium.desktop";
-        "text/strings" = "codium.desktop";
-        "text/t140" = "codium.desktop";
-        "text/tab-separated-values" = "codium.desktop";
-        "text/troff" = "codium.desktop";
-        "text/turtle" = "codium.desktop";
-        "text/ulpfec" = "codium.desktop";
-        "text/uri-list" = "codium.desktop";
-        "text/vcard" = "codium.desktop";
-        "text/vnd.a" = "codium.desktop";
-        "text/vnd.abc" = "codium.desktop";
-        "text/vnd.ascii-art" = "codium.desktop";
-        "text/vnd.curl" = "codium.desktop";
-        "text/vnd.debian.copyright" = "codium.desktop";
-        "text/vnd.DMClientScript" = "codium.desktop";
-        "text/vnd.dvb.subtitle" = "codium.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "codium.desktop";
-        "text/vnd.exchangeable" = "codium.desktop";
-        "text/vnd.familysearch.gedcom" = "codium.desktop";
-        "text/vnd.ficlab.flt" = "codium.desktop";
-        "text/vnd.fly" = "codium.desktop";
-        "text/vnd.fmi.flexstor" = "codium.desktop";
-        "text/vnd.gml" = "codium.desktop";
-        "text/vnd.graphviz" = "codium.desktop";
-        "text/vnd.hans" = "codium.desktop";
-        "text/vnd.hgl" = "codium.desktop";
-        "text/vnd.in3d.3dml" = "codium.desktop";
-        "text/vnd.in3d.spot" = "codium.desktop";
-        "text/vnd.IPTC.NewsML" = "codium.desktop";
-        "text/vnd.IPTC.NITF" = "codium.desktop";
-        "text/vnd.latex-z" = "codium.desktop";
-        "text/vnd.motorola.reflex" = "codium.desktop";
-        "text/vnd.ms-mediapackage" = "codium.desktop";
-        "text/vnd.net2phone.commcenter.command" = "codium.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "codium.desktop";
-        "text/vnd.senx.warpscript" = "codium.desktop";
-        "text/vnd.si.uricatalogue" = "codium.desktop";
-        "text/vnd.sosi" = "codium.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "codium.desktop";
-        "text/vnd.trolltech.linguist" = "codium.desktop";
-        "text/vnd.typst" = "codium.desktop";
-        "text/vnd.vcf" = "codium.desktop";
-        "text/vnd.wap.si" = "codium.desktop";
-        "text/vnd.wap.sl" = "codium.desktop";
-        "text/vnd.wap.wml" = "codium.desktop";
-        "text/vnd.wap.wmlscript" = "codium.desktop";
-        "text/vnd.zoo.kcl" = "codium.desktop";
-        "text/vtt" = "codium.desktop";
-        "text/wgsl" = "codium.desktop";
-        "text/xml" = "codium.desktop";
-        "text/xml-external-parsed-entity" = "codium.desktop";
+        "text/1d-interleaved-parityfec" = "nvim.desktop";
+        "text/cache-manifest" = "nvim.desktop";
+        "text/calendar" = "nvim.desktop";
+        "text/cql" = "nvim.desktop";
+        "text/cql-expression" = "nvim.desktop";
+        "text/cql-identifier" = "nvim.desktop";
+        "text/css" = "nvim.desktop";
+        "text/csv" = "nvim.desktop";
+        "text/csv-schema" = "nvim.desktop";
+        "text/directory" = "nvim.desktop";
+        "text/dns" = "nvim.desktop";
+        "text/ecmascript" = "nvim.desktop";
+        "text/encaprtp" = "nvim.desktop";
+        "text/enriched" = "nvim.desktop";
+        "text/fhirpath" = "nvim.desktop";
+        "text/flexfec" = "nvim.desktop";
+        "text/fwdred" = "nvim.desktop";
+        "text/gff3" = "nvim.desktop";
+        "text/grammar-ref-list" = "nvim.desktop";
+        "text/hl7v2" = "nvim.desktop";
+        "text/html" = "nvim.desktop";
+        "text/javascript" = "nvim.desktop";
+        "text/jcr-cnd" = "nvim.desktop";
+        "text/markdown" = "nvim.desktop";
+        "text/mizar" = "nvim.desktop";
+        "text/n3" = "nvim.desktop";
+        "text/org" = "nvim.desktop";
+        "text/parameters" = "nvim.desktop";
+        "text/parityfec" = "nvim.desktop";
+        "text/plain" = "nvim.desktop";
+        "text/provenance-notation" = "nvim.desktop";
+        "text/prs.fallenstein.rst" = "nvim.desktop";
+        "text/prs.lines.tag" = "nvim.desktop";
+        "text/prs.prop.logic" = "nvim.desktop";
+        "text/prs.texi" = "nvim.desktop";
+        "text/raptorfec" = "nvim.desktop";
+        "text/RED" = "nvim.desktop";
+        "text/rfc822-headers" = "nvim.desktop";
+        "text/richtext" = "nvim.desktop";
+        "text/rtf" = "nvim.desktop";
+        "text/rtp-enc-aescm128" = "nvim.desktop";
+        "text/rtploopback" = "nvim.desktop";
+        "text/rtx" = "nvim.desktop";
+        "text/SGML" = "nvim.desktop";
+        "text/shaclc" = "nvim.desktop";
+        "text/shex" = "nvim.desktop";
+        "text/spdx" = "nvim.desktop";
+        "text/strings" = "nvim.desktop";
+        "text/t140" = "nvim.desktop";
+        "text/tab-separated-values" = "nvim.desktop";
+        "text/troff" = "nvim.desktop";
+        "text/turtle" = "nvim.desktop";
+        "text/ulpfec" = "nvim.desktop";
+        "text/uri-list" = "nvim.desktop";
+        "text/vcard" = "nvim.desktop";
+        "text/vnd.a" = "nvim.desktop";
+        "text/vnd.abc" = "nvim.desktop";
+        "text/vnd.ascii-art" = "nvim.desktop";
+        "text/vnd.curl" = "nvim.desktop";
+        "text/vnd.debian.copyright" = "nvim.desktop";
+        "text/vnd.DMClientScript" = "nvim.desktop";
+        "text/vnd.dvb.subtitle" = "nvim.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "nvim.desktop";
+        "text/vnd.exchangeable" = "nvim.desktop";
+        "text/vnd.familysearch.gedcom" = "nvim.desktop";
+        "text/vnd.ficlab.flt" = "nvim.desktop";
+        "text/vnd.fly" = "nvim.desktop";
+        "text/vnd.fmi.flexstor" = "nvim.desktop";
+        "text/vnd.gml" = "nvim.desktop";
+        "text/vnd.graphviz" = "nvim.desktop";
+        "text/vnd.hans" = "nvim.desktop";
+        "text/vnd.hgl" = "nvim.desktop";
+        "text/vnd.in3d.3dml" = "nvim.desktop";
+        "text/vnd.in3d.spot" = "nvim.desktop";
+        "text/vnd.IPTC.NewsML" = "nvim.desktop";
+        "text/vnd.IPTC.NITF" = "nvim.desktop";
+        "text/vnd.latex-z" = "nvim.desktop";
+        "text/vnd.motorola.reflex" = "nvim.desktop";
+        "text/vnd.ms-mediapackage" = "nvim.desktop";
+        "text/vnd.net2phone.commcenter.command" = "nvim.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "nvim.desktop";
+        "text/vnd.senx.warpscript" = "nvim.desktop";
+        "text/vnd.si.uricatalogue" = "nvim.desktop";
+        "text/vnd.sosi" = "nvim.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "nvim.desktop";
+        "text/vnd.trolltech.linguist" = "nvim.desktop";
+        "text/vnd.typst" = "nvim.desktop";
+        "text/vnd.vcf" = "nvim.desktop";
+        "text/vnd.wap.si" = "nvim.desktop";
+        "text/vnd.wap.sl" = "nvim.desktop";
+        "text/vnd.wap.wml" = "nvim.desktop";
+        "text/vnd.wap.wmlscript" = "nvim.desktop";
+        "text/vnd.zoo.kcl" = "nvim.desktop";
+        "text/vtt" = "nvim.desktop";
+        "text/wgsl" = "nvim.desktop";
+        "text/xml" = "nvim.desktop";
+        "text/xml-external-parsed-entity" = "nvim.desktop";
 
         "image/aces" = "imv.desktop";
         "image/apng" = "imv.desktop";
@@ -4025,330 +4030,771 @@ in
           sourceFirst = true;
 
           settings = {
-            env = [
-              "NIXOS_OZONE_WL, 1"
-
-              "ADW_DISABLE_PORTAL, 1"
-
-              "XCURSOR_THEME, ${config.home-manager.users.root.home.pointerCursor.name}"
-              "XCURSOR_SIZE, ${toString config.home-manager.users.root.home.pointerCursor.size}"
-            ];
-
             monitor = [
-              # Name, Resolution, Position, Scale, Transform-Parameter, Transform
-              ", highres, auto, 1, transform, 0"
-              "eDP-1, highres, auto, 1, transform, 0"
-              "HDMI-A-1, highres, auto, 1, transform, 1"
+              {
+                output = "";
+                mode = "highres";
+                position = "auto";
+                transform = 0;
+                scale = 1;
+              }
+              {
+                output = "eDP-1";
+                mode = "highres";
+                position = "auto";
+                transform = 0;
+                scale = 1;
+              }
+              {
+                output = "HDMI-A-1";
+                mode = "highres";
+                position = "auto";
+                transform = 1; # 1 = 90 Degrees
+                scale = 1;
+              }
             ];
 
-            exec-once = [
-              "pidof moxnotify || uwsm-app -- moxnotify"
-              "pidof tray-tui || uwsm-app -- xdg-terminal-exec -- --title=\"Tray-TUI\" tray-tui"
-              "pidof soteria || uwsm-app -- soteria" # Fallback
-              "uwsm-app -- wl-paste --type text --watch cliphist store"
-              "uwsm-app -- wl-paste --type image --watch cliphist store"
-              "adb start-server"
-              "windowtolayer xdg-terminal-exec -- asciiquarium --transparent"
-            ];
+            on = {
+              _args = [
+                "hyprland.start"
+                (lib.generators.mkLuaInline ''
+                  function()
+                    hl.exec_cmd("pidof moxnotify || uwsm-app -- moxnotify")
+                    hl.exec_cmd("pidof tray-tui || uwsm-app -- xdg-terminal-exec -- tray-tui", {workspace = "special:magic"})
+                    hl.exec_cmd("pidof soteria || uwsm-app -- soteria")
+
+                    hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
+                    hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
+
+                    hl.exec_cmd("adb start-server")
+
+                    hl.exec_cmd("windowtolayer xdg-terminal-exec -- asciiquarium --transparent")
+                  end
+                '')
+              ];
+            };
 
             bind = [
-              "SUPER, L, exec, loginctl lock-session"
-              "SUPER CTRL, L, exec, uwsm-app -- wleave --service=false --show-keybinds=true --no-version-info=true"
-
-              "SUPER, 1, workspace, 1"
-              "SUPER, 2, workspace, 2"
-              "SUPER, 3, workspace, 3"
-              "SUPER, 4, workspace, 4"
-              "SUPER, 5, workspace, 5"
-              "SUPER, 6, workspace, 6"
-              "SUPER, 7, workspace, 7"
-              "SUPER, 8, workspace, 8"
-              "SUPER, 9, workspace, 9"
-              "SUPER, 0, workspace, 10"
-              "SUPER, mouse_down, workspace, e+1"
-              "SUPER, mouse_up, workspace, e-1"
-              "SUPER, S, togglespecialworkspace, magic"
-
-              "SUPER, left, movefocus, l"
-              "SUPER, right, movefocus, r"
-              "SUPER, up, movefocus, u"
-              "SUPER, down, movefocus, d"
-
-              "SUPER SHIFT, 1, movetoworkspace, 1"
-              "SUPER SHIFT, 2, movetoworkspace, 2"
-              "SUPER SHIFT, 3, movetoworkspace, 3"
-              "SUPER SHIFT, 4, movetoworkspace, 4"
-              "SUPER SHIFT, 5, movetoworkspace, 5"
-              "SUPER SHIFT, 6, movetoworkspace, 6"
-              "SUPER SHIFT, 7, movetoworkspace, 7"
-              "SUPER SHIFT, 8, movetoworkspace, 8"
-              "SUPER SHIFT, 9, movetoworkspace, 9"
-              "SUPER SHIFT, 0, movetoworkspace, 10"
-              "SUPER SHIFT, S, movetoworkspace, special:magic"
-              "SUPER SHIFT ALT, 1, movetoworkspacesilent, 1"
-              "SUPER SHIFT ALT, 2, movetoworkspacesilent, 2"
-              "SUPER SHIFT ALT, 3, movetoworkspacesilent, 3"
-              "SUPER SHIFT ALT, 4, movetoworkspacesilent, 4"
-              "SUPER SHIFT ALT, 5, movetoworkspacesilent, 5"
-              "SUPER SHIFT ALT, 6, movetoworkspacesilent, 6"
-              "SUPER SHIFT ALT, 7, movetoworkspacesilent, 7"
-              "SUPER SHIFT ALT, 8, movetoworkspacesilent, 8"
-              "SUPER SHIFT ALT, 9, movetoworkspacesilent, 9"
-              "SUPER SHIFT ALT, 0, movetoworkspacesilent, 10"
-              "SUPER SHIFT ALT, S, movetoworkspacesilent, special:magic"
-
-              "SUPER SHIFT, T, togglesplit," # FIXME: Not Working
-              "SUPER SHIFT, F, togglefloating,"
-              ", F11, fullscreen, 0"
-              "SUPER, Q, killactive,"
-
-              ", PRINT, exec, uwsm-app -- ferrishot"
-
-              "SUPER, RETURN, exec, uwsm-app -- wofi --show drun --disable-history | xargs -r uwsm-app --"
-              "SUPER ALT, RETURN, exec, uwsm-app -- wofi --show run --disable-history | xargs -r uwsm-app --"
-
-              "SUPER, SPACE, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
-
-              "SUPER, T, exec, uwsm-app -- xdg-terminal-exec"
-
-              ", XF86Explorer, exec, uwsm-app -- xdg-terminal-exec -- yazi"
-              "SUPER, F, exec, uwsm-app -- xdg-terminal-exec -- yazi"
-
-              "SUPER CTRL, B, exec, uwsm-app -- xdg-terminal-exec -- bluetui"
-              "SUPER CTRL, N, exec, uwsm-app -- xdg-terminal-exec -- wifitui tui"
-              "SUPER CTRL ALT, N, exec, uwsm-app -- xdg-terminal-exec -- nmtui"
-
-              "SUPER CTRL, A, exec, uwsm-app -- xdg-terminal-exec -- wiremix"
-
-              "SUPER, Y, exec, uwsm-app -- xdg-terminal-exec -- --hold cal --year"
-              "SUPER ALT, Y, exec, uwsm-app -- xdg-terminal-exec -- clock-rs --blink"
-
-              "SUPER, K, exec, uwsm-app -- keepassxc"
-              "SUPER ALT, K, exec, uwsm-app -- keepassxc --lock"
-
-              "SUPER, U, exec, uwsm-app -- xdg-terminal-exec -- btop"
-
-              "SUPER, W, exec, uwsm-app -- brave"
-              "SUPER ALT, W, exec, uwsm-app -- brave --incognito"
-
-              ", XF86Mail, exec, uwsm-app -- tutanota-desktop"
-              "SUPER, M, exec, uwsm-app -- tutanota-desktop"
-
-              "SUPER, E, exec, uwsm-app -- codium"
-
-              "SUPER, D, exec, uwsm-app -- dbgate"
-
-              "SUPER, O, exec, uwsm-app -- xdg-terminal-exec -- oterm"
+              {
+                _args = [
+                  "SUPER + L"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"loginctl lock-session\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + L"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- wleave --service=false --show-keybinds=true --no-version-info=true\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 1"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 2"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 3"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 4"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 5"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 6"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 7"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 8"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 9"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 0"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse_down"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse_up"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + S"
+                  (lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + left"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + right"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + up"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + down"
+                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 1"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 2"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 3"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 4"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 5"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 6"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 7"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 8"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 9"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 0"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + S"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 1"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 2"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 3"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 4"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 5"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 6"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 7"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 8"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 9"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 0"
+                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + F"
+                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + F"
+                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
+                ];
+              }
+              {
+                _args = [
+                  "F11"
+                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + Q"
+                  (lib.generators.mkLuaInline "hl.dsp.window.close()")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + Q"
+                  (lib.generators.mkLuaInline "hl.dsp.window.kill()")
+                ];
+              }
+              {
+                _args = [
+                  "Print"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- ferrishot\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + RETURN"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wofi --show drun --disable-history | xargs -r uwsm-app --\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + RETURN"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wofi --show run --disable-history | xargs -r uwsm-app --\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SPACE"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu | cliphist decode | wl-copy\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + T"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec\")")
+                ];
+              }
+              {
+                _args = [
+                  "XF86Explorer"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- yazi\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + F"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- yazi\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + B"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- bluetui\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + N"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- wifitui tui\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + ALT + N"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- nmtui\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + A"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- wiremix\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + Y"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- cal --year\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + Y"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- clock-rs --blink\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + K"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + K"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + U"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- btop\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + W"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + W"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave --incognito\")")
+                ];
+              }
+              {
+                _args = [
+                  "XF86Mail"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + M"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + E"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- nvim\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + D"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"dbgate\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + O"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- oterm\")")
+                ];
+              }
+              {
+                _args = [
+                  "XF86MonBrightnessUp"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl s 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86MonBrightnessDown"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl s 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioRaiseVolume"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioLowerVolume"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPlay"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPause"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioStop"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPrev"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioNext"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMute"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMicMute"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse:272"
+                  (lib.generators.mkLuaInline "hl.dsp.window.drag()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse:273"
+                  (lib.generators.mkLuaInline "hl.dsp.window.resize()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              }
             ];
 
-            bindm = [
-              "SUPER, mouse:272, movewindow"
-              "SUPER, mouse:273, resizewindow"
-            ]; # Mouse
+            config = {
+              binds = {
+                disable_keybind_grabbing = true;
+                pass_mouse_when_bound = false;
 
-            bindl = [
-              ", XF86AudioPlay, exec, playerctl play-pause"
-              ", XF86AudioPause, exec, playerctl play-pause"
-              ", XF86AudioStop, exec, playerctl stop"
-              ", XF86AudioPrev, exec, playerctl previous"
-              ", XF86AudioNext, exec, playerctl next"
+                window_direction_monitor_fallback = true;
+              };
 
-              ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-              ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-            ]; # Will also work when locked
+              cursor = {
+                no_hardware_cursors = false;
 
-            bindel = [
-              ", XF86MonBrightnessUp, exec, brightnessctl s 1%+"
-              ", XF86MonBrightnessDown, exec, brightnessctl s 1%-"
+                sync_gsettings_theme = true;
 
-              ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+"
-              ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-"
-            ]; # Repeat and will work when locked
+                persistent_warps = true;
 
-            general = {
-              allow_tearing = false;
+                no_warps = false;
 
-              gaps_workspaces = 0;
+                hide_on_key_press = false;
+                hide_on_touch = true;
+              };
 
-              layout = "dwindle";
+              decoration = {
+                dim_special = 0.25;
 
-              gaps_in = 1;
-              gaps_out = "0, 0, 0, 0"; # Top, Right, Bottom, Left
+                rounding = builtins.floor (design_factor / 2); # 8
 
-              border_size = 0;
+                active_opacity = 1.0;
+                fullscreen_opacity = 1.0;
+                inactive_opacity = 1.0;
 
-              no_focus_fallback = false;
+                dim_inactive = false;
+                dim_strength = 0.0;
 
-              resize_on_border = true;
-              hover_icon_on_border = true;
+                blur.enabled = false;
+                shadow.enabled = false;
+              };
 
-              snap = {
+              animations = {
                 enabled = true;
-                border_overlap = false;
-              };
-            };
 
-            ecosystem = {
-              no_update_news = false;
-            };
+                bezier = [
+                  "linear, 0, 0, 1, 1" # https://www.cssportal.com/css-cubic-bezier-generator/#0,0,1,1
+                ];
 
-            misc = {
-              disable_autoreload = false;
-
-              allow_session_lock_restore = true;
-
-              key_press_enables_dpms = true;
-              mouse_move_enables_dpms = true;
-
-              vfr = true;
-              vrr = 1;
-
-              mouse_move_focuses_monitor = true;
-
-              disable_hyprland_logo = true;
-              force_default_wallpaper = 1;
-              disable_splash_rendering = true;
-
-              font_family = fontPreferences.name.sans_serif;
-
-              close_special_on_empty = true;
-
-              animate_mouse_windowdragging = false;
-              animate_manual_resizes = false;
-
-              exit_window_retains_fullscreen = false;
-
-              layers_hog_keyboard_focus = true;
-
-              focus_on_activate = false;
-
-              middle_click_paste = true;
-            };
-
-            dwindle = {
-              pseudotile = false;
-
-              use_active_for_splits = true;
-              force_split = 0; # Follows Mouse
-              smart_split = false;
-              preserve_split = true;
-
-              smart_resizing = true;
-            };
-
-            xwayland = {
-              enabled = true;
-              force_zero_scaling = true;
-              use_nearest_neighbor = true;
-            };
-
-            # windowrule = [ ];
-
-            input = {
-              kb_layout = "us";
-
-              numlock_by_default = false;
-
-              follow_mouse = 1;
-              focus_on_close = 1;
-
-              left_handed = false;
-              natural_scroll = false;
-
-              touchpad = {
-                natural_scroll = true;
-
-                tap-to-click = true;
-                tap-and-drag = true;
-                drag_lock = true;
-
-                disable_while_typing = true;
+                animation = [
+                  "global, 1, 1.0, linear"
+                  "border, 1, 1.0, linear"
+                  "windows, 1, 1.0, linear"
+                  "windowsIn, 1, 1.0, linear"
+                  "windowsOut, 1, 1.0, linear"
+                  "fadeIn, 1, 1.0, linear"
+                  "fadeOut, 1, 1.0, linear"
+                  "fade, 1, 1.0, linear"
+                  "layers, 1, 1.0, linear"
+                  "layersIn, 1, 1.0, linear"
+                  "layersOut, 1, 1.0, linear"
+                  "fadeLayersIn, 1, 1.0, linear"
+                  "fadeLayersOut, 1, 1.0, linear"
+                  "workspaces, 1, 1.0, linear"
+                  "workspacesIn, 1, 1.0, linear"
+                  "workspacesOut, 1, 1.0, linear"
+                ];
+                # Name, On/Off, Speed, Bezier
               };
 
-              touchdevice = {
+              dwindle = {
+                use_active_for_splits = true;
+                force_split = 0; # Follows Mouse
+                smart_split = false;
+                preserve_split = true;
+
+                smart_resizing = true;
+              };
+
+              general = {
+                allow_tearing = false;
+
+                gaps_workspaces = 0;
+
+                layout = "dwindle";
+
+                gaps_in = 1;
+                gaps_out = {
+                  top = 0;
+                  right = 0;
+                  bottom = 0;
+                  left = 0;
+                };
+
+                border_size = 0;
+
+                no_focus_fallback = false;
+
+                resize_on_border = true;
+                hover_icon_on_border = true;
+
+                snap = {
+                  enabled = true;
+                  border_overlap = false;
+                };
+              };
+
+              misc = {
+                disable_autoreload = false;
+
+                allow_session_lock_restore = true;
+
+                key_press_enables_dpms = true;
+                mouse_move_enables_dpms = true;
+
+                vrr = 1;
+
+                mouse_move_focuses_monitor = true;
+
+                disable_hyprland_logo = true;
+                force_default_wallpaper = 1;
+                disable_splash_rendering = true;
+
+                font_family = fontPreferences.name.sans_serif;
+
+                close_special_on_empty = true;
+
+                animate_mouse_windowdragging = false;
+                animate_manual_resizes = false;
+
+                exit_window_retains_fullscreen = false;
+
+                layers_hog_keyboard_focus = true;
+
+                focus_on_activate = false;
+
+                middle_click_paste = true;
+              };
+
+              xwayland = {
                 enabled = true;
+                force_zero_scaling = true;
+                use_nearest_neighbor = true;
               };
 
-              tablet = {
+              # windowrule = [ ];
+
+              input = {
+                kb_layout = "us";
+
+                numlock_by_default = false;
+
+                follow_mouse = 1;
+                focus_on_close = 1;
+
                 left_handed = false;
+                natural_scroll = false;
+
+                touchpad = {
+                  natural_scroll = true;
+
+                  tap_to_click = true;
+                  tap_and_drag = true;
+                  drag_lock = true;
+
+                  disable_while_typing = true;
+                };
+
+                touchdevice = {
+                  enabled = true;
+                };
+
+                tablet = {
+                  left_handed = false;
+                };
+              };
+
+              gestures = {
+                # Touchpad
+                workspace_swipe_invert = true;
+
+                # Touchscreen
+                workspace_swipe_touch = false;
+                workspace_swipe_touch_invert = false;
+
+                workspace_swipe_create_new = true;
+                workspace_swipe_forever = true;
+              };
+
+              ecosystem = {
+                no_update_news = false;
               };
             };
 
-            cursor = {
-              no_hardware_cursors = false;
-
-              sync_gsettings_theme = true;
-
-              persistent_warps = true;
-
-              no_warps = false;
-
-              hide_on_key_press = false;
-              hide_on_touch = true;
-            };
-
-            binds = {
-              disable_keybind_grabbing = true;
-              pass_mouse_when_bound = false;
-
-              window_direction_monitor_fallback = true;
-            };
-
-            gestures = {
-              # Touchpad
-              workspace_swipe_invert = true;
-
-              # Touchscreen
-              workspace_swipe_touch = false;
-              workspace_swipe_touch_invert = false;
-
-              workspace_swipe_create_new = true;
-              workspace_swipe_forever = true;
-            };
-
-            decoration = {
-              dim_special = 0.25;
-
-              rounding = builtins.floor (design_factor / 2); # 8
-
-              active_opacity = 1.0;
-              fullscreen_opacity = 1.0;
-              inactive_opacity = 1.0;
-
-              dim_inactive = false;
-              dim_strength = 0.0;
-
-              blur.enabled = false;
-              shadow.enabled = false;
-            };
-
-            animations = {
-              enabled = true;
-
-              bezier = [
-                "linear, 0, 0, 1, 1" # https://www.cssportal.com/css-cubic-bezier-generator/#0,0,1,1
-              ];
-
-              animation = [
-                "global, 1, 1.0, linear"
-                "border, 1, 1.0, linear"
-                "windows, 1, 1.0, linear"
-                "windowsIn, 1, 1.0, linear"
-                "windowsOut, 1, 1.0, linear"
-                "fadeIn, 1, 1.0, linear"
-                "fadeOut, 1, 1.0, linear"
-                "fade, 1, 1.0, linear"
-                "layers, 1, 1.0, linear"
-                "layersIn, 1, 1.0, linear"
-                "layersOut, 1, 1.0, linear"
-                "fadeLayersIn, 1, 1.0, linear"
-                "fadeLayersOut, 1, 1.0, linear"
-                "workspaces, 1, 1.0, linear"
-                "workspacesIn, 1, 1.0, linear"
-                "workspacesOut, 1, 1.0, linear"
-              ];
-              # Name, On/Off, Speed, Bezier
-            };
           };
         };
 
@@ -4685,28 +5131,6 @@ in
             package = pkgs.cava;
           };
 
-          kodi = {
-            enable = true;
-            package = (
-              pkgs.kodi-wayland.override {
-                dbusSupport = true;
-                gbmSupport = true;
-                joystickSupport = true;
-                nfsSupport = true;
-                opticalSupport = true;
-                pipewireSupport = true;
-                pulseSupport = false;
-                rtmpSupport = true;
-                sambaSupport = true;
-                udevSupport = true;
-                usbSupport = false; # `usbSupport' and `udevSupport' cannot both be enabled at the same time.
-                vdpauSupport = true;
-                waylandSupport = true;
-                x11Support = false;
-              }
-            );
-          };
-
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
@@ -4774,7 +5198,7 @@ in
             settings = {
               git_protocol = "https";
 
-              editor = "nano";
+              editor = "nvim";
             };
           };
 
@@ -5364,7 +5788,7 @@ in
           gtk.icon.enable = false;
 
           hyprland = {
-            enable = config.catppuccin.enable;
+            enable = false; # TODO: Later
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
