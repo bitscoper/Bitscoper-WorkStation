@@ -1895,7 +1895,120 @@ in
     nixvim = {
       enable = true;
       package = pkgs.neovim-unwrapped;
-      autowrapRuntimeDeps = false;
+
+      autowrapRuntimeDeps = true;
+      dependencies = {
+        bat = {
+          enable = true;
+          package = config.programs.bat.package;
+        };
+
+        coreutils = {
+          enable = true;
+          package = config.home-manager.users.root.programs.dircolors.package;
+        };
+
+        direnv = {
+          enable = true;
+          package = config.programs.direnv.package;
+        };
+
+        epub-thumnailer = {
+          enable = true;
+          package = pkgs.epub-thumbnailer;
+        };
+
+        fd = {
+          enable = true;
+          package = pkgs.fd;
+        };
+
+        ffmpegthumbnailer = {
+          enable = true;
+          package = pkgs.ffmpegthumbnailer;
+        };
+
+        flutter = {
+          enable = true;
+          package = pkgs.flutter;
+        };
+
+        gcc = {
+          enable = true;
+          package = pkgs.gcc;
+        };
+
+        gh = {
+          enable = true;
+          package = pkgs.gh;
+        };
+
+        git = {
+          enable = true;
+          package = config.programs.git.package;
+        };
+
+        grep = {
+          enable = true;
+          package = pkgs.gnugrep;
+        };
+
+        gzip = {
+          enable = true;
+          package = pkgs.gzip;
+        };
+
+        lazygit = {
+          enable = true;
+          package = config.home-manager.users.root.programs.lazygit.package;
+        };
+
+        ripgrep = {
+          enable = true;
+          package = pkgs.ripgrep;
+        };
+
+        sed = {
+          enable = true;
+          package = pkgs.gnused;
+        };
+
+        television = {
+          enable = true;
+          package = pkgs.television;
+        };
+
+        tree-sitter = {
+          enable = true;
+          package = pkgs.tree-sitter;
+        };
+
+        util-linux = {
+          enable = true;
+          package = pkgs.util-linux;
+        };
+
+        websocat = {
+          enable = true;
+          package = pkgs.websocat;
+        };
+
+        which = {
+          enable = true;
+          package = pkgs.which;
+        };
+
+        yazi = {
+          enable = true;
+          package = config.programs.yazi.package;
+        };
+
+        yq = {
+          enable = true;
+          package = pkgs.yq;
+        };
+      };
+
       waylandSupport = true;
       enableMan = false; # FIXME: Build Failure
 
@@ -1903,20 +2016,193 @@ in
       viAlias = true;
       vimAlias = true;
 
+      enablePrintInit = true;
+      clipboard.register = "unnamedplus";
+      editorconfig.enable = true;
+
       plugins = {
         lsp = {
           enable = true;
 
           servers = {
-            lua_ls.enable = true;
+            arduino_language_server = {
+              enable = true;
+            };
+
+            asm_lsp = {
+              enable = true;
+            };
+
+            bashls = {
+              enable = true;
+            };
+
+            clangd = {
+              enable = true;
+            };
+
+            cmake = {
+              enable = true;
+            };
+
+            cssls = {
+              enable = true;
+            };
+
+            dartls = {
+              enable = true;
+            };
+
+            diagnosticls = {
+              enable = true;
+            };
+
+            dotls = {
+              enable = true;
+            };
+
+            html = {
+              enable = true;
+            };
+
+            jsonls = {
+              enable = true;
+            };
+
+            kotlin_language_server = {
+              enable = true;
+            };
+
+            lsp_ai = {
+              enable = true;
+            };
+
+            ltex = {
+              enable = true;
+            };
+
+            markdown_oxide = {
+              enable = true;
+            };
+
+            nil_ls = {
+              enable = true;
+            };
+
+            nixd = {
+              enable = true;
+            };
+
+            phpactor = {
+              enable = true;
+            };
+
+            postgres_lsp = {
+              enable = true;
+            };
+
+            pylsp = {
+              enable = true;
+            };
+
+            pylyzer = {
+              enable = true;
+            };
+
+            pyrefly = {
+              enable = true;
+            };
+
+            pyright = {
+              enable = true;
+            };
+
+            sqls = {
+              enable = true;
+            };
+
+            sqruff = {
+              enable = true;
+            };
+
+            statix = {
+              enable = true;
+            };
+
+            stylelint_lsp = {
+              enable = true;
+            };
+
+            stylua = {
+              enable = true;
+            };
+
+            superhtml = {
+              enable = true;
+            };
+
+            syntax_tree = {
+              enable = true;
+            };
+
+            systemd_ls = {
+              enable = true;
+            };
+
+            systemd_lsp = {
+              enable = true;
+            };
+
+            ts_ls = {
+              enable = true;
+            };
+
+            ts_query_ls = {
+              enable = true;
+            };
+
+            ttags = {
+              enable = true;
+            };
+
+            ty = {
+              enable = true;
+            };
+
+            wgsl_analyzer = {
+              enable = true;
+            };
+
+            yamlls = {
+              enable = true;
+            };
           };
+        };
+
+        flutter-tools = {
+          enable = true;
+        };
+
+        gitblame = {
+          enable = true;
+        };
+
+        gitignore = {
+          enable = true;
+        };
+
+        yaml-schema-detect = {
+          enable = true;
         };
 
         lualine.enable = true;
         luasnip.enable = true;
         oil.enable = true;
+        ollama.enable = true;
         telescope.enable = true;
         treesitter.enable = true;
+        web-devicons.enable = true;
+        yazi.enable = true;
 
         nvim-cmp = {
           enable = true;
@@ -2519,6 +2805,7 @@ in
         element
         elf-dissector
         emblem
+        epub-thumbnailer
         esptool
         etherape
         evtest
@@ -2534,6 +2821,7 @@ in
         fdroidcl
         fdt-viewer
         ferrishot
+        ffmpegthumbnailer
         ffpb
         fh
         file
@@ -2761,6 +3049,7 @@ in
         rclone
         rclone-browser
         regex-tui
+        ripgrep
         rp-pppoe
         rpi-imager
         rpmextract
@@ -2813,6 +3102,7 @@ in
         traitor
         tray-tui
         tree
+        tree-sitter
         treegen
         trufflehog
         trustymail
@@ -2847,8 +3137,8 @@ in
         wakeonlan
         warehouse
         wavemon
-        wayback_machine_downloader
         wayback-machine-archiver
+        wayback_machine_downloader
         waycheck
         waydroid-helper
         wayland-utils
@@ -4061,12 +4351,10 @@ in
                   function()
                     hl.exec_cmd("pidof moxnotify || uwsm-app -- moxnotify")
                     hl.exec_cmd("pidof tray-tui || uwsm-app -- xdg-terminal-exec -- tray-tui", {workspace = "special:magic"})
-                    hl.exec_cmd("pidof soteria || uwsm-app -- soteria")
+                    hl.exec_cmd("pidof soteria || uwsm-app -- soteria") -- Fallback
 
                     hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
                     hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
-
-                    hl.exec_cmd("adb start-server")
 
                     hl.exec_cmd("windowtolayer xdg-terminal-exec -- asciiquarium --transparent")
                   end
@@ -4419,7 +4707,7 @@ in
               }
               {
                 _args = [
-                  "SUPER + ALT + Y"
+                  "SUPER + C"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- clock-rs --blink\")")
                 ];
               }
@@ -4687,7 +4975,7 @@ in
 
                 layout = "dwindle";
 
-                gaps_in = 1;
+                gaps_in = 0;
                 gaps_out = {
                   top = 0;
                   right = 0;
@@ -4695,7 +4983,7 @@ in
                   left = 0;
                 };
 
-                border_size = 0;
+                border_size = 1;
 
                 no_focus_fallback = false;
 
@@ -5361,180 +5649,6 @@ in
           };
           brave.nativeMessagingHosts = config.home-manager.users.root.programs.chromium.nativeMessagingHosts;
 
-          vscodium = {
-            enable = true;
-            package = pkgs.vscodium;
-            mutableExtensionsDir = false;
-
-            profiles = {
-              default = {
-                extensions =
-                  with pkgs.vscode-extensions;
-                  [
-                    aaron-bond.better-comments
-                    adpyke.codesnap
-                    albymor.increment-selection
-                    alefragnani.bookmarks
-                    alexisvt.flutter-snippets
-                    anweber.vscode-httpyac
-                    bradgashler.htmltagwrap
-                    budparr.language-hugo-vscode
-                    chanhx.crabviz
-                    codezombiech.gitignore
-                    coolbear.systemd-unit-file
-                    cweijan.vscode-database-client2
-                    davidanson.vscode-markdownlint
-                    dbaeumer.vscode-eslint
-                    dendron.adjust-heading-level
-                    docker.docker
-                    dotenv.dotenv-vscode
-                    ecmel.vscode-html-css
-                    esbenp.prettier-vscode
-                    fabiospampinato.vscode-open-in-github
-                    foxundermoon.shell-format
-                    grapecity.gc-excelviewer
-                    gruntfuggly.todo-tree
-                    hars.cppsnippets
-                    hbenl.vscode-test-explorer
-                    ibm.output-colorizer
-                    iciclesoft.workspacesort
-                    iliazeus.vscode-ansi
-                    james-yu.latex-workshop
-                    jbockle.jbockle-format-files
-                    jellyedwards.gitsweep
-                    jnoortheen.nix-ide
-                    jock.svg
-                    lokalise.i18n-ally
-                    mads-hartmann.bash-ide-vscode
-                    mathiasfrohlich.kotlin
-                    mechatroner.rainbow-csv
-                    mishkinf.goto-next-previous-member
-                    mkhl.direnv
-                    moshfeu.compare-folders
-                    ms-kubernetes-tools.vscode-kubernetes-tools
-                    njpwerner.autodocstring
-                    oderwat.indent-rainbow
-                    platformio.platformio-vscode-ide
-                    quicktype.quicktype
-                    rioj7.commandonallfiles
-                    rubymaniac.vscode-paste-and-indent
-                    ryu1kn.partial-diff
-                    shardulm94.trailing-spaces
-                    spywhere.guides
-                    stylelint.vscode-stylelint
-                    tailscale.vscode-tailscale
-                    tamasfe.even-better-toml
-                    timonwong.shellcheck
-                    usernamehw.errorlens
-                    vincaslt.highlight-matching-tag
-                    vscjava.vscode-gradle
-                    wmaurer.change-case
-                    xdebug.php-debug
-                    zainchen.json
-                    zhwu95.riscv
-                  ]
-                  ++ (with pkgs.vscode-extensions.bierner; [
-                    color-info
-                    docs-view
-                    emojisense
-                    github-markdown-preview
-                    markdown-checkbox
-                    markdown-emoji
-                    markdown-footnotes
-                    markdown-mermaid
-                    markdown-preview-github-styles
-                  ])
-                  ++ (with pkgs.vscode-extensions.dart-code; [
-                    dart-code
-                    flutter
-                  ])
-                  ++ (with pkgs.vscode-extensions.formulahendry; [
-                    auto-close-tag
-                    auto-rename-tag
-                  ])
-                  ++ (with pkgs.vscode-extensions.github; [
-                    vscode-github-actions
-                    vscode-pull-request-github
-                  ])
-                  ++ (with pkgs.vscode-extensions.ms-python; [
-                    black-formatter
-                    debugpy
-                    flake8
-                    isort
-                    mypy-type-checker
-                    pylint
-                    python
-                    vscode-pylance # Unfree
-                  ])
-                  ++ (with pkgs.vscode-extensions.ms-vscode; [
-                    cmake-tools
-                    cpptools # Unfree
-                    hexeditor
-                    live-server
-                    makefile-tools
-                    test-adapter-converter
-                  ])
-                  ++ (with pkgs.vscode-extensions.redhat; [
-                    vscode-xml
-                    vscode-yaml
-                  ])
-                  ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-                    {
-                      name = "arb-editor";
-                      publisher = "Google";
-                      version = "0.2.2";
-                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
-                    }
-                    {
-                      name = "github-local-actions";
-                      publisher = "SanjulaGanepola";
-                      version = "1.2.5";
-                      sha256 = "gc3iOB/ibu4YBRdeyE6nmG72RbAsV0WIhiD8x2HNCfY=";
-                    }
-                    {
-                      name = "pubspec-assist";
-                      publisher = "jeroen-meijer";
-                      version = "2.3.2";
-                      sha256 = "+Mkcbeq7b+vkuf2/LYT10mj46sULixLNKGpCEk1Eu/0=";
-                    }
-                    {
-                      name = "unique-lines";
-                      publisher = "bibhasdn";
-                      version = "1.0.0";
-                      sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
-                    }
-                    {
-                      name = "vscode-ollama";
-                      publisher = "warm3snow";
-                      version = "1.2.1";
-                      sha256 = "rp7F0KU17BG1e18oB1/law0hnnxAn2MxqB3fvYcYXMA=";
-                    }
-                    {
-                      name = "vscode-serial-monitor";
-                      publisher = "ms-vscode";
-                      version = "0.13.251128001";
-                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
-                    }
-                    {
-                      name = "vscode-sort";
-                      publisher = "henriiik";
-                      version = "0.2.5";
-                      sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
-                    }
-                    {
-                      name = "vscode-sort-json";
-                      publisher = "richie5um2";
-                      version = "1.20.0";
-                      sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
-                    }
-                  ];
-
-                enableUpdateCheck = true;
-                enableExtensionUpdateCheck = true;
-              };
-            };
-          };
-
           obs-studio = {
             enable = config.programs.obs-studio.enable;
             package = config.programs.obs-studio.package;
@@ -5851,8 +5965,6 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           };
-
-          vscodium.profiles = null;
 
           yazi = {
             enable = config.catppuccin.enable;
