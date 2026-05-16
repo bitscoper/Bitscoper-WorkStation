@@ -1908,6 +1908,30 @@ in
           package = config.home-manager.users.root.programs.dircolors.package;
         };
 
+        curl = {
+          enable = true;
+          package = (
+            pkgs.curlFull.override {
+              brotliSupport = true;
+              c-aresSupport = true;
+              gsaslSupport = true;
+              gssSupport = true;
+              http2Support = true;
+              http3Support = true;
+              idnSupport = true;
+              opensslSupport = true;
+              pslSupport = true;
+              rtmpSupport = true;
+              scpSupport = true;
+              websocketSupport = true;
+              zlibSupport = true;
+              zstdSupport = true;
+            }
+          );
+
+          packageFallback = false;
+        };
+
         direnv = {
           enable = true;
           package = config.programs.direnv.package;
@@ -1933,6 +1957,11 @@ in
           package = pkgs.flutter;
         };
 
+        fontpreview = {
+          enable = true;
+          package = pkgs.fontpreview;
+        };
+
         gcc = {
           enable = true;
           package = pkgs.gcc;
@@ -1940,7 +1969,7 @@ in
 
         gh = {
           enable = true;
-          package = pkgs.gh;
+          package = config.home-manager.users.root.programs.gh.package;
         };
 
         git = {
@@ -1956,6 +1985,11 @@ in
         gzip = {
           enable = true;
           package = pkgs.gzip;
+        };
+
+        imagemagick = {
+          enable = true;
+          package = pkgs.imagemagick;
         };
 
         lazygit = {
@@ -1975,7 +2009,7 @@ in
 
         television = {
           enable = true;
-          package = pkgs.television;
+          package = config.home-manager.users.root.programs.television.package;
         };
 
         tree-sitter = {
@@ -2805,7 +2839,6 @@ in
         element
         elf-dissector
         emblem
-        epub-thumbnailer
         esptool
         etherape
         evtest
@@ -2816,12 +2849,10 @@ in
         f2fs-tools
         fastfetch
         fastlane
-        fd
         fdk_aac
         fdroidcl
         fdt-viewer
         ferrishot
-        ffmpegthumbnailer
         ffpb
         fh
         file
@@ -2831,7 +2862,6 @@ in
         flatpak-builder
         flatpak-xdg-utils
         flawz
-        flutter
         font-manager
         fontfor
         fork-cleaner
@@ -2840,7 +2870,6 @@ in
         fstl
         gama-tui
         gawk
-        gcc
         gdb
         gimp3-with-plugins
         git-big-picture
@@ -2852,9 +2881,7 @@ in
         globe-cli
         gnome-firmware
         gnome-nettool
-        gnugrep
         gnumake
-        gnused
         gnutar
         gollama
         google-lighthouse
@@ -2869,7 +2896,6 @@ in
         gtk-vnc
         gtt
         guestfs-tools
-        gzip
         hashcat
         hashcat-utils
         hashes
@@ -3049,7 +3075,6 @@ in
         rclone
         rclone-browser
         regex-tui
-        ripgrep
         rp-pppoe
         rpi-imager
         rpmextract
@@ -3102,7 +3127,6 @@ in
         traitor
         tray-tui
         tree
-        tree-sitter
         treegen
         trufflehog
         trustymail
@@ -3124,7 +3148,6 @@ in
         upscayl
         usbip-ssh
         usbutils
-        util-linux
         valgrind
         vex-tui
         video2x
@@ -3146,10 +3169,8 @@ in
         weathr
         webcamize
         webfontkitgenerator
-        websocat
         wev
         whatfiles
-        which
         whois
         whosthere
         wifitui
@@ -3174,29 +3195,12 @@ in
         yaml-language-server
         yara-x
         yoshimi
-        yq
         yuview
         zenity
         zenmap
         zfs
         zip
         zizmor
-        (curlFull.override {
-          brotliSupport = true;
-          c-aresSupport = true;
-          gsaslSupport = true;
-          gssSupport = true;
-          http2Support = true;
-          http3Support = true;
-          idnSupport = true;
-          opensslSupport = true;
-          pslSupport = true;
-          rtmpSupport = true;
-          scpSupport = true;
-          websocketSupport = true;
-          zlibSupport = true;
-          zstdSupport = true;
-        })
         (
           (ffmpeg-full.override {
             withAlsa = false;
@@ -3397,6 +3401,23 @@ in
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
         config.home-manager.users.root.services.udiskie.package
+        config.programs.nixvim.dependencies.curl.package
+        config.programs.nixvim.dependencies.epub-thumbnailer.package
+        config.programs.nixvim.dependencies.fd.package
+        config.programs.nixvim.dependencies.ffmpegthumbnailer.package
+        config.programs.nixvim.dependencies.flutter.package
+        config.programs.nixvim.dependencies.fontpreview.package
+        config.programs.nixvim.dependencies.gcc.package
+        config.programs.nixvim.dependencies.grep.package
+        config.programs.nixvim.dependencies.gzip.package
+        config.programs.nixvim.dependencies.imagemagick.package
+        config.programs.nixvim.dependencies.ripgrep.package
+        config.programs.nixvim.dependencies.sed.package
+        config.programs.nixvim.dependencies.tree-sitter.package
+        config.programs.nixvim.dependencies.util-linux.package
+        config.programs.nixvim.dependencies.websocat.package
+        config.programs.nixvim.dependencies.which.package
+        config.programs.nixvim.dependencies.yq.package
         config.services.phpfpm.phpPackage
       ]
       ++ config.boot.extraModulePackages
@@ -5840,6 +5861,12 @@ in
             flavor = config.catppuccin.flavor;
 
             transparent = true;
+          };
+
+          nvim = {
+            enable = false;
+
+            flavor = config.catppuccin.flavor;
           };
 
           wleave = {
