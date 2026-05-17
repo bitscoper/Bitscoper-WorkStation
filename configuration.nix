@@ -1567,7 +1567,6 @@ in
         cockpit-files
         cockpit-machines
         cockpit-podman
-        cockpit-zfs
       ];
 
       port = 9090;
@@ -2213,32 +2212,23 @@ in
           };
         };
 
-        flutter-tools = {
+        bufferline = {
           enable = true;
         };
 
-        gitblame = {
+        bullets = {
           enable = true;
         };
 
-        gitignore = {
+        clipboard-image = {
           enable = true;
         };
 
-        yaml-schema-detect = {
+        cmake-tools = {
           enable = true;
         };
 
-        lualine.enable = true;
-        luasnip.enable = true;
-        oil.enable = true;
-        ollama.enable = true;
-        telescope.enable = true;
-        treesitter.enable = true;
-        web-devicons.enable = true;
-        yazi.enable = true;
-
-        nvim-cmp = {
+        cmp = {
           enable = true;
 
           autoEnableSources = true;
@@ -2247,13 +2237,246 @@ in
               name = "nvim_lsp";
             }
             {
-              name = "path";
-            }
-            {
               name = "buffer";
             }
           ];
         };
+
+        cmp-async-path = {
+          enable = true;
+        };
+
+        cmp-buffer = {
+          enable = true;
+        };
+
+        cmp-dap = {
+          enable = true;
+        };
+
+        cmp-diagraphs = {
+          enable = true;
+        };
+
+        cmp-dictionary = {
+          enable = true;
+        };
+
+        cmp-git = {
+          enable = true;
+        };
+
+        cmp-latex-symbols = {
+          enable = true;
+        };
+
+        cmp-nixpkgs-maintainers = {
+          enable = true;
+        };
+
+        cmp-nvim-lsp = {
+          enable = true;
+        };
+
+        cmp-lsp-signature-help = {
+          enable = true;
+        };
+
+        cmp-rg = {
+          enable = true;
+        };
+
+        cmp-treesitter = {
+          enable = true;
+        };
+
+        codesnap = {
+          enable = true;
+        };
+
+        codesettings = {
+          enable = true;
+        };
+
+        colorizer = {
+          enable = true;
+        };
+
+        comment = {
+          enable = true;
+        };
+
+        compiler = {
+          enable = true;
+        };
+
+        csvview = {
+          enable = true;
+        };
+
+        cursorline = {
+          enable = true;
+        };
+
+        cutlass = {
+          enable = true;
+        };
+
+        dap = {
+          enable = true;
+        };
+
+        dap-python = {
+          enable = true;
+        };
+
+        dap-rr = {
+          enable = true;
+        };
+
+        dap-virtual-text = {
+          enable = true;
+        };
+
+        direnv = {
+          enable = true;
+        };
+
+        dropbar = {
+          enable = true;
+        };
+
+        flutter-tools = {
+          enable = true;
+        };
+
+        gitignore = {
+          enable = true;
+        };
+
+        illuminate = {
+          enable = true;
+        };
+
+        indent-blankline = {
+          enable = true;
+        };
+
+        lualine = {
+          enable = true;
+        };
+
+        luasnip = {
+          enable = true;
+        };
+
+        navic = {
+          enable = true;
+        };
+
+        neotest = {
+          enable = true;
+        };
+
+        nix = {
+          enable = true;
+        };
+
+        nix-develop = {
+          enable = true;
+        };
+
+        noice = {
+          enable = true;
+        };
+
+        ollama = {
+          enable = true;
+        };
+
+        overseer = {
+          enable = true;
+        };
+
+        patterns = {
+          enable = true;
+        };
+
+        smear-cursor = {
+          enable = true;
+        };
+
+        todo-comments = {
+          enable = true;
+        };
+
+        toggleterm = {
+          enable = true;
+        };
+
+        treesitter = {
+          enable = true;
+        };
+
+        treesitter-context = {
+          enable = true;
+        };
+
+        treesitter-refractor = {
+          enable = true;
+        };
+
+        treesitter-textobjects = {
+          enable = true;
+        };
+
+        trim = {
+          enable = true;
+        };
+
+        tv = {
+          enable = true;
+        };
+
+        twilight = {
+          enable = true;
+        };
+
+        web-devicons = {
+          enable = true;
+        };
+
+        which-key = {
+          enable = true;
+        };
+
+        whichpy = {
+          enable = true;
+        };
+
+        wrapping = {
+          enable = true;
+        };
+
+        yaml-schema-detect = {
+          enable = true;
+        };
+
+        yazi = {
+          enable = true;
+        };
+      };
+
+      performance = {
+        byteCompileLua = {
+          enable = true;
+
+          nvimRuntime = true;
+          plugins = true;
+          initLua = true;
+        };
+
+        combinePlugins.enable = false;
       };
 
       colorschemes.catppuccin = {
@@ -2757,6 +2980,7 @@ in
         asciiquarium-transparent
         asnmap
         astroterm
+        atac
         aurea
         autopsy
         avbroot
@@ -2800,6 +3024,7 @@ in
         cron
         crosspipe
         cryptsetup
+        cscope
         ctop
         cups-pk-helper
         cups-printers
@@ -2877,6 +3102,7 @@ in
         git-repo
         github-changelog-generator
         gitlogue
+        gittype
         glib
         globe-cli
         gnome-firmware
@@ -3080,6 +3306,7 @@ in
         rpmextract
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
+        runme
         rustc
         sbc
         sbom2dot
@@ -4996,12 +5223,12 @@ in
 
                 layout = "dwindle";
 
-                gaps_in = 0;
+                gaps_in = 4;
                 gaps_out = {
-                  top = 0;
-                  right = 0;
-                  bottom = 0;
-                  left = 0;
+                  top = 4;
+                  right = 4;
+                  bottom = 4;
+                  left = 4;
                 };
 
                 border_size = 1;
