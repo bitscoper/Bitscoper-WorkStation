@@ -20,9 +20,6 @@ let
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
-  nixvimFlake = builtins.getFlake "github:nix-community/nixvim/main";
-  tinyMediaManagerFlake = builtins.getFlake "github:gujial/tinyMediaManager-flake/master";
-  snapdFlake = builtins.getFlake "github:nix-community/nix-snapd/main";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
@@ -129,8 +126,6 @@ in
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
-    nixvimFlake.nixosModules.nixvim
-    snapdFlake.nixosModules.default
     catppuccinThemeFlake.nixosModules.catppuccin
     ./hardware-configuration.nix
     ./secrets.nix
@@ -1814,8 +1809,6 @@ in
         }
       );
     };
-
-    snap.enable = true;
   };
 
   programs = {
@@ -1889,599 +1882,6 @@ in
       );
 
       binfmt = true;
-    };
-
-    nixvim = {
-      enable = true;
-      package = pkgs.neovim-unwrapped;
-
-      autowrapRuntimeDeps = true;
-      dependencies = {
-        bat = {
-          enable = true;
-          package = config.programs.bat.package;
-        };
-
-        coreutils = {
-          enable = true;
-          package = config.home-manager.users.root.programs.dircolors.package;
-        };
-
-        curl = {
-          enable = true;
-          package = (
-            pkgs.curlFull.override {
-              brotliSupport = true;
-              c-aresSupport = true;
-              gsaslSupport = true;
-              gssSupport = true;
-              http2Support = true;
-              http3Support = true;
-              idnSupport = true;
-              opensslSupport = true;
-              pslSupport = true;
-              rtmpSupport = true;
-              scpSupport = true;
-              websocketSupport = true;
-              zlibSupport = true;
-              zstdSupport = true;
-            }
-          );
-
-          packageFallback = false;
-        };
-
-        direnv = {
-          enable = true;
-          package = config.programs.direnv.package;
-        };
-
-        epub-thumnailer = {
-          enable = true;
-          package = pkgs.epub-thumbnailer;
-        };
-
-        fd = {
-          enable = true;
-          package = pkgs.fd;
-        };
-
-        ffmpegthumbnailer = {
-          enable = true;
-          package = pkgs.ffmpegthumbnailer;
-        };
-
-        flutter = {
-          enable = true;
-          package = pkgs.flutter;
-        };
-
-        fontpreview = {
-          enable = true;
-          package = pkgs.fontpreview;
-        };
-
-        gcc = {
-          enable = true;
-          package = pkgs.gcc;
-        };
-
-        gh = {
-          enable = true;
-          package = config.home-manager.users.root.programs.gh.package;
-        };
-
-        git = {
-          enable = true;
-          package = config.programs.git.package;
-        };
-
-        grep = {
-          enable = true;
-          package = pkgs.gnugrep;
-        };
-
-        gzip = {
-          enable = true;
-          package = pkgs.gzip;
-        };
-
-        imagemagick = {
-          enable = true;
-          package = pkgs.imagemagick;
-        };
-
-        lazygit = {
-          enable = true;
-          package = config.home-manager.users.root.programs.lazygit.package;
-        };
-
-        ripgrep = {
-          enable = true;
-          package = pkgs.ripgrep;
-        };
-
-        sed = {
-          enable = true;
-          package = pkgs.gnused;
-        };
-
-        television = {
-          enable = true;
-          package = config.home-manager.users.root.programs.television.package;
-        };
-
-        tree-sitter = {
-          enable = true;
-          package = pkgs.tree-sitter;
-        };
-
-        util-linux = {
-          enable = true;
-          package = pkgs.util-linux;
-        };
-
-        websocat = {
-          enable = true;
-          package = pkgs.websocat;
-        };
-
-        which = {
-          enable = true;
-          package = pkgs.which;
-        };
-
-        yazi = {
-          enable = true;
-          package = config.programs.yazi.package;
-        };
-
-        yq = {
-          enable = true;
-          package = pkgs.yq;
-        };
-      };
-
-      waylandSupport = true;
-      enableMan = false; # FIXME: Build Failure
-
-      defaultEditor = true;
-      viAlias = true;
-      vimAlias = true;
-
-      enablePrintInit = true;
-      clipboard.register = "unnamedplus";
-      editorconfig.enable = true;
-
-      plugins = {
-        lsp = {
-          enable = true;
-
-          servers = {
-            arduino_language_server = {
-              enable = true;
-            };
-
-            asm_lsp = {
-              enable = true;
-            };
-
-            bashls = {
-              enable = true;
-            };
-
-            clangd = {
-              enable = true;
-            };
-
-            cmake = {
-              enable = true;
-            };
-
-            cssls = {
-              enable = true;
-            };
-
-            dartls = {
-              enable = true;
-            };
-
-            diagnosticls = {
-              enable = true;
-            };
-
-            dotls = {
-              enable = true;
-            };
-
-            html = {
-              enable = true;
-            };
-
-            jsonls = {
-              enable = true;
-            };
-
-            kotlin_language_server = {
-              enable = true;
-            };
-
-            lsp_ai = {
-              enable = true;
-            };
-
-            ltex = {
-              enable = true;
-            };
-
-            markdown_oxide = {
-              enable = true;
-            };
-
-            nil_ls = {
-              enable = true;
-            };
-
-            nixd = {
-              enable = true;
-            };
-
-            phpactor = {
-              enable = true;
-            };
-
-            postgres_lsp = {
-              enable = true;
-            };
-
-            pylsp = {
-              enable = true;
-            };
-
-            pylyzer = {
-              enable = true;
-            };
-
-            pyrefly = {
-              enable = true;
-            };
-
-            pyright = {
-              enable = true;
-            };
-
-            sqls = {
-              enable = true;
-            };
-
-            sqruff = {
-              enable = true;
-            };
-
-            statix = {
-              enable = true;
-            };
-
-            stylelint_lsp = {
-              enable = true;
-            };
-
-            stylua = {
-              enable = true;
-            };
-
-            superhtml = {
-              enable = true;
-            };
-
-            syntax_tree = {
-              enable = true;
-            };
-
-            systemd_ls = {
-              enable = true;
-            };
-
-            systemd_lsp = {
-              enable = true;
-            };
-
-            ts_ls = {
-              enable = true;
-            };
-
-            ts_query_ls = {
-              enable = true;
-            };
-
-            ttags = {
-              enable = true;
-            };
-
-            ty = {
-              enable = true;
-            };
-
-            wgsl_analyzer = {
-              enable = true;
-            };
-
-            yamlls = {
-              enable = true;
-            };
-          };
-        };
-
-        bufferline = {
-          enable = true;
-        };
-
-        bullets = {
-          enable = true;
-        };
-
-        clipboard-image = {
-          enable = true;
-        };
-
-        cmake-tools = {
-          enable = true;
-        };
-
-        cmp = {
-          enable = true;
-
-          autoEnableSources = true;
-          sources = [
-            {
-              name = "nvim_lsp";
-            }
-            {
-              name = "buffer";
-            }
-          ];
-        };
-
-        cmp-async-path = {
-          enable = true;
-        };
-
-        cmp-buffer = {
-          enable = true;
-        };
-
-        cmp-dap = {
-          enable = true;
-        };
-
-        cmp-diagraphs = {
-          enable = true;
-        };
-
-        cmp-dictionary = {
-          enable = true;
-        };
-
-        cmp-git = {
-          enable = true;
-        };
-
-        cmp-latex-symbols = {
-          enable = true;
-        };
-
-        cmp-nixpkgs-maintainers = {
-          enable = true;
-        };
-
-        cmp-nvim-lsp = {
-          enable = true;
-        };
-
-        cmp-lsp-signature-help = {
-          enable = true;
-        };
-
-        cmp-rg = {
-          enable = true;
-        };
-
-        cmp-treesitter = {
-          enable = true;
-        };
-
-        codesnap = {
-          enable = true;
-        };
-
-        codesettings = {
-          enable = true;
-        };
-
-        colorizer = {
-          enable = true;
-        };
-
-        comment = {
-          enable = true;
-        };
-
-        compiler = {
-          enable = true;
-        };
-
-        csvview = {
-          enable = true;
-        };
-
-        cursorline = {
-          enable = true;
-        };
-
-        cutlass = {
-          enable = true;
-        };
-
-        dap = {
-          enable = true;
-        };
-
-        dap-python = {
-          enable = true;
-        };
-
-        dap-rr = {
-          enable = true;
-        };
-
-        dap-virtual-text = {
-          enable = true;
-        };
-
-        direnv = {
-          enable = true;
-        };
-
-        dropbar = {
-          enable = true;
-        };
-
-        flutter-tools = {
-          enable = true;
-        };
-
-        gitignore = {
-          enable = true;
-        };
-
-        illuminate = {
-          enable = true;
-        };
-
-        indent-blankline = {
-          enable = true;
-        };
-
-        lualine = {
-          enable = true;
-        };
-
-        luasnip = {
-          enable = true;
-        };
-
-        navic = {
-          enable = true;
-        };
-
-        neotest = {
-          enable = true;
-        };
-
-        nix = {
-          enable = true;
-        };
-
-        nix-develop = {
-          enable = true;
-        };
-
-        noice = {
-          enable = true;
-        };
-
-        ollama = {
-          enable = true;
-        };
-
-        overseer = {
-          enable = true;
-        };
-
-        patterns = {
-          enable = true;
-        };
-
-        smear-cursor = {
-          enable = true;
-        };
-
-        todo-comments = {
-          enable = true;
-        };
-
-        toggleterm = {
-          enable = true;
-        };
-
-        treesitter = {
-          enable = true;
-        };
-
-        treesitter-context = {
-          enable = true;
-        };
-
-        treesitter-refractor = {
-          enable = true;
-        };
-
-        treesitter-textobjects = {
-          enable = true;
-        };
-
-        trim = {
-          enable = true;
-        };
-
-        tv = {
-          enable = true;
-        };
-
-        twilight = {
-          enable = true;
-        };
-
-        web-devicons = {
-          enable = true;
-        };
-
-        which-key = {
-          enable = true;
-        };
-
-        whichpy = {
-          enable = true;
-        };
-
-        wrapping = {
-          enable = true;
-        };
-
-        yaml-schema-detect = {
-          enable = true;
-        };
-
-        yazi = {
-          enable = true;
-        };
-      };
-
-      performance = {
-        byteCompileLua = {
-          enable = true;
-
-          nvimRuntime = true;
-          plugins = true;
-          initLua = true;
-        };
-
-        combinePlugins.enable = false;
-      };
-
-      colorschemes.catppuccin = {
-        enable = true;
-      };
     };
 
     direnv = {
@@ -3074,10 +2474,12 @@ in
         f2fs-tools
         fastfetch
         fastlane
+        fd
         fdk_aac
         fdroidcl
         fdt-viewer
         ferrishot
+        ffmpegthumbnailer
         ffpb
         fh
         file
@@ -3087,14 +2489,17 @@ in
         flatpak-builder
         flatpak-xdg-utils
         flawz
+        flutter
         font-manager
         fontfor
+        fontpreview
         fork-cleaner
         freecad
         fritzing
         fstl
         gama-tui
         gawk
+        gcc
         gdb
         gimp3-with-plugins
         git-big-picture
@@ -3107,7 +2512,9 @@ in
         globe-cli
         gnome-firmware
         gnome-nettool
+        gnugrep
         gnumake
+        gnused
         gnutar
         gollama
         google-lighthouse
@@ -3122,6 +2529,7 @@ in
         gtk-vnc
         gtt
         guestfs-tools
+        gzip
         hashcat
         hashcat-utils
         hashes
@@ -3348,7 +2756,6 @@ in
         termshark
         texliveFull
         time
-        tinyMediaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.default
         tpm2-tools
         traceroute
         traitor
@@ -3375,6 +2782,7 @@ in
         upscayl
         usbip-ssh
         usbutils
+        util-linux
         valgrind
         vex-tui
         video2x
@@ -3396,8 +2804,10 @@ in
         weathr
         webcamize
         webfontkitgenerator
+        websocat
         wev
         whatfiles
+        which
         whois
         whosthere
         wifitui
@@ -3422,12 +2832,29 @@ in
         yaml-language-server
         yara-x
         yoshimi
+        yq
         yuview
         zenity
         zenmap
         zfs
         zip
         zizmor
+        (curlFull.override {
+          brotliSupport = true;
+          c-aresSupport = true;
+          gsaslSupport = true;
+          gssSupport = true;
+          http2Support = true;
+          http3Support = true;
+          idnSupport = true;
+          opensslSupport = true;
+          pslSupport = true;
+          rtmpSupport = true;
+          scpSupport = true;
+          websocketSupport = true;
+          zlibSupport = true;
+          zstdSupport = true;
+        })
         (
           (ffmpeg-full.override {
             withAlsa = false;
@@ -3628,23 +3055,6 @@ in
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
         config.home-manager.users.root.services.udiskie.package
-        config.programs.nixvim.dependencies.curl.package
-        config.programs.nixvim.dependencies.epub-thumbnailer.package
-        config.programs.nixvim.dependencies.fd.package
-        config.programs.nixvim.dependencies.ffmpegthumbnailer.package
-        config.programs.nixvim.dependencies.flutter.package
-        config.programs.nixvim.dependencies.fontpreview.package
-        config.programs.nixvim.dependencies.gcc.package
-        config.programs.nixvim.dependencies.grep.package
-        config.programs.nixvim.dependencies.gzip.package
-        config.programs.nixvim.dependencies.imagemagick.package
-        config.programs.nixvim.dependencies.ripgrep.package
-        config.programs.nixvim.dependencies.sed.package
-        config.programs.nixvim.dependencies.tree-sitter.package
-        config.programs.nixvim.dependencies.util-linux.package
-        config.programs.nixvim.dependencies.websocat.package
-        config.programs.nixvim.dependencies.which.package
-        config.programs.nixvim.dependencies.yq.package
         config.services.phpfpm.phpPackage
       ]
       ++ config.boot.extraModulePackages
@@ -3792,6 +3202,8 @@ in
       }:$LD_LIBRARY_PATH";
 
       CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
+
+      EDITOR = "emacs";
     };
 
     sessionVariables = {
@@ -3875,103 +3287,103 @@ in
       defaultApplications = {
         "inode/directory" = "yazi.desktop";
 
-        "text/1d-interleaved-parityfec" = "nvim.desktop";
-        "text/cache-manifest" = "nvim.desktop";
-        "text/calendar" = "nvim.desktop";
-        "text/cql" = "nvim.desktop";
-        "text/cql-expression" = "nvim.desktop";
-        "text/cql-identifier" = "nvim.desktop";
-        "text/css" = "nvim.desktop";
-        "text/csv" = "nvim.desktop";
-        "text/csv-schema" = "nvim.desktop";
-        "text/directory" = "nvim.desktop";
-        "text/dns" = "nvim.desktop";
-        "text/ecmascript" = "nvim.desktop";
-        "text/encaprtp" = "nvim.desktop";
-        "text/enriched" = "nvim.desktop";
-        "text/fhirpath" = "nvim.desktop";
-        "text/flexfec" = "nvim.desktop";
-        "text/fwdred" = "nvim.desktop";
-        "text/gff3" = "nvim.desktop";
-        "text/grammar-ref-list" = "nvim.desktop";
-        "text/hl7v2" = "nvim.desktop";
-        "text/html" = "nvim.desktop";
-        "text/javascript" = "nvim.desktop";
-        "text/jcr-cnd" = "nvim.desktop";
-        "text/markdown" = "nvim.desktop";
-        "text/mizar" = "nvim.desktop";
-        "text/n3" = "nvim.desktop";
-        "text/org" = "nvim.desktop";
-        "text/parameters" = "nvim.desktop";
-        "text/parityfec" = "nvim.desktop";
-        "text/plain" = "nvim.desktop";
-        "text/provenance-notation" = "nvim.desktop";
-        "text/prs.fallenstein.rst" = "nvim.desktop";
-        "text/prs.lines.tag" = "nvim.desktop";
-        "text/prs.prop.logic" = "nvim.desktop";
-        "text/prs.texi" = "nvim.desktop";
-        "text/raptorfec" = "nvim.desktop";
-        "text/RED" = "nvim.desktop";
-        "text/rfc822-headers" = "nvim.desktop";
-        "text/richtext" = "nvim.desktop";
-        "text/rtf" = "nvim.desktop";
-        "text/rtp-enc-aescm128" = "nvim.desktop";
-        "text/rtploopback" = "nvim.desktop";
-        "text/rtx" = "nvim.desktop";
-        "text/SGML" = "nvim.desktop";
-        "text/shaclc" = "nvim.desktop";
-        "text/shex" = "nvim.desktop";
-        "text/spdx" = "nvim.desktop";
-        "text/strings" = "nvim.desktop";
-        "text/t140" = "nvim.desktop";
-        "text/tab-separated-values" = "nvim.desktop";
-        "text/troff" = "nvim.desktop";
-        "text/turtle" = "nvim.desktop";
-        "text/ulpfec" = "nvim.desktop";
-        "text/uri-list" = "nvim.desktop";
-        "text/vcard" = "nvim.desktop";
-        "text/vnd.a" = "nvim.desktop";
-        "text/vnd.abc" = "nvim.desktop";
-        "text/vnd.ascii-art" = "nvim.desktop";
-        "text/vnd.curl" = "nvim.desktop";
-        "text/vnd.debian.copyright" = "nvim.desktop";
-        "text/vnd.DMClientScript" = "nvim.desktop";
-        "text/vnd.dvb.subtitle" = "nvim.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "nvim.desktop";
-        "text/vnd.exchangeable" = "nvim.desktop";
-        "text/vnd.familysearch.gedcom" = "nvim.desktop";
-        "text/vnd.ficlab.flt" = "nvim.desktop";
-        "text/vnd.fly" = "nvim.desktop";
-        "text/vnd.fmi.flexstor" = "nvim.desktop";
-        "text/vnd.gml" = "nvim.desktop";
-        "text/vnd.graphviz" = "nvim.desktop";
-        "text/vnd.hans" = "nvim.desktop";
-        "text/vnd.hgl" = "nvim.desktop";
-        "text/vnd.in3d.3dml" = "nvim.desktop";
-        "text/vnd.in3d.spot" = "nvim.desktop";
-        "text/vnd.IPTC.NewsML" = "nvim.desktop";
-        "text/vnd.IPTC.NITF" = "nvim.desktop";
-        "text/vnd.latex-z" = "nvim.desktop";
-        "text/vnd.motorola.reflex" = "nvim.desktop";
-        "text/vnd.ms-mediapackage" = "nvim.desktop";
-        "text/vnd.net2phone.commcenter.command" = "nvim.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "nvim.desktop";
-        "text/vnd.senx.warpscript" = "nvim.desktop";
-        "text/vnd.si.uricatalogue" = "nvim.desktop";
-        "text/vnd.sosi" = "nvim.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "nvim.desktop";
-        "text/vnd.trolltech.linguist" = "nvim.desktop";
-        "text/vnd.typst" = "nvim.desktop";
-        "text/vnd.vcf" = "nvim.desktop";
-        "text/vnd.wap.si" = "nvim.desktop";
-        "text/vnd.wap.sl" = "nvim.desktop";
-        "text/vnd.wap.wml" = "nvim.desktop";
-        "text/vnd.wap.wmlscript" = "nvim.desktop";
-        "text/vnd.zoo.kcl" = "nvim.desktop";
-        "text/vtt" = "nvim.desktop";
-        "text/wgsl" = "nvim.desktop";
-        "text/xml" = "nvim.desktop";
-        "text/xml-external-parsed-entity" = "nvim.desktop";
+        "text/1d-interleaved-parityfec" = "emacs.desktop";
+        "text/cache-manifest" = "emacs.desktop";
+        "text/calendar" = "emacs.desktop";
+        "text/cql" = "emacs.desktop";
+        "text/cql-expression" = "emacs.desktop";
+        "text/cql-identifier" = "emacs.desktop";
+        "text/css" = "emacs.desktop";
+        "text/csv" = "emacs.desktop";
+        "text/csv-schema" = "emacs.desktop";
+        "text/directory" = "emacs.desktop";
+        "text/dns" = "emacs.desktop";
+        "text/ecmascript" = "emacs.desktop";
+        "text/encaprtp" = "emacs.desktop";
+        "text/enriched" = "emacs.desktop";
+        "text/fhirpath" = "emacs.desktop";
+        "text/flexfec" = "emacs.desktop";
+        "text/fwdred" = "emacs.desktop";
+        "text/gff3" = "emacs.desktop";
+        "text/grammar-ref-list" = "emacs.desktop";
+        "text/hl7v2" = "emacs.desktop";
+        "text/html" = "emacs.desktop";
+        "text/javascript" = "emacs.desktop";
+        "text/jcr-cnd" = "emacs.desktop";
+        "text/markdown" = "emacs.desktop";
+        "text/mizar" = "emacs.desktop";
+        "text/n3" = "emacs.desktop";
+        "text/org" = "emacs.desktop";
+        "text/parameters" = "emacs.desktop";
+        "text/parityfec" = "emacs.desktop";
+        "text/plain" = "emacs.desktop";
+        "text/provenance-notation" = "emacs.desktop";
+        "text/prs.fallenstein.rst" = "emacs.desktop";
+        "text/prs.lines.tag" = "emacs.desktop";
+        "text/prs.prop.logic" = "emacs.desktop";
+        "text/prs.texi" = "emacs.desktop";
+        "text/raptorfec" = "emacs.desktop";
+        "text/RED" = "emacs.desktop";
+        "text/rfc822-headers" = "emacs.desktop";
+        "text/richtext" = "emacs.desktop";
+        "text/rtf" = "emacs.desktop";
+        "text/rtp-enc-aescm128" = "emacs.desktop";
+        "text/rtploopback" = "emacs.desktop";
+        "text/rtx" = "emacs.desktop";
+        "text/SGML" = "emacs.desktop";
+        "text/shaclc" = "emacs.desktop";
+        "text/shex" = "emacs.desktop";
+        "text/spdx" = "emacs.desktop";
+        "text/strings" = "emacs.desktop";
+        "text/t140" = "emacs.desktop";
+        "text/tab-separated-values" = "emacs.desktop";
+        "text/troff" = "emacs.desktop";
+        "text/turtle" = "emacs.desktop";
+        "text/ulpfec" = "emacs.desktop";
+        "text/uri-list" = "emacs.desktop";
+        "text/vcard" = "emacs.desktop";
+        "text/vnd.a" = "emacs.desktop";
+        "text/vnd.abc" = "emacs.desktop";
+        "text/vnd.ascii-art" = "emacs.desktop";
+        "text/vnd.curl" = "emacs.desktop";
+        "text/vnd.debian.copyright" = "emacs.desktop";
+        "text/vnd.DMClientScript" = "emacs.desktop";
+        "text/vnd.dvb.subtitle" = "emacs.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "emacs.desktop";
+        "text/vnd.exchangeable" = "emacs.desktop";
+        "text/vnd.familysearch.gedcom" = "emacs.desktop";
+        "text/vnd.ficlab.flt" = "emacs.desktop";
+        "text/vnd.fly" = "emacs.desktop";
+        "text/vnd.fmi.flexstor" = "emacs.desktop";
+        "text/vnd.gml" = "emacs.desktop";
+        "text/vnd.graphviz" = "emacs.desktop";
+        "text/vnd.hans" = "emacs.desktop";
+        "text/vnd.hgl" = "emacs.desktop";
+        "text/vnd.in3d.3dml" = "emacs.desktop";
+        "text/vnd.in3d.spot" = "emacs.desktop";
+        "text/vnd.IPTC.NewsML" = "emacs.desktop";
+        "text/vnd.IPTC.NITF" = "emacs.desktop";
+        "text/vnd.latex-z" = "emacs.desktop";
+        "text/vnd.motorola.reflex" = "emacs.desktop";
+        "text/vnd.ms-mediapackage" = "emacs.desktop";
+        "text/vnd.net2phone.commcenter.command" = "emacs.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "emacs.desktop";
+        "text/vnd.senx.warpscript" = "emacs.desktop";
+        "text/vnd.si.uricatalogue" = "emacs.desktop";
+        "text/vnd.sosi" = "emacs.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "emacs.desktop";
+        "text/vnd.trolltech.linguist" = "emacs.desktop";
+        "text/vnd.typst" = "emacs.desktop";
+        "text/vnd.vcf" = "emacs.desktop";
+        "text/vnd.wap.si" = "emacs.desktop";
+        "text/vnd.wap.sl" = "emacs.desktop";
+        "text/vnd.wap.wml" = "emacs.desktop";
+        "text/vnd.wap.wmlscript" = "emacs.desktop";
+        "text/vnd.zoo.kcl" = "emacs.desktop";
+        "text/vtt" = "emacs.desktop";
+        "text/wgsl" = "emacs.desktop";
+        "text/xml" = "emacs.desktop";
+        "text/xml-external-parsed-entity" = "emacs.desktop";
 
         "image/aces" = "imv.desktop";
         "image/apng" = "imv.desktop";
@@ -4371,7 +3783,7 @@ in
   };
 
   documentation = {
-    enable = false; # FIXME: Fails Building Nixvim
+    enable = true;
 
     dev.enable = true;
     doc.enable = true;
@@ -5004,7 +4416,7 @@ in
               {
                 _args = [
                   "SUPER + E"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- nvim\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs\")")
                 ];
               }
               {
@@ -5655,6 +5067,34 @@ in
             enableBashIntegration = true;
           };
 
+          emacs = {
+            enable = true;
+            package = pkgs.emacs-pgtk;
+            # overrides = {
+
+            # };
+            extraPackages =
+              epkgs: with pkgs.emacsPackages; [
+		dap-mode
+		dart-mode
+		lsp-dart
+		lsp-focus
+		lsp-latex
+		lsp-mode
+                catppuccin-theme
+                flutter
+                flutter-l10n-flycheck
+                nixfmt
+                nixos-options
+                ollama-buddy
+                platformio-mode
+              ];
+
+            # extraConfig = ''
+
+            # '';
+          };
+
           television = {
             enable = true;
             package = pkgs.television;
@@ -5734,7 +5174,7 @@ in
             settings = {
               git_protocol = "https";
 
-              editor = "nvim";
+              editor = "emacs";
             };
           };
 
@@ -6001,9 +5441,10 @@ in
               location = "center";
 
               gtk_dark = true;
-              columns = 2;
+              columns = 1;
               dynamic_lines = false;
-              height = "50%";
+              height = "75%";
+	      width = "25%";
               hide_scroll = false;
 
               hide_search = false;
@@ -6088,12 +5529,6 @@ in
             flavor = config.catppuccin.flavor;
 
             transparent = true;
-          };
-
-          nvim = {
-            enable = false;
-
-            flavor = config.catppuccin.flavor;
           };
 
           wleave = {
