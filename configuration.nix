@@ -2765,6 +2765,7 @@ in
         traitor
         tray-tui
         tree
+        tree-sitter
         treegen
         trufflehog
         trustymail
@@ -5094,20 +5095,67 @@ in
 
             # };
             extraPackages =
-              epkgs: with pkgs.emacsPackages; [
+              epkgs: with epkgs; [
+                arduino-mode
+                auto-compile
+                catppuccin-theme
+                cmake-mode
+                colorful-mode
+                com-css-sort
+                company
+                company-emoji
+                company-nixos-options
+                company-phpactor
+                company-statistics
                 dap-mode
                 dart-mode
-                lsp-dart
-                lsp-focus
-                lsp-latex
-                lsp-mode
-                catppuccin-theme
+                direnv
+                dockerfile-mode
+                editorconfig
+                filechooser
                 flutter
                 flutter-l10n-flycheck
+                flymake
+                flymake-cursor
+                flymake-languagetool
+                flymake-markdownlint
+                flymake-phpcs
+                flymake-phpstan
+                flymake-pyrefly
+                flymake-yamllint
+                git-commit
+                git-modes
+                highlight
+                html5-schema
+                http-server
+                hugoista
+                indent-bars
+                indent-control
+                indent-tools
+                isortify
+                json-mode
+                kubernetes
+                lsp-dart
+                lsp-docker
+                lsp-focus
+                lsp-mode
+                nix-ts-mode
                 nixfmt
                 nixos-options
                 ollama-buddy
+                org
+                php-mode
+                php-runtime
+                phpactor
+                phpinspect
+                phpstan
+                pipewire
                 platformio-mode
+                python
+                tree-sitter
+                tree-sitter-indent
+                tree-sitter-langs
+                xml-rpc
               ];
 
             # extraConfig = ''
