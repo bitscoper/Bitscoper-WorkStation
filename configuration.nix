@@ -104,6 +104,10 @@ let
     size = builtins.floor (design_factor * 0.75); # 12
   };
 
+  wallpaper = builtins.fetchurl {
+    url = "https://raw.githubusercontent.com/zhichaoh/catppuccin-wallpapers/refs/heads/main/os/nix-black-4k.png";
+  };
+
   tlsCertificateFiles =
     pkgs.runCommand "tlsCertificate"
       {
@@ -4015,8 +4019,6 @@ in
 
                     hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
                     hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
-
-                    hl.exec_cmd("windowtolayer xdg-terminal-exec -- asciiquarium --transparent")
                   end
                 '')
               ];
@@ -5004,6 +5006,24 @@ in
 
             autoStart = true;
           };
+
+          hyprpaper = {
+            enable = true;
+            package = pkgs.hyprpaper;
+
+            settings = {
+              ipc = "on";
+
+              splash = false;
+
+              wallpaper = {
+                monitor = "";
+                recursive = true;
+                path = wallpaper;
+                fit_mode = "cover";
+              };
+            };
+          };
         };
 
         programs = {
@@ -5075,12 +5095,12 @@ in
             # };
             extraPackages =
               epkgs: with pkgs.emacsPackages; [
-		dap-mode
-		dart-mode
-		lsp-dart
-		lsp-focus
-		lsp-latex
-		lsp-mode
+                dap-mode
+                dart-mode
+                lsp-dart
+                lsp-focus
+                lsp-latex
+                lsp-mode
                 catppuccin-theme
                 flutter
                 flutter-l10n-flycheck
@@ -5444,7 +5464,7 @@ in
               columns = 1;
               dynamic_lines = false;
               height = "75%";
-	      width = "25%";
+              width = "25%";
               hide_scroll = false;
 
               hide_search = false;
