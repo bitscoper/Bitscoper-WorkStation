@@ -1995,7 +1995,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-curses.override {
+          pkgs.pinentry-emacs.override {
             withLibsecret = true;
           }
         );
@@ -2544,6 +2544,7 @@ in
         host
         hstsparser
         hugo
+        hurl
         hw-probe
         hydra-check
         hyprgraphics
@@ -2551,6 +2552,7 @@ in
         hyprland-qt-support
         hyprland-qtutils
         hyprland-workspaces-tui
+        hyprls
         hyprpicker
         hyprshutdown
         hyprtoolkit
@@ -5108,6 +5110,7 @@ in
                 company-phpactor
                 company-statistics
                 dap-mode
+                dashboard
                 dart-mode
                 direnv
                 dockerfile-mode
@@ -5123,12 +5126,15 @@ in
                 flymake-phpstan
                 flymake-pyrefly
                 flymake-yamllint
-                git-commit
                 git-modes
+                gnu-elpa
+                gnu-elpa-keyring-update
+                gnu-indent
                 highlight
                 html5-schema
                 http-server
                 hugoista
+                hyprlang-ts-mode
                 indent-bars
                 indent-control
                 indent-tools
@@ -5139,6 +5145,9 @@ in
                 lsp-docker
                 lsp-focus
                 lsp-mode
+                lsp-treemacs
+                magit
+                nerd-icons
                 nix-ts-mode
                 nixfmt
                 nixos-options
@@ -5149,18 +5158,169 @@ in
                 phpactor
                 phpinspect
                 phpstan
+                pinentry
                 pipewire
                 platformio-mode
+                projectile
                 python
+                quelpa
+                quelpa-use-package
                 tree-sitter
                 tree-sitter-indent
                 tree-sitter-langs
+                treemacs
+                treemacs-magit
+                treemacs-projectile
+                treemacs-tab-bar
+                use-package
                 xml-rpc
+                (treesit-grammars.with-grammars (
+                  grammars: with grammars; [
+                    tree-sitter-awk
+                    tree-sitter-bash
+                    tree-sitter-bibtex
+                    tree-sitter-c
+                    tree-sitter-cmake
+                    tree-sitter-comment
+                    tree-sitter-cpp
+                    tree-sitter-css
+                    tree-sitter-csv
+                    tree-sitter-dart
+                    tree-sitter-diff
+                    tree-sitter-dockerfile
+                    tree-sitter-dot
+                    tree-sitter-dtd
+                    tree-sitter-git-config
+                    tree-sitter-git-rebase
+                    tree-sitter-gitattributes
+                    tree-sitter-gitcommit
+                    tree-sitter-gitignore
+                    tree-sitter-graphql
+                    tree-sitter-hosts
+                    tree-sitter-html
+                    tree-sitter-http
+                    tree-sitter-hurl
+                    tree-sitter-hyprlang
+                    tree-sitter-ini
+                    tree-sitter-javascript
+                    tree-sitter-jq
+                    tree-sitter-json
+                    tree-sitter-kotlin
+                    tree-sitter-latex
+                    tree-sitter-ld
+                    tree-sitter-llvm
+                    tree-sitter-log
+                    tree-sitter-lua
+                    tree-sitter-mail
+                    tree-sitter-make
+                    tree-sitter-markdown
+                    tree-sitter-markdown-inline
+                    tree-sitter-mermaid
+                    tree-sitter-nix
+                    tree-sitter-org
+                    tree-sitter-passwd
+                    tree-sitter-pem
+                    tree-sitter-php
+                    tree-sitter-powershell
+                    tree-sitter-python
+                    tree-sitter-query
+                    tree-sitter-regex
+                    tree-sitter-smali
+                    tree-sitter-sql
+                    tree-sitter-sshclientconfig
+                    tree-sitter-todotxt
+                    tree-sitter-toml
+                    tree-sitter-xml
+                    tree-sitter-yaml
+                  ]
+                ))
               ];
 
-            # extraConfig = ''
+            extraConfig = ''
+              ;;; -*- lexical-binding: t; -*-
 
-            # '';
+              (load-theme 'catppuccin :no-confirm)
+              (setq catppuccin-flavor '${config.catppuccin.flavor})
+              (catppuccin-reload)
+
+              (setq display-buffer-base-action '((display-buffer-same-window)))
+              (setq tab-bar-show 1)
+              (setq tab-line-show 1)
+
+              (display-time-mode t)
+
+              (require 'use-package)
+              (use-package nerd-icons
+                :custom (nerd-icons-font-family "${fontPreferences.name.mono}"))
+              (require 'dashboard)
+              (setq dashboard-display-icons t)
+              (setq dashboard-set-heading-icon t)
+              (setq dashboard-set-file-icons t)
+              (setq dashboard-icon-type 'nerd-icons)
+              (setq dashboard-show-shortcuts t)
+              (setq dashboard-filter-agenda-entry 'dashboard-no-filter-agenda)
+              (add-to-list 'dashboard-items '(agenda) t)
+              (setq dashboard-navigation-cycle t)
+              (dashboard-setup-startup-hook)
+
+              (use-package projectile
+                :init (projectile-mode +1))
+              (use-package magit)
+              (use-package treemacs
+                :defer t
+                :config (progn
+                  (setq treemacs-show-hidden-files t)
+                  (treemacs-follow-mode t)
+                  (treemacs-filewatch-mode t)
+                  (treemacs-git-commit-diff-mode t))
+                :init)
+              (use-package treemacs-projectile
+                :after (treemacs projectile))
+              (use-package treemacs-magit
+                :after (treemacs magit))
+              (use-package treemacs-tab-bar
+                :after (treemacs)
+                :config (treemacs-set-scope-type 'Tabs))
+              (treemacs-start-on-boot)
+
+              (size-indication-mode t)
+              (global-display-line-numbers-mode t)
+              (column-number-mode t)
+              (global-hl-line-mode t)
+              (show-paren-mode t)
+              (transient-mark-mode t)
+
+              (setq standard-indent 2)
+
+              (require 'nix-ts-mode)
+              (setq treesit-font-lock-level 4)
+              (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-ts-mode))
+
+              (add-hook 'after-init-hook 'global-company-mode)
+              (add-to-list 'company-backends 'company-nixos-options)
+
+              (add-hook 'nix-mode-hook 'nixfmt-on-save-mode)
+
+              (use-package dart-mode)
+              (require 'lsp-mode)
+              (setq lsp-auto-guess-root t)
+              (add-hook 'dart-mode-hook 'lsp)
+              (require 'reformatter)
+              (reformatter-define dart-format
+                :program "dart"
+                :args '("format"))
+              (with-eval-after-load "projectile"
+              (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
+              (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
+
+              (use-package flutter
+                :after (dart-mode))
+
+              (require 'platformio-mode)
+              (add-hook 'c++-mode-hook (lambda ()
+                (lsp-deferred)
+                (platformio-conditionally-enable)))
+            '';
           };
 
           television = {
