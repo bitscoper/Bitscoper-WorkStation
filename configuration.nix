@@ -2447,7 +2447,6 @@ in
         debase
         diffoci
         dig
-        discord # Unfree
         disktui
         dive
         dmg2img
@@ -2493,6 +2492,7 @@ in
         flatpak-builder
         flatpak-xdg-utils
         flawz
+        flowblade
         flutter
         font-manager
         fontfor
@@ -2750,6 +2750,7 @@ in
         stenc
         streamlit
         subfinder
+        subtitleedit
         svt-av1
         switcheroo
         symlinks
@@ -5105,6 +5106,7 @@ in
                 colorful-mode
                 com-css-sort
                 company
+                company-arduino
                 company-emoji
                 company-nixos-options
                 company-phpactor
@@ -5113,9 +5115,9 @@ in
                 dashboard
                 dart-mode
                 direnv
+                docker-compose-mode
                 dockerfile-mode
                 editorconfig
-                filechooser
                 flutter
                 flutter-l10n-flycheck
                 flymake
@@ -5165,6 +5167,7 @@ in
                 python
                 quelpa
                 quelpa-use-package
+                trailing-newline-indicator
                 tree-sitter
                 tree-sitter-indent
                 tree-sitter-langs
@@ -5290,37 +5293,69 @@ in
               (show-paren-mode t)
               (transient-mark-mode t)
 
+              (use-package trailing-newline-indicator
+                :init (global-trailing-newline-indicator-mode 1))
+
+              (use-package direnv
+                :config (direnv-mode))
+
+              (use-package editorconfig
+                :config (editorconfig-mode 1))
+
               (setq standard-indent 2)
 
-              (require 'nix-ts-mode)
               (setq treesit-font-lock-level 4)
-              (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-ts-mode))
+              (use-package nix-ts-mode
+                :mode "\\.nix\\'")
+              (add-hook 'nix-mode-hook 'nixfmt-on-save-mode)
 
               (add-hook 'after-init-hook 'global-company-mode)
               (add-to-list 'company-backends 'company-nixos-options)
 
-              (add-hook 'nix-mode-hook 'nixfmt-on-save-mode)
-
-              (use-package dart-mode)
+              (use-package dart-mode
+                :hook (dart-mode . flutter-test-mode))
               (require 'lsp-mode)
               (setq lsp-auto-guess-root t)
+              ;; (use-package lsp-dart
+              ;;   :hook (dart-mode . lsp)
+              ;;   :init)
               (add-hook 'dart-mode-hook 'lsp)
               (require 'reformatter)
               (reformatter-define dart-format
                 :program "dart"
                 :args '("format"))
               (with-eval-after-load "projectile"
-              (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
-              (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
+                (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
+                (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
 
               (use-package flutter
-                :after (dart-mode))
+                :after (dart-mode)
+                :custom (flutter-sdk-path "${pkgs.flutter}/"))
+
+              (require 'dockerfile-mode)
+              (use-package docker-compose-mode)
+
+              (use-package hugoista)
+
+              (use-package arduino-mode)
+              (require 'company-arduino)
 
               (require 'platformio-mode)
               (add-hook 'c++-mode-hook (lambda ()
                 (lsp-deferred)
                 (platformio-conditionally-enable)))
-            '';
+
+              (use-package indent-bars
+                :custom (indent-bars-treesit-support t)
+                :hook ((nix-mode) . indent-bar-mode))
+
+              (use-package kubernetes
+                :commands (kubernetes-overview))
+
+              (use-package ollama-buddy)
+
+              (require 'pipewire)
+            ''; # TODO: Test nixfmt Hook, Indent Bars, & Trailing New Line Indicator
           };
 
           television = {
