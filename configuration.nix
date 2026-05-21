@@ -181,7 +181,7 @@ in
       };
     };
 
-    kernelPackages = pkgs.linuxKernel.packages.linux_7_0;
+    kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
 
     extraModulePackages = with config.boot.kernelPackages; [
       # apfs # FIXME: Build Failure
@@ -199,8 +199,14 @@ in
     kernelModules = [
       "at24"
       "ee1004"
+      "i915"
       "kvm-intel"
       "spd5118"
+    ];
+
+    blacklistedKernelModules = [
+      "efifb"
+      "simplefb"
     ];
 
     extraModprobeConfig = ''
@@ -210,10 +216,12 @@ in
 
     kernelParams = [
       "boot.shell_on_fail"
+      "initcall_blacklist=simpledrm_platform_driver_init"
       "intel_iommu=on"
       "iommu=pt"
       "kvm.ignore_msrs=1"
       "mitigations=auto"
+      "splash"
       "rd.systemd.show_status=true"
       "rd.udev.log_level=err"
       "udev.log_level=err"
@@ -377,7 +385,7 @@ in
     };
 
     gc = {
-      automatic = true;
+      automatic = false; # Enabled nh clean Instead
       dates = "weekly";
       persistent = true;
     };
@@ -997,32 +1005,6 @@ in
       }
     );
 
-    packages = with pkgs; [
-      (hardinfo2.override {
-        printingSupport = true;
-      })
-    ];
-
-    services = {
-      hardinfo2_custom = {
-        description = "Hardinfo2 support for root access";
-        wantedBy = [
-          "basic.target"
-        ];
-
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${
-            (pkgs.hardinfo2.override {
-              printingSupport = true;
-            })
-          }/bin/hwinfo2_fetch_sysdata"; # The ${pkgs.hardinfo2}/lib/systemd/system/hardinfo2.service file intends to run ${pkgs.hardinfo2}/bin/hwinfo2_fetch_sysdata oneshot which calls ${pkgs.hardinfo2}/bin/.hwinfo2_fetch_sysdata-wrapped
-        };
-
-        enable = true;
-      };
-    }; # Custom Service Unit File due to Errors
-
     tmpfiles.rules = [
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
       "d /var/lib/swtpm-localca 0750 tss root -"
@@ -1186,7 +1168,7 @@ in
       implementation = "broker";
 
       packages = with pkgs; [
-        gnome2.GConf
+        libvirt-dbus
       ];
     };
 
@@ -1195,6 +1177,7 @@ in
     fprintd = {
       enable = true;
       package = if config.services.fprintd.tod.enable then pkgs.fprintd-tod else pkgs.fprintd;
+
       # tod = {
       #   enable = true;
       #   driver = ;
@@ -1666,6 +1649,17 @@ in
       '';
     };
 
+    gvfs = {
+      enable = true;
+      package = (
+        pkgs.gvfs.override {
+          gnomeSupport = false;
+          googleSupport = false;
+          udevSupport = true;
+        }
+      );
+    };
+
     postfix = {
       enable = true;
 
@@ -1927,6 +1921,7 @@ in
           convert
           diff
           drag
+          gvfs
           lazygit
           mount
           rsync
@@ -2005,13 +2000,7 @@ in
     };
 
     ssh = {
-      package = (
-        pkgs.openssh.override {
-          isNixos = true;
-          linkOpenssl = true;
-          withPAM = true;
-        }
-      );
+      package = config.services.openssh.package;
 
       startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
       agentTimeout = null;
@@ -2061,6 +2050,13 @@ in
     nh = {
       enable = true;
       package = pkgs.nh;
+
+      clean = {
+        enable = true;
+
+        dates = "weekly";
+        extraArgs = "--optimise";
+      };
     };
 
     usbtop.enable = true;
@@ -2397,6 +2393,7 @@ in
         binwalk
         bleachbit
         bluetui
+        bluez-alsa
         bluez-tools
         brightnessctl
         btrfs-assistant
@@ -2415,7 +2412,6 @@ in
         clinfo
         cliphist
         cloc
-        clock-rs
         cmake
         cmake-language-server
         codec2
@@ -2475,7 +2471,6 @@ in
         exiftool
         extract-dtb
         f2fs-tools
-        fastfetch
         fastlane
         fd
         fdk_aac
@@ -2572,7 +2567,6 @@ in
         jfsutils
         jmc2obj
         jmol
-        jq
         jxrlib
         kernel-hardening-checker
         kernelshark
@@ -2665,7 +2659,6 @@ in
         obexftp
         oha
         onionshare-gui
-        onlyoffice-desktopeditors
         openai-whisper
         openapv
         opencore-amr
@@ -2712,7 +2705,6 @@ in
         qtscrcpy
         radare2
         raider
-        rclone
         rclone-browser
         regex-tui
         rp-pppoe
@@ -2762,6 +2754,7 @@ in
         termscp
         termshark
         texliveFull
+        texlivePackages.latexmk
         time
         tpm2-tools
         traceroute
@@ -3080,7 +3073,6 @@ in
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
-      ++ config.systemd.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
       ++ config.virtualisation.podman.extraPackages
       ++ config.virtualisation.podman.extraRuntimes
@@ -3161,9 +3153,6 @@ in
         mediastreamer2
         msopenh264
         ortp
-      ])
-      ++ (with texlivePackages; [
-        latexmk
       ])
       ++ (with unixtools; [
         arp
@@ -3288,8 +3277,6 @@ in
       enable = true;
 
       addedAssociations = config.xdg.mime.defaultApplications;
-
-      # removedAssociations = { };
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
@@ -3819,10 +3806,6 @@ in
   };
 
   users = {
-    groups = {
-      hardinfo2 = { };
-    };
-
     enforceIdUniqueness = true;
     mutableUsers = true;
 
@@ -3853,7 +3836,6 @@ in
         "floppy"
         "fwupd-refresh"
         "greeter"
-        "hardinfo2"
         "i2c"
         "input"
         "kvm"
@@ -3933,6 +3915,8 @@ in
       catppuccinThemeFlake.homeModules.catppuccin
 
       {
+        _class = "homeManager";
+
         home = {
           enableNixpkgsReleaseCheck = true;
 
@@ -3947,7 +3931,19 @@ in
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             size = builtins.floor (design_factor * 1.50); # 24
 
-            gtk.enable = true;
+            hyprcursor = {
+              enable = true;
+              size = config.home-manager.users.root.home.pointerCursor.size;
+            };
+
+            gtk = {
+              enable = true;
+              size = config.home-manager.users.root.home.pointerCursor.size;
+            };
+
+            x11.enable = false;
+
+            dotIcons.enable = true;
           };
 
           # sessionSearchVariables = { };
@@ -4374,7 +4370,7 @@ in
               {
                 _args = [
                   "SUPER + C"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- clock-rs --blink\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- clock-rs\")")
                 ];
               }
               {
@@ -4762,8 +4758,12 @@ in
               added = config.xdg.mime.addedAssociations;
               removed = config.xdg.mime.removedAssociations;
             };
-
             defaultApplications = config.xdg.mime.defaultApplications;
+          };
+
+          userDirs = {
+            createDirectories = true;
+            setSessionVariables = true;
           };
 
           configFile = {
@@ -5091,6 +5091,20 @@ in
             enableBashIntegration = true;
           };
 
+          onlyoffice = {
+            enable = true;
+            package = pkgs.onlyoffice-desktopeditors;
+          };
+
+          rclone = {
+            enable = true;
+            package = (
+              pkgs.rclone.override {
+                enableCmount = true;
+              }
+            );
+          };
+
           emacs = {
             enable = true;
             package = pkgs.emacs-pgtk;
@@ -5370,6 +5384,61 @@ in
             package = pkgs.cava;
           };
 
+          # texlive = { };
+
+          ssh = {
+            enable = true;
+            package = config.services.openssh.package;
+          };
+
+          jq = {
+            enable = true;
+            package = (
+              pkgs.jq.override {
+                onigurumaSupport = true;
+              }
+            );
+          };
+
+          command-not-found.enable = config.programs.command-not-found.enable;
+
+          clock-rs = {
+            enable = true;
+            package = pkgs.clock-rs;
+
+            settings = {
+              general = {
+                blink = true;
+                bold = true;
+              };
+            };
+          };
+
+          fastfetch = {
+            enable = true;
+            package = (
+              pkgs.fastfetch.override {
+                audioSupport = true;
+                brightnessSupport = true;
+                dbusSupport = true;
+                enlightenmentSupport = false;
+                flashfetchSupport = false;
+                gnomeSupport = false;
+                imageSupport = true;
+                openclSupport = true;
+                openglSupport = true;
+                rpmSupport = false;
+                sqliteSupport = true;
+                terminalSupport = true;
+                vulkanSupport = true;
+                waylandSupport = true;
+                x11Support = false;
+                xfceSupport = false;
+                zfsSupport = true;
+              }
+            );
+          };
+
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
@@ -5395,6 +5464,11 @@ in
               kubectl = pkgs.lib.getExe pkgs.kubectl;
               preset = "dark";
             };
+          };
+
+          info = {
+            enable = true;
+            package = pkgs.texinfoInteractive;
           };
 
           git = {
@@ -5694,6 +5768,14 @@ in
             settings = config.programs.yazi.settings;
           };
 
+          keychain = {
+            enable = true;
+            package = pkgs.keychain;
+
+            enableBashIntegration = true;
+            enableXsessionIntegration = false;
+          };
+
           wofi = {
             enable = true;
             package = pkgs.wofi;
@@ -5747,6 +5829,21 @@ in
                 margin-right: 4px;
               }
             '';
+          };
+
+          nix-index = {
+            enable = config.programs.nix-index.enable;
+            package = config.programs.nix-index.package;
+
+            enableBashIntegration = config.programs.nix-index.enableBashIntegration;
+          };
+
+          man = {
+            enable = config.documentation.man.enable;
+            package = config.documentation.man.man-db.package;
+            man-db.enable = config.documentation.man.man-db.enable;
+
+            generateCaches = config.documentation.man.cache.enable;
           };
         };
 
@@ -5924,6 +6021,12 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           };
+        };
+
+        manual = {
+          manpages.enable = true;
+          html.enable = true;
+          json.enable = false;
         };
       }
     ];
