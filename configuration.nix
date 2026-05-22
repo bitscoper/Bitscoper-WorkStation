@@ -11,7 +11,7 @@
 let
   stableNixPackages =
     import
-      (builtins.fetchTarball {
+      (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
       })
       {
@@ -1990,7 +1990,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-emacs.override {
+          pkgs.pinentry-tty.override {
             withLibsecret = true;
           }
         );
@@ -2409,6 +2409,9 @@ in
         certbot-full
         certdump
         cicero-tui
+        clang-analyzer
+        clang-tools
+        clang_22
         clinfo
         cliphist
         cloc
@@ -2600,7 +2603,9 @@ in
         libvpx
         linux-exploit-suggester
         linuxConsoleTools
+        lld_22
         llmfit
+        llvm_22
         logtop
         lorem
         lsb-release
@@ -2646,8 +2651,6 @@ in
         ninja
         nix-diff
         nix-info
-        nixd
-        nixfmt
         nixmate
         nixpkgs-reviewFull
         nmap
@@ -2761,7 +2764,6 @@ in
         traitor
         tray-tui
         tree
-        tree-sitter
         treegen
         trufflehog
         trustymail
@@ -2792,6 +2794,7 @@ in
         vorbis-tools
         vulkan-caps-viewer
         vulkan-tools
+        vulnix
         wafw00f
         wakeonlan
         warehouse
@@ -3038,6 +3041,9 @@ in
           pulseaudioSupport = false;
           waylandSupport = true;
         })
+        (tree-sitter.override {
+          webUISupport = false; # FIXME: Build Failure
+        })
         (ventoy-full-gtk.override {
           withExt4 = true;
           withNtfs = true;
@@ -3066,6 +3072,7 @@ in
       ++ config.home-manager.users.root.programs.gh.extensions
       ++ config.home-manager.users.root.programs.lutris.extraPackages
       ++ config.home-manager.users.root.programs.lutris.winePackages
+      ++ config.home-manager.users.root.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
@@ -3154,6 +3161,63 @@ in
         msopenh264
         ortp
       ])
+      ++ (with tree-sitter-grammars; [
+        tree-sitter-awk
+        tree-sitter-bash
+        tree-sitter-bibtex
+        tree-sitter-c
+        tree-sitter-cmake
+        tree-sitter-comment
+        tree-sitter-cpp
+        tree-sitter-css
+        tree-sitter-csv
+        tree-sitter-dart
+        tree-sitter-diff
+        tree-sitter-dockerfile
+        tree-sitter-dot
+        tree-sitter-dtd
+        tree-sitter-git-config
+        tree-sitter-git-rebase
+        tree-sitter-gitattributes
+        tree-sitter-gitcommit
+        tree-sitter-gitignore
+        tree-sitter-graphql
+        tree-sitter-hosts
+        tree-sitter-html
+        tree-sitter-http
+        tree-sitter-hurl
+        tree-sitter-hyprlang
+        tree-sitter-ini
+        tree-sitter-javascript
+        tree-sitter-jq
+        tree-sitter-json
+        tree-sitter-kotlin
+        tree-sitter-latex
+        tree-sitter-ld
+        tree-sitter-llvm
+        tree-sitter-log
+        tree-sitter-lua
+        tree-sitter-mail
+        tree-sitter-make
+        tree-sitter-markdown
+        tree-sitter-markdown-inline
+        tree-sitter-mermaid
+        tree-sitter-nix
+        tree-sitter-passwd
+        tree-sitter-pem
+        tree-sitter-php
+        tree-sitter-powershell
+        tree-sitter-python
+        tree-sitter-query
+        tree-sitter-regex
+        tree-sitter-smali
+        tree-sitter-sql
+        tree-sitter-sshclientconfig
+        tree-sitter-todotxt
+        tree-sitter-toml
+        tree-sitter-xml
+        tree-sitter-yaml
+      ])
       ++ (with unixtools; [
         arp
         column
@@ -3199,8 +3263,6 @@ in
       }:$LD_LIBRARY_PATH";
 
       CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
-
-      EDITOR = "emacs";
     };
 
     sessionVariables = {
@@ -3282,103 +3344,103 @@ in
       defaultApplications = {
         "inode/directory" = "yazi.desktop";
 
-        "text/1d-interleaved-parityfec" = "emacs.desktop";
-        "text/cache-manifest" = "emacs.desktop";
-        "text/calendar" = "emacs.desktop";
-        "text/cql" = "emacs.desktop";
-        "text/cql-expression" = "emacs.desktop";
-        "text/cql-identifier" = "emacs.desktop";
-        "text/css" = "emacs.desktop";
-        "text/csv" = "emacs.desktop";
-        "text/csv-schema" = "emacs.desktop";
-        "text/directory" = "emacs.desktop";
-        "text/dns" = "emacs.desktop";
-        "text/ecmascript" = "emacs.desktop";
-        "text/encaprtp" = "emacs.desktop";
-        "text/enriched" = "emacs.desktop";
-        "text/fhirpath" = "emacs.desktop";
-        "text/flexfec" = "emacs.desktop";
-        "text/fwdred" = "emacs.desktop";
-        "text/gff3" = "emacs.desktop";
-        "text/grammar-ref-list" = "emacs.desktop";
-        "text/hl7v2" = "emacs.desktop";
-        "text/html" = "emacs.desktop";
-        "text/javascript" = "emacs.desktop";
-        "text/jcr-cnd" = "emacs.desktop";
-        "text/markdown" = "emacs.desktop";
-        "text/mizar" = "emacs.desktop";
-        "text/n3" = "emacs.desktop";
-        "text/org" = "emacs.desktop";
-        "text/parameters" = "emacs.desktop";
-        "text/parityfec" = "emacs.desktop";
-        "text/plain" = "emacs.desktop";
-        "text/provenance-notation" = "emacs.desktop";
-        "text/prs.fallenstein.rst" = "emacs.desktop";
-        "text/prs.lines.tag" = "emacs.desktop";
-        "text/prs.prop.logic" = "emacs.desktop";
-        "text/prs.texi" = "emacs.desktop";
-        "text/raptorfec" = "emacs.desktop";
-        "text/RED" = "emacs.desktop";
-        "text/rfc822-headers" = "emacs.desktop";
-        "text/richtext" = "emacs.desktop";
-        "text/rtf" = "emacs.desktop";
-        "text/rtp-enc-aescm128" = "emacs.desktop";
-        "text/rtploopback" = "emacs.desktop";
-        "text/rtx" = "emacs.desktop";
-        "text/SGML" = "emacs.desktop";
-        "text/shaclc" = "emacs.desktop";
-        "text/shex" = "emacs.desktop";
-        "text/spdx" = "emacs.desktop";
-        "text/strings" = "emacs.desktop";
-        "text/t140" = "emacs.desktop";
-        "text/tab-separated-values" = "emacs.desktop";
-        "text/troff" = "emacs.desktop";
-        "text/turtle" = "emacs.desktop";
-        "text/ulpfec" = "emacs.desktop";
-        "text/uri-list" = "emacs.desktop";
-        "text/vcard" = "emacs.desktop";
-        "text/vnd.a" = "emacs.desktop";
-        "text/vnd.abc" = "emacs.desktop";
-        "text/vnd.ascii-art" = "emacs.desktop";
-        "text/vnd.curl" = "emacs.desktop";
-        "text/vnd.debian.copyright" = "emacs.desktop";
-        "text/vnd.DMClientScript" = "emacs.desktop";
-        "text/vnd.dvb.subtitle" = "emacs.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "emacs.desktop";
-        "text/vnd.exchangeable" = "emacs.desktop";
-        "text/vnd.familysearch.gedcom" = "emacs.desktop";
-        "text/vnd.ficlab.flt" = "emacs.desktop";
-        "text/vnd.fly" = "emacs.desktop";
-        "text/vnd.fmi.flexstor" = "emacs.desktop";
-        "text/vnd.gml" = "emacs.desktop";
-        "text/vnd.graphviz" = "emacs.desktop";
-        "text/vnd.hans" = "emacs.desktop";
-        "text/vnd.hgl" = "emacs.desktop";
-        "text/vnd.in3d.3dml" = "emacs.desktop";
-        "text/vnd.in3d.spot" = "emacs.desktop";
-        "text/vnd.IPTC.NewsML" = "emacs.desktop";
-        "text/vnd.IPTC.NITF" = "emacs.desktop";
-        "text/vnd.latex-z" = "emacs.desktop";
-        "text/vnd.motorola.reflex" = "emacs.desktop";
-        "text/vnd.ms-mediapackage" = "emacs.desktop";
-        "text/vnd.net2phone.commcenter.command" = "emacs.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "emacs.desktop";
-        "text/vnd.senx.warpscript" = "emacs.desktop";
-        "text/vnd.si.uricatalogue" = "emacs.desktop";
-        "text/vnd.sosi" = "emacs.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "emacs.desktop";
-        "text/vnd.trolltech.linguist" = "emacs.desktop";
-        "text/vnd.typst" = "emacs.desktop";
-        "text/vnd.vcf" = "emacs.desktop";
-        "text/vnd.wap.si" = "emacs.desktop";
-        "text/vnd.wap.sl" = "emacs.desktop";
-        "text/vnd.wap.wml" = "emacs.desktop";
-        "text/vnd.wap.wmlscript" = "emacs.desktop";
-        "text/vnd.zoo.kcl" = "emacs.desktop";
-        "text/vtt" = "emacs.desktop";
-        "text/wgsl" = "emacs.desktop";
-        "text/xml" = "emacs.desktop";
-        "text/xml-external-parsed-entity" = "emacs.desktop";
+        "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
+        "text/cache-manifest" = "dev.zed.Zed.desktop";
+        "text/calendar" = "dev.zed.Zed.desktop";
+        "text/cql" = "dev.zed.Zed.desktop";
+        "text/cql-expression" = "dev.zed.Zed.desktop";
+        "text/cql-identifier" = "dev.zed.Zed.desktop";
+        "text/css" = "dev.zed.Zed.desktop";
+        "text/csv" = "dev.zed.Zed.desktop";
+        "text/csv-schema" = "dev.zed.Zed.desktop";
+        "text/directory" = "dev.zed.Zed.desktop";
+        "text/dns" = "dev.zed.Zed.desktop";
+        "text/ecmascript" = "dev.zed.Zed.desktop";
+        "text/encaprtp" = "dev.zed.Zed.desktop";
+        "text/enriched" = "dev.zed.Zed.desktop";
+        "text/fhirpath" = "dev.zed.Zed.desktop";
+        "text/flexfec" = "dev.zed.Zed.desktop";
+        "text/fwdred" = "dev.zed.Zed.desktop";
+        "text/gff3" = "dev.zed.Zed.desktop";
+        "text/grammar-ref-list" = "dev.zed.Zed.desktop";
+        "text/hl7v2" = "dev.zed.Zed.desktop";
+        "text/html" = "dev.zed.Zed.desktop";
+        "text/javascript" = "dev.zed.Zed.desktop";
+        "text/jcr-cnd" = "dev.zed.Zed.desktop";
+        "text/markdown" = "dev.zed.Zed.desktop";
+        "text/mizar" = "dev.zed.Zed.desktop";
+        "text/n3" = "dev.zed.Zed.desktop";
+        "text/org" = "dev.zed.Zed.desktop";
+        "text/parameters" = "dev.zed.Zed.desktop";
+        "text/parityfec" = "dev.zed.Zed.desktop";
+        "text/plain" = "dev.zed.Zed.desktop";
+        "text/provenance-notation" = "dev.zed.Zed.desktop";
+        "text/prs.fallenstein.rst" = "dev.zed.Zed.desktop";
+        "text/prs.lines.tag" = "dev.zed.Zed.desktop";
+        "text/prs.prop.logic" = "dev.zed.Zed.desktop";
+        "text/prs.texi" = "dev.zed.Zed.desktop";
+        "text/raptorfec" = "dev.zed.Zed.desktop";
+        "text/RED" = "dev.zed.Zed.desktop";
+        "text/rfc822-headers" = "dev.zed.Zed.desktop";
+        "text/richtext" = "dev.zed.Zed.desktop";
+        "text/rtf" = "dev.zed.Zed.desktop";
+        "text/rtp-enc-aescm128" = "dev.zed.Zed.desktop";
+        "text/rtploopback" = "dev.zed.Zed.desktop";
+        "text/rtx" = "dev.zed.Zed.desktop";
+        "text/SGML" = "dev.zed.Zed.desktop";
+        "text/shaclc" = "dev.zed.Zed.desktop";
+        "text/shex" = "dev.zed.Zed.desktop";
+        "text/spdx" = "dev.zed.Zed.desktop";
+        "text/strings" = "dev.zed.Zed.desktop";
+        "text/t140" = "dev.zed.Zed.desktop";
+        "text/tab-separated-values" = "dev.zed.Zed.desktop";
+        "text/troff" = "dev.zed.Zed.desktop";
+        "text/turtle" = "dev.zed.Zed.desktop";
+        "text/ulpfec" = "dev.zed.Zed.desktop";
+        "text/uri-list" = "dev.zed.Zed.desktop";
+        "text/vcard" = "dev.zed.Zed.desktop";
+        "text/vnd.a" = "dev.zed.Zed.desktop";
+        "text/vnd.abc" = "dev.zed.Zed.desktop";
+        "text/vnd.ascii-art" = "dev.zed.Zed.desktop";
+        "text/vnd.curl" = "dev.zed.Zed.desktop";
+        "text/vnd.debian.copyright" = "dev.zed.Zed.desktop";
+        "text/vnd.DMClientScript" = "dev.zed.Zed.desktop";
+        "text/vnd.dvb.subtitle" = "dev.zed.Zed.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "dev.zed.Zed.desktop";
+        "text/vnd.exchangeable" = "dev.zed.Zed.desktop";
+        "text/vnd.familysearch.gedcom" = "dev.zed.Zed.desktop";
+        "text/vnd.ficlab.flt" = "dev.zed.Zed.desktop";
+        "text/vnd.fly" = "dev.zed.Zed.desktop";
+        "text/vnd.fmi.flexstor" = "dev.zed.Zed.desktop";
+        "text/vnd.gml" = "dev.zed.Zed.desktop";
+        "text/vnd.graphviz" = "dev.zed.Zed.desktop";
+        "text/vnd.hans" = "dev.zed.Zed.desktop";
+        "text/vnd.hgl" = "dev.zed.Zed.desktop";
+        "text/vnd.in3d.3dml" = "dev.zed.Zed.desktop";
+        "text/vnd.in3d.spot" = "dev.zed.Zed.desktop";
+        "text/vnd.IPTC.NewsML" = "dev.zed.Zed.desktop";
+        "text/vnd.IPTC.NITF" = "dev.zed.Zed.desktop";
+        "text/vnd.latex-z" = "dev.zed.Zed.desktop";
+        "text/vnd.motorola.reflex" = "dev.zed.Zed.desktop";
+        "text/vnd.ms-mediapackage" = "dev.zed.Zed.desktop";
+        "text/vnd.net2phone.commcenter.command" = "dev.zed.Zed.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "dev.zed.Zed.desktop";
+        "text/vnd.senx.warpscript" = "dev.zed.Zed.desktop";
+        "text/vnd.si.uricatalogue" = "dev.zed.Zed.desktop";
+        "text/vnd.sosi" = "dev.zed.Zed.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "dev.zed.Zed.desktop";
+        "text/vnd.trolltech.linguist" = "dev.zed.Zed.desktop";
+        "text/vnd.typst" = "dev.zed.Zed.desktop";
+        "text/vnd.vcf" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.si" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.sl" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.wml" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.wmlscript" = "dev.zed.Zed.desktop";
+        "text/vnd.zoo.kcl" = "dev.zed.Zed.desktop";
+        "text/vtt" = "dev.zed.Zed.desktop";
+        "text/wgsl" = "dev.zed.Zed.desktop";
+        "text/xml" = "dev.zed.Zed.desktop";
+        "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
         "image/aces" = "imv.desktop";
         "image/apng" = "imv.desktop";
@@ -3975,9 +4037,9 @@ in
             ];
           };
 
-          plugins = with pkgs.hyprlandPlugins; [
-            # xtra-dispatchers # FIXME: Build Failure
-          ];
+          # plugins = with pkgs.hyprlandPlugins; [
+          #   xtra-dispatchers # FIXME: Build Failure
+          # ];
 
           xwayland.enable = true;
 
@@ -4418,7 +4480,7 @@ in
               {
                 _args = [
                   "SUPER + E"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
                 ];
               }
               {
@@ -5105,271 +5167,150 @@ in
             );
           };
 
-          emacs = {
+          zed-editor = {
             enable = true;
-            package = pkgs.emacs-pgtk;
-            # overrides = {
+            package = (
+              pkgs.zed-editor
+              # pkgs.zed-editor.override {
+              #   buildRemoteServer = false;
+              #   git = config.programs.git.package;
+              # }
+            );
 
-            # };
-            extraPackages =
-              epkgs: with epkgs; [
-                arduino-mode
-                auto-compile
-                catppuccin-theme
-                cmake-mode
-                colorful-mode
-                com-css-sort
-                company
-                company-arduino
-                company-emoji
-                company-nixos-options
-                company-phpactor
-                company-statistics
-                dap-mode
-                dashboard
-                dart-mode
-                direnv
-                docker-compose-mode
-                dockerfile-mode
-                editorconfig
-                flutter
-                flutter-l10n-flycheck
-                flymake
-                flymake-cursor
-                flymake-languagetool
-                flymake-markdownlint
-                flymake-phpcs
-                flymake-phpstan
-                flymake-pyrefly
-                flymake-yamllint
-                git-modes
-                gnu-elpa
-                gnu-elpa-keyring-update
-                gnu-indent
-                highlight
-                html5-schema
-                http-server
-                hugoista
-                hyprlang-ts-mode
-                indent-bars
-                indent-control
-                indent-tools
-                isortify
-                json-mode
-                kubernetes
-                lsp-dart
-                lsp-docker
-                lsp-focus
-                lsp-mode
-                lsp-treemacs
-                magit
-                nerd-icons
-                nix-ts-mode
-                nixfmt
-                nixos-options
-                ollama-buddy
-                org
-                php-mode
-                php-runtime
-                phpactor
-                phpinspect
-                phpstan
-                pinentry
-                pipewire
-                platformio-mode
-                projectile
-                python
-                quelpa
-                quelpa-use-package
-                trailing-newline-indicator
-                tree-sitter
-                tree-sitter-indent
-                tree-sitter-langs
-                treemacs
-                treemacs-magit
-                treemacs-projectile
-                treemacs-tab-bar
-                use-package
-                xml-rpc
-                (treesit-grammars.with-grammars (
-                  grammars: with grammars; [
-                    tree-sitter-awk
-                    tree-sitter-bash
-                    tree-sitter-bibtex
-                    tree-sitter-c
-                    tree-sitter-cmake
-                    tree-sitter-comment
-                    tree-sitter-cpp
-                    tree-sitter-css
-                    tree-sitter-csv
-                    tree-sitter-dart
-                    tree-sitter-diff
-                    tree-sitter-dockerfile
-                    tree-sitter-dot
-                    tree-sitter-dtd
-                    tree-sitter-git-config
-                    tree-sitter-git-rebase
-                    tree-sitter-gitattributes
-                    tree-sitter-gitcommit
-                    tree-sitter-gitignore
-                    tree-sitter-graphql
-                    tree-sitter-hosts
-                    tree-sitter-html
-                    tree-sitter-http
-                    tree-sitter-hurl
-                    tree-sitter-hyprlang
-                    tree-sitter-ini
-                    tree-sitter-javascript
-                    tree-sitter-jq
-                    tree-sitter-json
-                    tree-sitter-kotlin
-                    tree-sitter-latex
-                    tree-sitter-ld
-                    tree-sitter-llvm
-                    tree-sitter-log
-                    tree-sitter-lua
-                    tree-sitter-mail
-                    tree-sitter-make
-                    tree-sitter-markdown
-                    tree-sitter-markdown-inline
-                    tree-sitter-mermaid
-                    tree-sitter-nix
-                    tree-sitter-org
-                    tree-sitter-passwd
-                    tree-sitter-pem
-                    tree-sitter-php
-                    tree-sitter-powershell
-                    tree-sitter-python
-                    tree-sitter-query
-                    tree-sitter-regex
-                    tree-sitter-smali
-                    tree-sitter-sql
-                    tree-sitter-sshclientconfig
-                    tree-sitter-todotxt
-                    tree-sitter-toml
-                    tree-sitter-xml
-                    tree-sitter-yaml
-                  ]
-                ))
-              ];
+            installRemoteServer = false;
+            enableMcpIntegration = true;
 
-            extraConfig = ''
-              ;;; -*- lexical-binding: t; -*-
+            extensions = [
+              "arduino"
+              "awk"
+              "basher"
+              "bloc"
+              "bookmark"
+              "catppuccin"
+              "catppuccin-icons"
+              "comment"
+              "comment-block-snippets"
+              "css-variables"
+              "dart"
+              "desktop"
+              "docker-compose"
+              "dockerfile"
+              "editorconfig"
+              "env"
+              "flutter-snippets"
+              "github-actions"
+              "github-activity-summazier"
+              "gitignore-templates"
+              "graphql"
+              "html-snippets"
+              "http"
+              "hurl"
+              "hyprlang"
+              "import-cost-lsp"
+              "ini"
+              "javascript-snippets"
+              "keep-a-changelog-snippets"
+              "kubernetes-snippets"
+              "latex"
+              "live-server"
+              "log"
+              "logcat"
+              "lua"
+              "make"
+              "markdown-snippets"
+              "markdownlinter"
+              "mermaid"
+              "nix"
+              "php"
+              "php-snippets"
+              "phpcs"
+              "phpmd"
+              "platformio"
+              "postgres-context-server"
+              "postgres-language-server"
+              "powershell"
+              "python-snippets"
+              "rainbow-csv"
+              "riverpod-dart-flutter-snippets"
+              "sql"
+              "xml"
+            ];
 
-              (load-theme 'catppuccin :no-confirm)
-              (setq catppuccin-flavor '${config.catppuccin.flavor})
-              (catppuccin-reload)
+            extraPackages = with pkgs; [
+              nixd
+              nixfmt
+            ];
 
-              (setq display-buffer-base-action '((display-buffer-same-window)))
-              (setq tab-bar-show 1)
-              (setq tab-line-show 1)
+            mutableUserDebug = true;
+            mutableUserKeymaps = true;
+            mutableUserSettings = true;
+            mutableUserTasks = true;
 
-              (display-time-mode t)
+            userSettings = {
+              telemetry = {
+                metrics = false;
+              };
 
-              (require 'use-package)
-              (use-package nerd-icons
-                :custom (nerd-icons-font-family "${fontPreferences.name.mono}"))
-              (require 'dashboard)
-              (setq dashboard-display-icons t)
-              (setq dashboard-set-heading-icon t)
-              (setq dashboard-set-file-icons t)
-              (setq dashboard-icon-type 'nerd-icons)
-              (setq dashboard-show-shortcuts t)
-              (setq dashboard-filter-agenda-entry 'dashboard-no-filter-agenda)
-              (add-to-list 'dashboard-items '(agenda) t)
-              (setq dashboard-navigation-cycle t)
-              (dashboard-setup-startup-hook)
+              terminal = {
+                font_family = fontPreferences.name.mono;
+                font_size = design_factor;
 
-              (use-package projectile
-                :init (projectile-mode +1))
-              (use-package magit)
-              (use-package treemacs
-                :defer t
-                :config (progn
-                  (setq treemacs-show-hidden-files t)
-                  (treemacs-follow-mode t)
-                  (treemacs-filewatch-mode t)
-                  (treemacs-git-commit-diff-mode t))
-                :init)
-              (use-package treemacs-projectile
-                :after (treemacs projectile))
-              (use-package treemacs-magit
-                :after (treemacs magit))
-              (use-package treemacs-tab-bar
-                :after (treemacs)
-                :config (treemacs-set-scope-type 'Tabs))
-              (treemacs-start-on-boot)
+                cursor_shape = "bar";
+                cursor_blink = true;
+              };
 
-              (size-indication-mode t)
-              (global-display-line-numbers-mode t)
-              (column-number-mode t)
-              (global-hl-line-mode t)
-              (show-paren-mode t)
-              (transient-mark-mode t)
+              vim_mode = false;
 
-              (use-package trailing-newline-indicator
-                :init (global-trailing-newline-indicator-mode 1))
+              ui_font_family = fontPreferences.name.sans_serif;
+              ui_font_size = design_factor;
 
-              (use-package direnv
-                :config (direnv-mode))
+              buffer_font_family = fontPreferences.name.mono;
+              buffer_font_size = design_factor;
 
-              (use-package editorconfig
-                :config (editorconfig-mode 1))
+              cursor_shape = "bar";
+              cursor_blink = true;
 
-              (setq standard-indent 2)
+              languages = {
+                Nix = {
+                  language_servers = [
+                    "nixd"
+                    "!nil"
+                  ];
 
-              (setq treesit-font-lock-level 4)
-              (use-package nix-ts-mode
-                :mode "\\.nix\\'")
-              (add-hook 'nix-mode-hook 'nixfmt-on-save-mode)
+                  formatter = {
+                    external = {
+                      command = "nixfmt";
+                      arguments = [ ];
+                    };
+                  };
+                };
+              };
 
-              (add-hook 'after-init-hook 'global-company-mode)
-              (add-to-list 'company-backends 'company-nixos-options)
+              lsp = {
+                nixd = {
+                  initialization_options = {
+                    formatting = {
+                      command = [
+                        "nixfmt"
+                      ];
+                    };
+                  };
+                };
 
-              (use-package dart-mode
-                :hook (dart-mode . flutter-test-mode))
-              (require 'lsp-mode)
-              (setq lsp-auto-guess-root t)
-              ;; (use-package lsp-dart
-              ;;   :hook (dart-mode . lsp)
-              ;;   :init)
-              (add-hook 'dart-mode-hook 'lsp)
-              (require 'reformatter)
-              (reformatter-define dart-format
-                :program "dart"
-                :args '("format"))
-              (with-eval-after-load "projectile"
-                (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
-                (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
+                dart = {
+                  binary = {
+                    path = "${pkgs.flutter}/bin/dart";
+                    arguments = [
+                      "language-server"
+                      "--protocol=lsp"
+                    ];
+                  };
+                };
+              };
 
-              (use-package flutter
-                :after (dart-mode)
-                :custom (flutter-sdk-path "${pkgs.flutter}/"))
+            };
 
-              (require 'dockerfile-mode)
-              (use-package docker-compose-mode)
-
-              (use-package hugoista)
-
-              (use-package arduino-mode)
-              (require 'company-arduino)
-
-              (require 'platformio-mode)
-              (add-hook 'c++-mode-hook (lambda ()
-                (lsp-deferred)
-                (platformio-conditionally-enable)))
-
-              (use-package indent-bars
-                :custom (indent-bars-treesit-support t)
-                :hook ((nix-mode) . indent-bar-mode))
-
-              (use-package kubernetes
-                :commands (kubernetes-overview))
-
-              (use-package ollama-buddy)
-
-              (require 'pipewire)
-            ''; # TODO: Test nixfmt Hook, Indent Bars, & Trailing New Line Indicator
+            defaultEditor = true;
           };
 
           television = {
@@ -5511,7 +5452,7 @@ in
             settings = {
               git_protocol = "https";
 
-              editor = "emacs";
+              editor = "zeditor";
             };
           };
 
@@ -5910,6 +5851,21 @@ in
             enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
+          };
+
+          zed = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            icons = {
+              enable = true;
+
+              flavor = config.catppuccin.flavor;
+            };
+
+            italics = false;
           };
 
           fcitx5 = {
