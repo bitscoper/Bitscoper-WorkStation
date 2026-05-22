@@ -2370,7 +2370,6 @@ in
         appimageupdate-qt
         arduino-cli
         arduino-ide
-        arduino-language-server
         ascii
         ascii-draw
         ascii-image-converter
@@ -2751,7 +2750,6 @@ in
         symlinks
         systemctl-tui
         systemd-lsp
-        tdf
         telegraph
         terminaltexteffects
         termscp
@@ -2833,7 +2831,6 @@ in
         xonotic
         xoscope
         xvidcore
-        yaml-language-server
         yara-x
         yoshimi
         yq
@@ -5202,6 +5199,8 @@ in
               "github-activity-summazier"
               "gitignore-templates"
               "graphql"
+              "graphviz"
+              "groovy"
               "html-snippets"
               "http"
               "hurl"
@@ -5215,6 +5214,7 @@ in
               "live-server"
               "log"
               "logcat"
+              "ltex"
               "lua"
               "make"
               "markdown-snippets"
@@ -5237,8 +5237,14 @@ in
             ];
 
             extraPackages = with pkgs; [
+              arduino-language-server
+              config.home-manager.users.root.programs.sioyek.package
               nixd
               nixfmt
+              prettier
+              shfmt
+              sql-formatter
+              yaml-language-server
             ];
 
             mutableUserDebug = true;
@@ -5256,7 +5262,7 @@ in
                 font_size = design_factor;
 
                 cursor_shape = "bar";
-                cursor_blink = true;
+                blinking = "on";
               };
 
               vim_mode = false;
@@ -5269,6 +5275,20 @@ in
 
               cursor_shape = "bar";
               cursor_blink = true;
+
+              format_on_save = "on";
+              hard_tabs = false;
+              tab_size = 2;
+
+              file_types = {
+                Diff = [
+                  "diff"
+                ];
+
+                Dockerfile = [
+                  "Dockerfile.*"
+                ];
+              };
 
               languages = {
                 Nix = {
@@ -5284,6 +5304,67 @@ in
                     };
                   };
                 };
+
+                "Shell Script" = {
+                  formatter = {
+                    external = {
+                      command = "shfmt";
+                      arguments = [
+                        "--filename"
+                        "{buffer_path}"
+                        "--indent"
+                        "2"
+                      ];
+                    };
+                  };
+                };
+
+                PHP = {
+                  language_servers = [
+                    "phpactor"
+                    "!intelephense"
+                    "!phptools"
+                  ];
+                };
+
+                JavaScript = {
+                  formatter = {
+                    external = {
+                      command = "prettier";
+                      arguments = [
+                        "--stdin-filepath"
+                        "{buffer_path}"
+                      ];
+                    };
+                  };
+
+                  code_actions_on_format = {
+                    "source.fixAll.eslint" = true;
+                  };
+                };
+
+                SQL = {
+                  formatter = {
+                    external = {
+                      command = "sql-formatter";
+                      # arguments = [
+                      #   "--language"
+                      #   "postgresql"
+                      # ];
+                      # arguments = [
+                      #   "--language"
+                      #   "mariadb"
+                      # ];
+                    };
+                  };
+                };
+
+                Markdown = {
+                  indent_list_on_tab = true;
+                  extend_list_on_newline = true;
+
+                  remove_trailing_whitespace_on_save = false;
+                };
               };
 
               lsp = {
@@ -5297,6 +5378,23 @@ in
                   };
                 };
 
+                clangd = {
+                  binary = {
+                    path = "${pkgs.clang-tools}/bin/clangd";
+                    arguments = [ ];
+                  };
+                };
+
+                arduino-language-server = {
+                  binary = {
+                    path = "${pkgs.arduino-language-server}/bin/arduino-language-server";
+                    arguments = [
+                      "--fqbn"
+                      "arduino:avr"
+                    ];
+                  };
+                };
+
                 dart = {
                   binary = {
                     path = "${pkgs.flutter}/bin/dart";
@@ -5306,8 +5404,66 @@ in
                     ];
                   };
                 };
-              };
 
+                eslint = {
+                  settings = {
+                    workingDirectory = {
+                      mode = "auto";
+                    };
+                  };
+                };
+
+                ltex = {
+                  settings = {
+                    ltex = {
+                      language = "auto";
+                    };
+                  };
+                };
+                texlab = {
+                  settings = {
+                    texlab = {
+                      build = {
+                        onSave = true;
+                        forwardSearchAfter = true;
+                      };
+                      forwardSearch = {
+                        executable = "sioyek";
+                        args = [
+                          "--reuse-window"
+                          "--execute-command"
+                          "toggle_synctex"
+                          "--inverse-search"
+                          "texlab inverse-search -i \"%%1\" -l %%2"
+                          "--forward-search-file"
+                          "%f"
+                          "--forward-search-line"
+                          "%l"
+                          "%p"
+                        ];
+                      };
+                    };
+                  };
+                };
+
+                yaml-language-server = {
+                  binary = {
+                    path = "${pkgs.yaml-language-server}/bin/yaml-language-server";
+                    arguments = [ ];
+                  };
+
+                  settings = {
+                    yaml = {
+                      schemaStore = {
+                        enable = true;
+                      };
+
+                      keyOrdering = true;
+                      singleQuote = false;
+                    };
+                  };
+                };
+              };
             };
 
             defaultEditor = true;
@@ -5318,6 +5474,15 @@ in
             package = pkgs.television;
 
             enableBashIntegration = true;
+          };
+
+          sioyek = {
+            enable = true;
+            package = pkgs.sioyek;
+
+            config.startup_commands = [
+              "toggle_dark_mode"
+            ];
           };
 
           cava = {
@@ -5830,6 +5995,12 @@ in
             flavor = config.catppuccin.flavor;
 
             transparent = true;
+          };
+
+          sioyek = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
           };
 
           wleave = {
