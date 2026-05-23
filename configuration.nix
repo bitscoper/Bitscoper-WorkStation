@@ -1,9 +1,9 @@
 # By Abdullah As-Sadeed
 
 {
+  # modulesPath,
   config,
   lib,
-  modulesPath,
   options,
   pkgs,
   ...
@@ -2404,7 +2404,6 @@ in
         avbroot
         avrdude
         banner
-        bash-language-server
         bcachefs-tools
         bcg729
         binutils
@@ -2434,7 +2433,6 @@ in
         cliphist
         cloc
         cmake
-        cmake-language-server
         codec2
         codevis
         collision
@@ -2470,8 +2468,6 @@ in
         dmg2img
         dmidecode
         dnsrecon
-        docker-compose-language-service
-        docker-language-server
         dosfstools
         dot2tex
         dtui
@@ -2569,7 +2565,6 @@ in
         hyprland-qt-support
         hyprland-qtutils
         hyprland-workspaces-tui
-        hyprls
         hyprpicker
         hyprshutdown
         hyprtoolkit
@@ -2597,7 +2592,6 @@ in
         kind
         kmod
         kotlin
-        kotlin-language-server
         kubectl
         kubernetes-controller-tools
         kubeshark
@@ -2641,7 +2635,6 @@ in
         mailcap
         mapscii
         mcaselector
-        md-lsp
         md-tui
         meow
         mermaid-cli
@@ -2709,7 +2702,6 @@ in
         podman-compose
         podman-tui
         poop # POOP = Performance Optimizer Observation Platform
-        postgres-language-server
         procps
         profile-cleaner
         progress
@@ -2768,7 +2760,6 @@ in
         switcheroo
         symlinks
         systemctl-tui
-        systemd-lsp
         telegraph
         terminaltexteffects
         termscp
@@ -5195,11 +5186,19 @@ in
 
             extraPackages = with pkgs; [
               arduino-language-server
+              basedpyright
+              bash-language-server
               config.home-manager.users.root.programs.sioyek.package
               ctags-lsp
+              docker-compose-language-service
+              dockerfile-language-server
+              hyprls
+              kotlin-language-server
               nixd
               nixfmt
+              postgres-language-server
               prettier
+              ruff
               shellcheck
               shfmt
               sql-formatter
@@ -5209,6 +5208,7 @@ in
             installRemoteServer = false;
             enableMcpIntegration = true;
 
+            # curl -s https://raw.githubusercontent.com/zed-industries/extensions/main/.gitmodules
             extensions = [
               "arduino"
               "assembly"
@@ -5276,6 +5276,9 @@ in
               "sql"
               "ssh-config"
               "stylelint"
+              "toml"
+              "unicode"
+              "vcard"
               "xml"
             ];
 
@@ -5318,7 +5321,27 @@ in
               project_panel = {
                 button = true;
 
+                sticky_scroll = true;
+                entry_spacing = "comfortable";
+
+                indent_guides = {
+                  show = "always";
+                };
+
+                hide_root = false;
+                hide_hidden = false;
+                sort_mode = "directories_first";
+
+                folder_icons = true;
+                file_icons = true;
+                git_status = true;
                 show_diagnostics = "all";
+
+                scrollbar = {
+                  show = "auto";
+                };
+
+                drag_and_drop = true;
               };
 
               file_finder = {
@@ -5327,10 +5350,26 @@ in
 
               outline_panel = {
                 button = true;
+
+                folder_icons = true;
+                file_icons = true;
+                git_status = true;
+
+                indent_guides = {
+                  show = "always";
+                };
+
+                scrollbar = {
+                  show = "auto";
+                };
               };
 
               git_panel = {
                 button = true;
+
+                scrollbar = {
+                  show = "auto";
+                };
               };
 
               collaboration_panel = {
@@ -5342,6 +5381,10 @@ in
 
                 toolbar = {
                   breadcrumbs = true;
+                };
+
+                scrollbar = {
+                  show = "auto";
                 };
 
                 font_family = fontPreferences.name.mono;
@@ -5363,6 +5406,17 @@ in
                     activate_script = "default";
                   };
                 };
+              };
+
+              debugger = {
+                button = true;
+              };
+
+              tab_bar = {
+                show = true;
+
+                show_tab_bar_buttons = true;
+                show_nav_history_buttons = true;
               };
 
               tabs = {
@@ -5418,12 +5472,32 @@ in
                 background_coloring = "disabled";
               };
 
+              git = {
+                inline_blame = {
+                  enabled = true;
+
+                  show_commit_summary = true;
+                };
+
+                hunk_style = "staged_hollow";
+              };
+
               diagnostics = {
                 button = true;
 
                 inline = {
                   enabled = true;
                 };
+              };
+
+              inlay_hints = {
+                enabled = true;
+
+                show_background = false;
+
+                show_type_hints = true;
+                show_parameter_hints = true;
+                show_other_hints = true;
               };
 
               edit_predictions = {
@@ -5434,6 +5508,7 @@ in
               };
 
               agent = {
+                enabled = true;
                 button = true;
 
                 # default_model = {
@@ -5446,6 +5521,9 @@ in
                 #   }
                 # ];
               };
+
+              use_system_prompts = true;
+              use_system_path_prompts = true;
 
               vim_mode = false;
               hide_mouse = "never";
@@ -5466,11 +5544,18 @@ in
 
               show_whitespaces = "all";
               show_wrap_guides = true;
+              lsp_document_colors = "inlay";
+              colorize_brackets = true;
               current_line_highlight = "all";
+              inline_code_actions = true;
 
               show_completions_on_input = true;
-              format_on_save = "on";
+              show_completion_documentation = true;
+              completion_menu_scrollbar = "auto";
+              auto_signature_help = true;
+              show_signature_help_after_edits = true;
 
+              format_on_save = "on";
               hard_tabs = false;
               tab_size = 2;
 
@@ -5539,6 +5624,23 @@ in
                   };
                 };
 
+                Python = {
+                  language_servers = [
+                    "basedpyright"
+                    "ruff"
+                  ];
+
+                  formatter = {
+                    language_server = {
+                      name = "ruff";
+                    };
+                  };
+
+                  code_actions_on_format = {
+                    "source.organizeImports.ruff" = true;
+                  };
+                };
+
                 SQL = {
                   formatter = {
                     external = {
@@ -5568,6 +5670,12 @@ in
               };
 
               lsp = {
+                # unicode = {
+                #   settings = {
+                #     include_all_symbols = true;
+                #   };
+                # };
+
                 nixd = {
                   initialization_options = {
                     formatting = {
