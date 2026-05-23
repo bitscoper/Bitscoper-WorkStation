@@ -417,6 +417,9 @@ in
         );
       })
       (final: prev: {
+        vte = stableNixPackages.vte;
+      })
+      (final: prev: {
         xdg-desktop-portal-hyprland =
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
             {
@@ -1654,7 +1657,6 @@ in
       package = (
         pkgs.gvfs.override {
           gnomeSupport = false;
-          googleSupport = false;
           udevSupport = true;
         }
       );
@@ -2061,7 +2063,23 @@ in
 
     usbtop.enable = true;
 
-    nano.enable = false;
+    nano = {
+      enable = true;
+      package = (
+        pkgs.nano.override {
+          enableNls = true;
+        }
+      );
+
+      syntaxHighlight = true;
+
+      nanorc = ''
+        set linenumbers
+        set indicator
+        set softwrap
+        set autoindent
+      '';
+    };
 
     bat = {
       enable = true;
@@ -2343,6 +2361,7 @@ in
       [
         # dart # flutter adds the compatible version
         # freesmlauncher # Overlay from Flake # FIXME: Build Failure
+        # metadata # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # xfstests # FIXME: Build Failure
         aalib
@@ -2427,6 +2446,7 @@ in
         crosspipe
         cryptsetup
         cscope
+        ctagsWrapped
         ctop
         cups-pk-helper
         cups-printers
@@ -2626,7 +2646,6 @@ in
         meow
         mermaid-cli
         mesa-demos
-        metadata
         metadata-cleaner
         mfcuk
         mfoc
@@ -5174,11 +5193,25 @@ in
               # }
             );
 
+            extraPackages = with pkgs; [
+              arduino-language-server
+              config.home-manager.users.root.programs.sioyek.package
+              ctags-lsp
+              nixd
+              nixfmt
+              prettier
+              shellcheck
+              shfmt
+              sql-formatter
+              yaml-language-server
+            ];
+
             installRemoteServer = false;
             enableMcpIntegration = true;
 
             extensions = [
               "arduino"
+              "assembly"
               "awk"
               "basher"
               "bloc"
@@ -5188,11 +5221,14 @@ in
               "comment"
               "comment-block-snippets"
               "css-variables"
+              "csv"
+              "ctags"
               "dart"
               "desktop"
               "docker-compose"
               "dockerfile"
               "editorconfig"
+              "emoji-completions"
               "env"
               "flutter-snippets"
               "github-actions"
@@ -5207,6 +5243,7 @@ in
               "hyprlang"
               "import-cost-lsp"
               "ini"
+              "intl-lens"
               "javascript-snippets"
               "keep-a-changelog-snippets"
               "kubernetes-snippets"
@@ -5218,9 +5255,10 @@ in
               "lua"
               "make"
               "markdown-snippets"
-              "markdownlinter"
+              "markdownlint"
               "mermaid"
               "nix"
+              "pbxproj"
               "php"
               "php-snippets"
               "phpcs"
@@ -5229,22 +5267,16 @@ in
               "postgres-context-server"
               "postgres-language-server"
               "powershell"
+              "python-requirements"
               "python-snippets"
-              "rainbow-csv"
+              "regedit"
               "riverpod-dart-flutter-snippets"
+              "rpmspec"
+              "sieve"
               "sql"
+              "ssh-config"
+              "stylelint"
               "xml"
-            ];
-
-            extraPackages = with pkgs; [
-              arduino-language-server
-              config.home-manager.users.root.programs.sioyek.package
-              nixd
-              nixfmt
-              prettier
-              shfmt
-              sql-formatter
-              yaml-language-server
             ];
 
             mutableUserDebug = true;
@@ -5254,31 +5286,195 @@ in
 
             userSettings = {
               telemetry = {
+                diagnostics = false;
                 metrics = false;
               };
 
+              title_bar = {
+                show_branch_name = true;
+                show_branch_status_icon = true;
+                show_menus = true;
+                show_onboarding_banner = true;
+                show_project_items = true;
+                show_sign_in = true;
+                show_user_menu = true;
+                show_user_picture = true;
+              };
+
+              toolbar = {
+                agent_review = true;
+                breadcrumbs = true;
+                code_actions = true;
+                quick_actions = true;
+                selections_menu = true;
+              };
+
+              status_bar = {
+                active_language_button = true;
+                cursor_position_button = true;
+                line_endings_button = true;
+              };
+
+              project_panel = {
+                button = true;
+
+                show_diagnostics = "all";
+              };
+
+              file_finder = {
+                file_icons = true;
+              };
+
+              outline_panel = {
+                button = true;
+              };
+
+              git_panel = {
+                button = true;
+              };
+
+              collaboration_panel = {
+                button = true;
+              };
+
               terminal = {
+                button = true;
+
+                toolbar = {
+                  breadcrumbs = true;
+                };
+
                 font_family = fontPreferences.name.mono;
                 font_size = design_factor;
+                line_height = "comfortable";
 
                 cursor_shape = "bar";
                 blinking = "on";
+
+                copy_on_select = false;
+                keep_selection_on_copy = true;
+
+                detect_venv = {
+                  on = {
+                    directories = [
+                      ".venv"
+                      "venv"
+                    ];
+                    activate_script = "default";
+                  };
+                };
+              };
+
+              tabs = {
+                file_icons = true;
+
+                show_close_button = "hover";
+                close_position = "right";
+
+                git_status = true;
+                show_diagnostics = "all";
+              };
+
+              search = {
+                button = true;
+              };
+
+              gutter = {
+                line_numbers = true;
+                runnables = true;
+                breakpoints = true;
+                folds = true;
+              };
+
+              scrollbar = {
+                show = "auto";
+                axes = {
+                  horizontal = true;
+                  vertical = true;
+                };
+
+                cursors = true;
+                diagnostics = "all";
+                git_diff = true;
+                search_results = true;
+                selected_symbol = true;
+                selected_text = true;
+              };
+
+              minimap = {
+                show = "auto";
+                display_in = "all_editors";
+                thumb = "always";
+              };
+
+              sticky_scroll = {
+                enabled = true;
+              };
+
+              indent_guides = {
+                enabled = true;
+
+                coloring = "indent_aware";
+                background_coloring = "disabled";
+              };
+
+              diagnostics = {
+                button = true;
+
+                inline = {
+                  enabled = true;
+                };
+              };
+
+              edit_predictions = {
+                mode = "subtle";
+
+                provider = "ollama";
+                ollama = { };
+              };
+
+              agent = {
+                button = true;
+
+                # default_model = {
+                #   provider = "ollama";
+                # };
+
+                # inline_alternatives = [
+                #   {
+                #     provider = "ollama";
+                #   }
+                # ];
               };
 
               vim_mode = false;
+              hide_mouse = "never";
+
+              show_call_status_icon = true;
 
               ui_font_family = fontPreferences.name.sans_serif;
               ui_font_size = design_factor;
 
               buffer_font_family = fontPreferences.name.mono;
               buffer_font_size = design_factor;
+              buffer_font_features = {
+                calt = false; # Ligatures
+              };
 
               cursor_shape = "bar";
               cursor_blink = true;
 
+              show_whitespaces = "all";
+              show_wrap_guides = true;
+              current_line_highlight = "all";
+
+              show_completions_on_input = true;
               format_on_save = "on";
+
               hard_tabs = false;
               tab_size = 2;
+
+              redact_private_values = true;
 
               file_types = {
                 Diff = [
@@ -5365,6 +5561,10 @@ in
 
                   remove_trailing_whitespace_on_save = false;
                 };
+              };
+
+              global_lsp_settings = {
+                button = true;
               };
 
               lsp = {
@@ -5495,6 +5695,8 @@ in
           ssh = {
             enable = true;
             package = config.services.openssh.package;
+
+            enableDefaultConfig = false;
           };
 
           jq = {
