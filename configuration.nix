@@ -20,7 +20,6 @@ let
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
-  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher/develop";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -177,21 +176,40 @@ in
       enable = true;
 
       sysctl = {
-        "net.ipv4.tcp_syncookies" = true;
+        "kernel.dmesg_restrict" = 1;
+        "kernel.kptr_restrict" = 1;
+        "kernel.sysrq" = 1;
+        "kernel.unprivileged_bpf_disabled" = 1;
+
+        "net.core.default_qdisc" = "fq";
+        "net.ipv4.conf.all.accept_redirects" = 0;
+        "net.ipv4.conf.all.accept_source_route" = 0;
+        "net.ipv4.conf.all.rp_filter" = 1;
+        "net.ipv4.conf.all.send_redirects" = 0;
+        "net.ipv4.conf.default.accept_redirects" = 0;
+        "net.ipv4.conf.default.accept_source_route" = 0;
+        "net.ipv4.conf.default.rp_filter" = 1;
+        "net.ipv4.conf.default.send_redirects" = 0;
+        "net.ipv4.tcp_congestion_control" = "bbr";
+        "net.ipv4.tcp_ecn" = 1;
+        "net.ipv4.tcp_mtu_probing" = 1;
+        "net.ipv4.tcp_syncookies" = 1;
+        "net.ipv4.tcp_tw_reuse" = 2; # Loopback Only
+        "net.ipv4.tcp_window_scaling" = 1;
       };
     };
 
     kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
 
     extraModulePackages = with config.boot.kernelPackages; [
-      # apfs # FIXME: Build Failure
-      # zfs # FIXME: Build Failure
+      apfs
       cpupower
       mm-tools
       openafs
       tmon
       turbostat
       usbip
+      zfs_2_4
     ];
 
     hardwareScan = true;
@@ -404,9 +422,6 @@ in
 
     overlays = [
       (final: prev: {
-        libvirt = stableNixPackages.libvirt;
-      })
-      (final: prev: {
         hyprland = (
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
             debug = false;
@@ -416,9 +431,14 @@ in
           }
         );
       })
+      (_: prev: {
+        openldap = prev.openldap.overrideAttrs {
+          doCheck = !prev.stdenv.hostPlatform.isi686;
+        };
+      }) # Fixes Build Failure of Lutris
       (final: prev: {
         vte = stableNixPackages.vte;
-      })
+      }) # Fixes Build Failure
       (final: prev: {
         xdg-desktop-portal-hyprland =
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
@@ -426,7 +446,6 @@ in
               debug = false;
             };
       })
-      freesmLauncherFlake.overlays.default
     ];
   };
 
@@ -1009,7 +1028,11 @@ in
     );
 
     tmpfiles.rules = [
+      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
+      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
+
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
+
       "d /var/lib/swtpm-localca 0750 tss root -"
     ];
   };
@@ -1190,11 +1213,23 @@ in
     displayManager = {
       enable = true;
 
-      ly = {
+      sddm = {
         enable = true;
-        package = pkgs.ly;
+        package = pkgs.qt6Packages.sddm;
 
-        x11Support = false;
+        wayland = {
+          enable = true;
+          compositor = "kwin";
+        };
+
+        enableHidpi = true;
+
+        autoNumlock = false;
+        autoLogin.relogin = false;
+
+        settings = {
+          Wayland.SessionDir = "/etc/xdg/wayland-sessions/";
+        };
       };
 
       defaultSession = "hyprland-uwsm";
@@ -1652,16 +1687,6 @@ in
       '';
     };
 
-    gvfs = {
-      enable = true;
-      package = (
-        pkgs.gvfs.override {
-          gnomeSupport = false;
-          udevSupport = true;
-        }
-      );
-    };
-
     postfix = {
       enable = true;
 
@@ -1767,6 +1792,15 @@ in
       ''; # <loglevel>2</loglevel> = Warn
     };
 
+    jellyfin = {
+      enable = true;
+      package = pkgs.jellyfin;
+
+      transcoding.enableSubtitleExtraction = true;
+
+      openFirewall = true;
+    };
+
     ollama = {
       enable = true;
       package = pkgs.ollama-cpu; # Or pkgs.ollama-vulkan Or pkgs.ollama
@@ -1854,11 +1888,6 @@ in
         ]);
     };
 
-    nautilus-open-any-terminal = {
-      enable = true;
-      terminal = "foot";
-    };
-
     appimage = {
       enable = true;
       package = (
@@ -1909,71 +1938,6 @@ in
       flags = [
         "--cmd cd"
       ];
-    };
-
-    yazi = {
-      enable = true;
-      package = pkgs.yazi;
-
-      plugins = with pkgs.yaziPlugins; {
-        inherit
-          chmod
-          clipboard
-          compress
-          convert
-          diff
-          drag
-          gvfs
-          lazygit
-          mount
-          rsync
-          smart-filter
-          smart-paste
-          sudo
-          time-travel
-          vcs-files
-          wl-clipboard
-          ;
-      };
-
-      settings = {
-        yazi = {
-          mgr = {
-            sort_by = "natural";
-            sort_sensitive = true;
-            sort_reverse = false;
-            sort_dir_first = true;
-            sort_translit = false;
-            linemode = "mtime";
-            show_hidden = true;
-            show_symlink = true;
-          };
-
-          preview = {
-            wrap = "yes";
-            image_quality = 90; # Highest is 90
-          };
-
-          input = {
-            cursor_blink = true;
-          };
-
-          confirm = {
-            cursor_blink = true;
-          };
-
-          pick = {
-            cursor_blink = true;
-          };
-
-          which = {
-            sort_by = "key";
-            sort_sensitive = true;
-            sort_reverse = false;
-            sort_translit = false;
-          };
-        }; # yazi.toml
-      };
     };
 
     gnupg = {
@@ -2360,7 +2324,6 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
-        # freesmlauncher # Overlay from Flake # FIXME: Build Failure
         # metadata # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # xfstests # FIXME: Build Failure
@@ -2388,7 +2351,6 @@ in
         apkleaks
         appimageupdate-qt
         arduino-cli
-        arduino-ide
         ascii
         ascii-draw
         ascii-image-converter
@@ -2473,7 +2435,6 @@ in
         dtui
         dvb-apps
         e2fsprogs
-        easyeda2kicad
         ebook2cw
         efibootmgr
         efivar
@@ -2494,6 +2455,7 @@ in
         fdk_aac
         fdroidcl
         fdt-viewer
+        fdupes
         ferrishot
         ffmpegthumbnailer
         ffpb
@@ -2505,13 +2467,11 @@ in
         flatpak-builder
         flatpak-xdg-utils
         flawz
-        flowblade
         flutter
         font-manager
         fontfor
         fontpreview
         fork-cleaner
-        freecad
         fritzing
         fstl
         gama-tui
@@ -2582,7 +2542,6 @@ in
         interception-tools
         iotop-c
         jfsutils
-        jmc2obj
         jmol
         jxrlib
         kernel-hardening-checker
@@ -2634,7 +2593,6 @@ in
         macchanger
         mailcap
         mapscii
-        mcaselector
         md-tui
         meow
         mermaid-cli
@@ -2643,18 +2601,13 @@ in
         mfcuk
         mfoc
         minikube
-        mixxx
         mmtui
         monkeys-audio
         mousam
         moxnotify
         mt-st
         mtools
-        musescore
-        musikcube
         mysqltuner
-        nautilus
-        nautilus-python
         ncdu
         nemu
         nethogs
@@ -2689,6 +2642,7 @@ in
         pciutils
         pdfarranger
         pe-bear
+        peazip
         pev
         pg_top
         pgbadger
@@ -2706,7 +2660,7 @@ in
         profile-cleaner
         progress
         protocol
-        protonup-rs
+        protonup-qt
         ps
         psmisc
         python3Packages.tkinter
@@ -2828,21 +2782,17 @@ in
         wl-clipboard
         wofi-emoji
         wordbook
-        worldpainter
         wpprobe
         wvkbd # wvkbd-mobintl
-        x2goclient
         xar
         xdg-dbus-proxy
         xdg-user-dirs
         xdg-utils
         xfsdump
         xfsprogs
-        xonotic
         xoscope
         xvidcore
         yara-x
-        yoshimi
         yq
         yuview
         zenity
@@ -2865,6 +2815,12 @@ in
           websocketSupport = true;
           zlibSupport = true;
           zstdSupport = true;
+        })
+        (blender.override {
+          jackaudioSupport = false;
+          openUsdSupport = true;
+          spaceNavSupport = true;
+          waylandSupport = true;
         })
         (
           (ffmpeg-full.override {
@@ -2975,16 +2931,6 @@ in
             doCheck = false;
           })
         )
-        (kicad.override {
-          with3d = true;
-          withI18n = true;
-          withNgspice = true;
-          withScripting = true;
-          addons = with pkgs.kicadAddons; [
-            kikit
-            kikit-library
-          ];
-        })
         (python315FreeThreading.override {
           bluezSupport = true;
           enableNoSemanticInterposition = true;
@@ -3063,9 +3009,6 @@ in
           withLibpsl = true;
           withOpenssl = true;
         })
-        (wget2.override {
-          sslSupport = true;
-        })
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
         config.home-manager.users.root.services.udiskie.package
@@ -3143,12 +3086,6 @@ in
         (gstreamer.override {
           enableDocumentation = true;
         })
-      ])
-      ++ (with kubernetes-helmPlugins; [
-        helm-diff
-        helm-git
-        helm-schema
-        helm-secrets
       ])
       ++ (with linphonePackages; [
         bc-decaf
@@ -3349,7 +3286,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "yazi.desktop";
+        "inode/directory" = "peazip.desktop";
 
         "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
         "text/cache-manifest" = "dev.zed.Zed.desktop";
@@ -3810,7 +3747,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "com.brave.Browser.desktop";
+        "application/pdf" = "sioyek.desktop";
 
         "font/collection" = "com.github.FontManager.FontViewer.desktop";
         "font/otf" = "com.github.FontManager.FontViewer.desktop";
@@ -3819,15 +3756,15 @@ in
         "font/woff" = "com.github.FontManager.FontViewer.desktop";
         "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
-        "application/gzip" = "yazi.desktop";
-        "application/vnd.rar" = "yazi.desktop";
-        "application/x-7z-compressed" = "yazi.desktop";
-        "application/x-arj" = "yazi.desktop";
-        "application/x-bzip2" = "yazi.desktop";
-        "application/x-gtar" = "yazi.desktop";
-        "application/x-rar-compressed " = "yazi.desktop"; # More common than "application/vnd.rar"
-        "application/x-tar" = "yazi.desktop";
-        "application/zip" = "yazi.desktop";
+        "application/gzip" = "peazip.desktop";
+        "application/vnd.rar" = "peazip.desktop";
+        "application/x-7z-compressed" = "peazip.desktop";
+        "application/x-arj" = "peazip.desktop";
+        "application/x-bzip2" = "peazip.desktop";
+        "application/x-gtar" = "peazip.desktop";
+        "application/x-rar-compressed " = "peazip.desktop"; # More common than "application/vnd.rar"
+        "application/x-tar" = "peazip.desktop";
+        "application/zip" = "peazip.desktop";
 
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
@@ -3907,6 +3844,7 @@ in
         "greeter"
         "i2c"
         "input"
+        "jellyfin"
         "kvm"
         "libvirtd"
         "lp"
@@ -3951,6 +3889,22 @@ in
       enable = config.catppuccin.enable;
 
       flavor = config.catppuccin.flavor;
+    };
+
+    sddm = {
+      enable = true;
+      assertQt6Sddm = true;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      font = fontPreferences.name.sans_serif;
+      fontSize = toString fontPreferences.size;
+
+      loginBackground = true;
+
+      userIcon = true;
+      clockEnabled = true;
     };
 
     plymouth.enable = false;
@@ -4022,6 +3976,10 @@ in
               mkdir -p $HOME/.local/share/fonts/
               cp -f /var/lib/onlyoffice-fonts/* $HOME/.local/share/fonts/ || true
               ${pkgs.fontconfig}/bin/fc-cache -f $HOME/.local/share/fonts/
+            '';
+
+            permitJellyfin = ''
+              ${pkgs.acl}/bin/setfacl --modify user:jellyfin:--x $HOME
             '';
           };
 
@@ -4397,13 +4355,13 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- yazi\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- peazip\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- yazi\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- peazip\")")
                 ];
               }
               {
@@ -5177,17 +5135,16 @@ in
           zed-editor = {
             enable = true;
             package = (
-              pkgs.zed-editor
-              # pkgs.zed-editor.override {
-              #   buildRemoteServer = false;
-              #   git = config.programs.git.package;
-              # }
+              pkgs.zed-editor.override {
+                buildRemoteServer = true;
+              }
             );
 
             extraPackages = with pkgs; [
               arduino-language-server
               basedpyright
               bash-language-server
+              config.home-manager.users.root.programs.opencode.package
               config.home-manager.users.root.programs.sioyek.package
               ctags-lsp
               docker-compose-language-service
@@ -5205,7 +5162,7 @@ in
               yaml-language-server
             ];
 
-            installRemoteServer = false;
+            installRemoteServer = true;
             enableMcpIntegration = true;
 
             # curl -s https://raw.githubusercontent.com/zed-industries/extensions/main/.gitmodules
@@ -5258,6 +5215,7 @@ in
               "markdownlint"
               "mermaid"
               "nix"
+              "opencode"
               "pbxproj"
               "php"
               "php-snippets"
@@ -5784,13 +5742,28 @@ in
             enableBashIntegration = true;
           };
 
+          mcp = {
+            enable = true;
+          };
+
+          opencode = {
+            enable = true;
+            package = pkgs.opencode;
+
+            enableMcpIntegration = true;
+
+            web = {
+              enable = false;
+            };
+          };
+
           sioyek = {
             enable = true;
             package = pkgs.sioyek;
 
-            config.startup_commands = [
-              "toggle_dark_mode"
-            ];
+            # config.startup_commands = [
+            #   "toggle_dark_mode"
+            # ];
           };
 
           cava = {
@@ -6152,9 +6125,9 @@ in
           };
 
           lutris = {
-            enable = false; # FIXME: Build Failure
+            enable = true;
             package = (
-              stableNixPackages.lutris-free.override {
+              pkgs.lutris.override {
                 steamSupport = false;
               }
             );
@@ -6172,16 +6145,6 @@ in
             protonPackages = with pkgs; [
               proton-ge-bin
             ];
-          };
-
-          yazi = {
-            enable = config.programs.yazi.enable;
-            package = config.programs.yazi.package;
-            plugins = config.programs.yazi.plugins;
-
-            enableBashIntegration = true;
-
-            settings = config.programs.yazi.settings;
           };
 
           keychain = {
@@ -6204,7 +6167,7 @@ in
               gtk_dark = true;
               columns = 1;
               dynamic_lines = false;
-              height = "75%";
+              height = "50%";
               width = "25%";
               hide_scroll = false;
 
@@ -6305,6 +6268,12 @@ in
             flavor = config.catppuccin.flavor;
 
             transparent = true;
+          };
+
+          opencode = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
           };
 
           sioyek = {
@@ -6447,13 +6416,6 @@ in
           qt5ct = {
             enable = config.catppuccin.enable;
             assertPlatformTheme = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          yazi = {
-            enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
