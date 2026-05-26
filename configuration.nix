@@ -1165,6 +1165,16 @@ in
       mountOnMedia = false;
     };
 
+    gvfs = {
+      enable = true;
+      package = (
+        pkgs.gvfs.override {
+          gnomeSupport = false;
+          udevSupport = true;
+        }
+      );
+    };
+
     smartd = {
       enable = false; # FIXME: Fails to Start
 
@@ -2461,6 +2471,7 @@ in
         ffpb
         fh
         file
+        file-roller
         fileinfo
         flake-checker
         flare-floss
@@ -2468,6 +2479,7 @@ in
         flatpak-xdg-utils
         flawz
         flutter
+        folder-color-switcher
         font-manager
         fontfor
         fontpreview
@@ -2642,7 +2654,6 @@ in
         pciutils
         pdfarranger
         pe-bear
-        peazip
         pev
         pg_top
         pgbadger
@@ -2931,6 +2942,16 @@ in
             doCheck = false;
           })
         )
+        (nemo-with-extensions.override {
+          useDefaultExtensions = true;
+          extensions = with pkgs; [
+            nemo-emblems
+            nemo-fileroller
+            nemo-preview
+            nemo-python
+            nemo-seahorse
+          ];
+        })
         (python315FreeThreading.override {
           bluezSupport = true;
           enableNoSemanticInterposition = true;
@@ -3286,7 +3307,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "peazip.desktop";
+        "inode/directory" = "nemo.desktop";
 
         "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
         "text/cache-manifest" = "dev.zed.Zed.desktop";
@@ -3756,15 +3777,15 @@ in
         "font/woff" = "com.github.FontManager.FontViewer.desktop";
         "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
-        "application/gzip" = "peazip.desktop";
-        "application/vnd.rar" = "peazip.desktop";
-        "application/x-7z-compressed" = "peazip.desktop";
-        "application/x-arj" = "peazip.desktop";
-        "application/x-bzip2" = "peazip.desktop";
-        "application/x-gtar" = "peazip.desktop";
-        "application/x-rar-compressed " = "peazip.desktop"; # More common than "application/vnd.rar"
-        "application/x-tar" = "peazip.desktop";
-        "application/zip" = "peazip.desktop";
+        "application/gzip" = "org.gnome.FileRoller.desktop";
+        "application/vnd.rar" = "org.gnome.FileRoller.desktop";
+        "application/x-7z-compressed" = "org.gnome.FileRoller.desktop";
+        "application/x-arj" = "org.gnome.FileRoller.desktop";
+        "application/x-bzip2" = "org.gnome.FileRoller.desktop";
+        "application/x-gtar" = "org.gnome.FileRoller.desktop";
+        "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More common than "application/vnd.rar"
+        "application/x-tar" = "org.gnome.FileRoller.desktop";
+        "application/zip" = "org.gnome.FileRoller.desktop";
 
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
@@ -4355,13 +4376,13 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- peazip\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- peazip\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
               }
               {
@@ -5144,6 +5165,7 @@ in
               arduino-language-server
               basedpyright
               bash-language-server
+              css-variables-language-server
               config.home-manager.users.root.programs.opencode.package
               config.home-manager.users.root.programs.sioyek.package
               ctags-lsp
@@ -5189,7 +5211,7 @@ in
               "env"
               "flutter-snippets"
               "github-actions"
-              "github-activity-summazier"
+              "github-activity-summarizer"
               "gitignore-templates"
               "graphql"
               "graphviz"
@@ -5527,6 +5549,19 @@ in
                 Dockerfile = [
                   "Dockerfile.*"
                 ];
+
+                "GitHub Actions" = [
+                  ".github/workflows/*.yaml"
+                  ".github/workflows/*.yml"
+                ];
+
+                "Python constraints" = [
+                  "*constraints*.txt"
+                ];
+                "Python requirements" = [
+                  "**/requirements/*.{in,txt}"
+                  "*requirements*.{in,txt}"
+                ];
               };
 
               languages = {
@@ -5558,12 +5593,31 @@ in
                   };
                 };
 
+                C = {
+                  language_servers = [
+                    "ctags-lsp"
+                  ];
+                };
+
+                "C++" = {
+                  language_servers = [
+                    "ctags-lsp"
+                  ];
+                };
+
                 PHP = {
                   language_servers = [
                     "phpactor"
+                    "phpcs"
+                    "phpmd"
+                    "ctags-lsp"
                     "!intelephense"
                     "!phptools"
                   ];
+
+                  code_actions_on_format = {
+                    "source.fixAll" = true;
+                  };
                 };
 
                 JavaScript = {
@@ -5586,6 +5640,7 @@ in
                   language_servers = [
                     "basedpyright"
                     "ruff"
+                    "ctags-lsp"
                   ];
 
                   formatter = {
@@ -5615,6 +5670,12 @@ in
                   };
                 };
 
+                CSS = {
+                  code_actions_on_format = {
+                    "source.fixAll.stylelint" = true;
+                  };
+                };
+
                 Markdown = {
                   indent_list_on_tab = true;
                   extend_list_on_newline = true;
@@ -5625,6 +5686,12 @@ in
 
               global_lsp_settings = {
                 button = true;
+
+                semantic_token_rules = [
+                  {
+                    token_type = "comment";
+                  }
+                ];
               };
 
               lsp = {
@@ -5671,10 +5738,24 @@ in
                   };
                 };
 
+                phpmd = {
+                  settings = {
+                    rulesets = "cleancode,codesize,controversial,design,naming,unusedcode";
+                  };
+                };
+
                 eslint = {
                   settings = {
                     workingDirectory = {
                       mode = "auto";
+                    };
+                  };
+                };
+
+                css-variables = {
+                  settings = {
+                    cssVariables = {
+                      undefinedVarFallback = "info";
                     };
                   };
                 };
