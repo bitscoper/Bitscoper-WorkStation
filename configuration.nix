@@ -104,7 +104,7 @@ let
   };
 
   wallpaper = builtins.fetchurl {
-    url = "https://raw.githubusercontent.com/zhichaoh/catppuccin-wallpapers/refs/heads/main/os/nix-black-4k.png";
+    url = "https://raw.githubusercontent.com/orangci/walls-catppuccin-mocha/refs/heads/master/map.png";
   };
 
   tlsCertificateFiles =
@@ -367,7 +367,7 @@ in
 
     # userActivationScripts = { };
 
-    stateVersion = "26.05";
+    stateVersion = "26.11";
   };
 
   nix = {
@@ -1203,8 +1203,9 @@ in
 
       implementation = "broker";
 
-      packages = with pkgs; [
-        libvirt-dbus
+      packages = [
+        config.services.gnome.gcr-ssh-agent.package
+        pkgs.libvirt-dbus
       ];
     };
 
@@ -1452,6 +1453,7 @@ in
                 filter
                 ftp
                 gd
+                gnupg
                 iconv
                 imagick
                 imap
@@ -1952,9 +1954,14 @@ in
 
     gnupg = {
       package = (
-        pkgs.gnupg.override {
-          guiSupport = true;
-          withTpm2Tss = true;
+        pkgs.gnupg1.override {
+          gnupg = (
+            pkgs.gnupg.override {
+              guiSupport = true;
+              withPcsc = true;
+              withTpm2Tss = true;
+            }
+          );
         }
       );
 
@@ -1966,7 +1973,7 @@ in
         enableSSHSupport = false;
 
         pinentryPackage = (
-          pkgs.pinentry-tty.override {
+          pkgs.pinentry-curses.override {
             withLibsecret = true;
           }
         );
@@ -2648,6 +2655,7 @@ in
         openssl
         oterm
         otree
+        p7zip
         paper-clip
         parted
         pbzx
@@ -2801,6 +2809,7 @@ in
         xdg-utils
         xfsdump
         xfsprogs
+        xhost
         xoscope
         xvidcore
         yara-x
@@ -3033,6 +3042,8 @@ in
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
         config.home-manager.users.root.services.udiskie.package
+        config.programs.gnupg.agent.pinentryPackage
+        config.services.gnome.gcr-ssh-agent.package
         config.services.phpfpm.phpPackage
       ]
       ++ config.boot.extraModulePackages
@@ -3274,9 +3285,9 @@ in
 
     portal = {
       enable = true;
-      extraPortals = with pkgs; [
+      extraPortals = [
         config.programs.hyprland.portalPackage
-        xdg-desktop-portal-gtk
+        pkgs.xdg-desktop-portal-gtk
       ];
 
       xdgOpenUsePortal = true;
@@ -3919,12 +3930,14 @@ in
       flavor = config.catppuccin.flavor;
       accent = config.catppuccin.accent;
 
+      background = wallpaper;
+
       font = fontPreferences.name.sans_serif;
       fontSize = toString fontPreferences.size;
 
-      loginBackground = true;
-
+      loginBackground = false;
       userIcon = true;
+
       clockEnabled = true;
     };
 
@@ -4034,7 +4047,7 @@ in
           settings = {
             monitor = [
               {
-                output = "";
+                output = ""; # "" = All
                 mode = "highres";
                 position = "auto";
                 transform = 0;
@@ -5161,28 +5174,32 @@ in
               }
             );
 
-            extraPackages = with pkgs; [
-              arduino-language-server
-              basedpyright
-              bash-language-server
-              css-variables-language-server
-              config.home-manager.users.root.programs.opencode.package
-              config.home-manager.users.root.programs.sioyek.package
-              ctags-lsp
-              docker-compose-language-service
-              dockerfile-language-server
-              hyprls
-              kotlin-language-server
-              nixd
-              nixfmt
-              postgres-language-server
-              prettier
-              ruff
-              shellcheck
-              shfmt
-              sql-formatter
-              yaml-language-server
-            ];
+            extraPackages =
+              with pkgs;
+              [
+                arduino-language-server
+                basedpyright
+                bash-language-server
+                css-variables-language-server
+                ctags-lsp
+                docker-compose-language-service
+                dockerfile-language-server
+                hyprls
+                kotlin-language-server
+                nixd
+                nixfmt
+                postgres-language-server
+                prettier
+                ruff
+                shellcheck
+                shfmt
+                sql-formatter
+                yaml-language-server
+              ]
+              ++ [
+                config.home-manager.users.root.programs.opencode.package
+                config.home-manager.users.root.programs.sioyek.package
+              ];
 
             installRemoteServer = true;
             enableMcpIntegration = true;
@@ -6012,102 +6029,35 @@ in
 
             sourceFirst = true;
 
-            # settings = {
-            #   general = {
-            #     immediate_render = true;
-            #     fractional_scaling = 2; # 2 = Automatic
+            settings = {
+              general = {
+                immediate_render = true;
+                fractional_scaling = 2; # 2 = Automatic
 
-            #     text_trim = false;
-            #     hide_cursor = false;
+                text_trim = false;
+                hide_cursor = false;
 
-            #     ignore_empty_input = true;
-            #     fail_timeout = 2000; # ms
-            #   };
+                ignore_empty_input = true;
+              };
 
-            #   auth = {
-            #     pam = {
-            #       enabled = true;
-            #       module = "hyprlock";
-            #     };
+              auth = {
+                pam = {
+                  enabled = true;
+                  module = "hyprlock";
+                };
 
-            #     fingerprint = {
-            #       enabled = true;
+                fingerprint = {
+                  enabled = true;
+                };
+              };
 
-            #       ready_message = "Scan Fingerprint";
-            #       present_message = "Scanning Fingerprint";
-
-            #       retry_delay = 250; # ms
-            #     };
-            #   };
-
-            #   background = [
-            #     {
-            #       monitor = ""; # "" = All
-            #       # path = wallpaper;
-            #     }
-            #   ];
-
-            #   label = [
-            #     {
-            #       monitor = ""; # "" = All
-            #       halign = "center";
-            #       valign = "top";
-            #       position = "0, -128";
-
-            #       text_align = "center";
-            #       font_family = fontPreferences.name.sans_serif;
-            #       # color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-            #       font_size = design_factor * 4; # 64
-            #       text = "$TIME12";
-            #     }
-
-            #     {
-            #       monitor = ""; # "" = All
-            #       halign = "center";
-            #       valign = "center";
-            #       position = "0, 0";
-
-            #       text_align = "center";
-            #       font_family = fontPreferences.name.sans_serif;
-            #       # color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-            #       font_size = design_factor;
-            #       text = "$DESC"; # Full Name
-            #     }
-            #   ];
-
-            #   input-field = [
-            #     {
-            #       monitor = ""; # "" = All
-            #       halign = "center";
-            #       valign = "bottom";
-            #       position = "0, 128";
-
-            #       size = "256, 48";
-            #       rounding = design_factor;
-            #       outline_thickness = 1;
-            #       # outer_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
-            #       shadow_passes = 0;
-            #       hide_input = false;
-            #       # inner_color = convert_hex_color_code_to_rgba_color_code colors.hex.background;
-            #       font_family = fontPreferences.name.sans_serif;
-            #       # font_color = convert_hex_color_code_to_rgba_color_code colors.hex.foreground;
-            #       placeholder_text = "Enter Password";
-            #       dots_center = true;
-            #       dots_rounding = -1;
-
-            #       fade_on_empty = true;
-
-            #       invert_numlock = false;
-            #       # capslock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-            #       # numlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-            #       # bothlock_color = convert_hex_color_code_to_rgba_color_code colors.hex.warning;
-
-            #       # check_color = convert_hex_color_code_to_rgba_color_code colors.hex.success;
-            #       # fail_color = convert_hex_color_code_to_rgba_color_code colors.hex.error;
-            #       fail_text = "$FAIL <b>($ATTEMPTS)</b>";
-            #     }
-            #   ];
-            # };
+              background = [
+                {
+                  monitor = ""; # "" = All
+                  path = wallpaper;
+                }
+              ];
+            }; # Addition
           };
 
           keepassxc = {
@@ -6213,13 +6163,17 @@ in
               }
             );
 
-            extraPackages = with pkgs; [
-              config.home-manager.users.root.programs.mangohud.package
-              gamemode
-              gamescope
-              protontricks
-              winetricks
-            ];
+            extraPackages =
+              with pkgs;
+              [
+                gamemode
+                gamescope
+                protontricks
+                winetricks
+              ]
+              ++ [
+                config.home-manager.users.root.programs.mangohud.package
+              ];
             winePackages = with pkgs; [
               wineWow64Packages.waylandFull
             ];
