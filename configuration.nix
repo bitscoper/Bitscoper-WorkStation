@@ -104,7 +104,7 @@ let
   };
 
   wallpaper = builtins.fetchurl {
-    url = "https://raw.githubusercontent.com/orangci/walls-catppuccin-mocha/refs/heads/master/map.png";
+    url = "https://raw.githubusercontent.com/NixOS/nixos-artwork/refs/heads/master/wallpapers/nix-wallpaper-nineish-catppuccin-${config.catppuccin.flavor}.png";
   };
 
   tlsCertificateFiles =
@@ -143,6 +143,8 @@ in
       grub = {
         enable = true;
 
+        copyKernels = true;
+
         efiSupport = true;
         zfsSupport = true;
         enableCryptodisk = true;
@@ -153,7 +155,9 @@ in
 
         gfxmodeEfi = "1920x1080,auto";
         gfxpayloadEfi = "keep";
-        splashMode = "stretch";
+
+        splashImage = lib.mkForce wallpaper;
+        splashMode = "normal";
 
         configurationLimit = 100;
         extraEntriesBeforeNixOS = false;
@@ -169,7 +173,7 @@ in
         forceInstall = false;
       };
 
-      timeout = 2; # 2 Seconds
+      timeout = 1; # 1 Second
     };
 
     kernel = {
@@ -300,17 +304,19 @@ in
       enable = true;
 
       themePackages = with pkgs; [
-        (catppuccin-plymouth.override {
-          variant = config.catppuccin.flavor;
-        })
+        catppuccin-plymouth # From config.nixpkgs.overlays
       ];
       theme = "catppuccin-${config.catppuccin.flavor}";
 
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
-      extraConfig = ''
-        UseFirmwareBackground=true
-      '';
+      logo = builtins.fetchurl {
+        url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png"; # Transparent
+      }; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
+
+      # extraConfig = ''
+      #   UseFirmwareBackground=true
+      # '';
     };
   };
 
@@ -421,6 +427,20 @@ in
     };
 
     overlays = [
+      (final: prev: {
+        catppuccin-plymouth =
+          (prev.catppuccin-plymouth.override {
+            variant = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
+
+                mkdir -p $THEME_DIRECTORY
+                cp ${wallpaper} $THEME_DIRECTORY/background.png
+              '';
+            });
+      })
       (final: prev: {
         hyprland = (
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
@@ -1029,7 +1049,7 @@ in
 
     tmpfiles.rules = [
       "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
-      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
+      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop" # From config.nixpkgs.overlays
 
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
@@ -1239,7 +1259,7 @@ in
         autoLogin.relogin = false;
 
         settings = {
-          Wayland.SessionDir = "/etc/xdg/wayland-sessions/";
+          Wayland.SessionDir = "/etc/xdg/wayland-sessions/"; # With config.systemd.tmpfiles.rules
         };
       };
 
@@ -2090,8 +2110,8 @@ in
 
     hyprland = {
       enable = true;
-      package = pkgs.hyprland;
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+      package = pkgs.hyprland; # From config.nixpkgs.overlays
+      portalPackage = pkgs.xdg-desktop-portal-hyprland; # From config.nixpkgs.overlays
 
       withUWSM = true;
       xwayland.enable = true;
@@ -3908,6 +3928,7 @@ in
     enableReleaseCheck = true;
     cache.enable = true;
 
+    autoEnable = true;
     flavor = "mocha";
     accent = "lavender";
 
@@ -3935,13 +3956,13 @@ in
       font = fontPreferences.name.sans_serif;
       fontSize = toString fontPreferences.size;
 
-      loginBackground = false;
+      loginBackground = true;
       userIcon = true;
 
       clockEnabled = true;
     };
 
-    plymouth.enable = false;
+    plymouth.enable = false; # Done Manually
 
     cursors = {
       enable = config.catppuccin.enable;
@@ -6262,11 +6283,12 @@ in
         };
 
         catppuccin = {
-          enable = true;
+          enable = config.catppuccin.enable;
 
-          enableReleaseCheck = true;
-          cache.enable = true;
+          enableReleaseCheck = config.catppuccin.enableReleaseCheck;
+          cache.enable = config.catppuccin.cache.enable;
 
+          autoEnable = config.catppuccin.autoEnable;
           flavor = config.catppuccin.flavor;
           accent = config.catppuccin.accent;
 
@@ -6396,7 +6418,7 @@ in
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
-          }; # TODO:Check
+          };
 
           hyprlock = {
             enable = config.catppuccin.enable;
