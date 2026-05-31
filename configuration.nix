@@ -107,6 +107,10 @@ let
     url = "https://raw.githubusercontent.com/NixOS/nixos-artwork/refs/heads/master/wallpapers/nix-wallpaper-nineish-catppuccin-${config.catppuccin.flavor}.png";
   };
 
+  transparent_1x1_png_file = builtins.fetchurl {
+    url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
+  };
+
   tlsCertificateFiles =
     pkgs.runCommand "tlsCertificate"
       {
@@ -155,6 +159,8 @@ in
 
         gfxmodeEfi = "1920x1080,auto";
         gfxpayloadEfi = "keep";
+
+        theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
 
         splashImage = lib.mkForce wallpaper;
         splashMode = "normal";
@@ -310,9 +316,7 @@ in
 
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
-      logo = builtins.fetchurl {
-        url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png"; # Transparent
-      }; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
+      logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
 
       # extraConfig = ''
       #   UseFirmwareBackground=true
@@ -428,6 +432,32 @@ in
 
     overlays = [
       (final: prev: {
+        catppuccin-grub =
+          (prev.catppuccin-grub.override {
+            flavor = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                cp ${wallpaper} $out/background.png
+
+                rm -f $out/logo.png
+                sed -i '/# Logo image/,+5d' $out/theme.txt
+                # Because the background already has the NixOS logo.
+
+                # Moving the boot menu to the center of the left half of the screen
+                sed -i 's/left = 50%-240/left = 5%/' $out/theme.txt
+                sed -i 's/top = 60%/top = 35%/' $out/theme.txt
+                sed -i 's/width = 480/width = 40%/' $out/theme.txt
+
+                # Preserving the relative position of the countdown
+                sed -i 's/top = 82%/top = 57%/' $out/theme.txt
+                sed -i 's/left = 35%/left = 5%/' $out/theme.txt
+                sed -i 's/width = 30%/width = 40%/' $out/theme.txt
+              ''; # installPhase Runs postInstall
+            });
+      })
+
+      (final: prev: {
         catppuccin-plymouth =
           (prev.catppuccin-plymouth.override {
             variant = config.catppuccin.flavor;
@@ -438,9 +468,10 @@ in
 
                 mkdir -p $THEME_DIRECTORY
                 cp ${wallpaper} $THEME_DIRECTORY/background.png
-              '';
+              ''; # installPhase Runs postInstall
             });
       })
+
       (final: prev: {
         hyprland = (
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
@@ -451,14 +482,17 @@ in
           }
         );
       })
-      (_: prev: {
+
+      (final: prev: {
         openldap = prev.openldap.overrideAttrs {
           doCheck = !prev.stdenv.hostPlatform.isi686;
         };
       }) # Fixes Build Failure of Lutris
+
       (final: prev: {
         vte = stableNixPackages.vte;
       }) # Fixes Build Failure
+
       (final: prev: {
         xdg-desktop-portal-hyprland =
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
@@ -488,6 +522,7 @@ in
       LC_PAPER = config.i18n.defaultLocale;
       LC_TELEPHONE = config.i18n.defaultLocale;
       LC_TIME = config.i18n.defaultLocale;
+
       LC_ALL = config.i18n.defaultLocale;
     };
 
@@ -2517,6 +2552,7 @@ in
         gawk
         gcc
         gdb
+        gdu
         gimp3-with-plugins
         git-big-picture
         git-filter-repo
@@ -2607,6 +2643,7 @@ in
         libnotify
         libogg
         libopus
+        libqalculate # qalc
         libsecret
         libsixel
         libultrahdr
@@ -2633,6 +2670,7 @@ in
         mailcap
         mapscii
         md-tui
+        meld
         meow
         mermaid-cli
         mesa-demos
@@ -2647,7 +2685,6 @@ in
         mt-st
         mtools
         mysqltuner
-        ncdu
         nemu
         nethogs
         nilfs-utils
@@ -2675,7 +2712,6 @@ in
         openssl
         oterm
         otree
-        p7zip
         paper-clip
         parted
         pbzx
@@ -2687,6 +2723,7 @@ in
         pgbadger
         pgmodeler
         pgread
+        pinta
         pipes
         pkg-config
         platformio
@@ -2703,6 +2740,7 @@ in
         ps
         psmisc
         python3Packages.tkinter
+        qalculate-gtk
         qemu-user
         qemu-utils
         qr-backup
@@ -2711,6 +2749,7 @@ in
         qtscrcpy
         radare2
         raider
+        rar # Unfree
         rclone-browser
         regex-tui
         rp-pppoe
@@ -2730,6 +2769,7 @@ in
         share-preview
         shellclear
         sherlock
+        simple-scan
         sipvicious
         sl
         sleuthkit
@@ -2753,6 +2793,7 @@ in
         switcheroo
         symlinks
         systemctl-tui
+        szyszka
         telegraph
         terminaltexteffects
         termscp
@@ -2781,6 +2822,7 @@ in
         unimatrix
         universal-android-debloater # uad-ng
         unix-privesc-check
+        unrar # Unfree
         unzip
         upnp-router-control
         upscayl
@@ -2980,6 +3022,9 @@ in
             nemo-python
             nemo-seahorse
           ];
+        })
+        (p7zip.override {
+          enableUnfree = true; # Unfree # Includes RAR
         })
         (python315FreeThreading.override {
           bluezSupport = true;
@@ -3932,17 +3977,15 @@ in
     flavor = "mocha";
     accent = "lavender";
 
-    grub = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-    };
+    grub.enable = false; # Done Manually
 
     tty = {
       enable = config.catppuccin.enable;
 
       flavor = config.catppuccin.flavor;
     };
+
+    plymouth.enable = false; # Done Manually
 
     sddm = {
       enable = true;
@@ -3961,8 +4004,6 @@ in
 
       clockEnabled = true;
     };
-
-    plymouth.enable = false; # Done Manually
 
     cursors = {
       enable = config.catppuccin.enable;
@@ -4851,17 +4892,27 @@ in
           configFile = {
             "mimeapps.list".force = true;
 
-            # "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
-            #   enable = true;
-            #   target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
+            "gdu/gdu.yaml" = {
+              enable = true;
 
-            #   source = builtins.fetchurl {
-            #     url = "https://github.com/catppuccin/qbittorrent/releases/latest/download/catppuccin-${config.catppuccin.flavor}.qbtheme";
-            #     sha256 = "1qamhay71jqzi6bq0f8gar55jz2hdwzsfj4d7r14msl1v2ggbpgn";
-            #   };
+              source = builtins.fetchurl {
+                url = "https://raw.githubusercontent.com/scarcekoi/gdu/refs/heads/main/themes/${config.catppuccin.flavor}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.yaml";
+              };
 
-            #   executable = null;
-            # };
+              target = "gdu/gdu.yaml";
+              executable = null;
+            };
+
+            "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
+              enable = true;
+
+              source = builtins.fetchurl {
+                url = "https://github.com/catppuccin/qbittorrent/releases/latest/download/catppuccin-${config.catppuccin.flavor}.qbtheme";
+              };
+
+              target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
+              executable = null;
+            };
           };
         };
 
