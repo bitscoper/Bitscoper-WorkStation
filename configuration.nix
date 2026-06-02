@@ -21,6 +21,7 @@ let
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
+  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -2269,7 +2270,7 @@ in
 
         tweak = {
           sixel = "yes";
-          surface-bit-depth = "16-bit";
+          surface-bit-depth = "auto";
           font-monospace-warn = "yes";
         };
 
@@ -2506,6 +2507,7 @@ in
         compose2nix
         constrict
         cramfsprogs
+        crlfuzz
         cron
         crosspipe
         cryptsetup
@@ -2516,6 +2518,8 @@ in
         cups-printers
         curtail
         cve-bin-tool
+        cyclonedx-cli
+        cyclonedx-python
         d-spy
         daemon
         darktable
@@ -2539,6 +2543,7 @@ in
         dtui
         dvb-apps
         e2fsprogs
+        easyeda2kicad
         ebook2cw
         efibootmgr
         efivar
@@ -2580,6 +2585,9 @@ in
         fontpreview
         fork-cleaner
         freac
+        freecad
+        freerouting
+        freesmLauncherFlake.packages.${pkgs.stdenv.hostPlatform.system}.default
         fritzing
         fstl
         fwupd-efi
@@ -2587,6 +2595,8 @@ in
         gawk
         gcc
         gdb
+        genealogos-cli
+        gerbolyze
         gimp3-with-plugins
         git-big-picture
         git-filter-repo
@@ -2650,11 +2660,14 @@ in
         imhex
         indent
         inetutils
+        inkcut
         inkscape-with-extensions
         inotify-tools
+        interactive-html-bom
         interception-tools
         iotop-c
         jfsutils
+        jmc2obj
         jmol
         jxrlib
         kernel-hardening-checker
@@ -2666,6 +2679,7 @@ in
         kotlin
         kubectl
         kubernetes-controller-tools
+        kubescape
         kubeshark
         lazyjournal
         lazyssh
@@ -2707,11 +2721,13 @@ in
         macchanger
         mailcap
         mapscii
+        mcaselector
         md-tui
         meld
         meow
         mermaid-cli
         mesa-demos
+        meshlab
         metadata-cleaner
         mfcuk
         mfoc
@@ -2720,10 +2736,10 @@ in
         monkeys-audio
         mousam
         moxnotify
+        mslicer
         mt-st
         mtools
         mysqltuner
-        nemu
         nethogs
         nilfs-utils
         ninja
@@ -2739,7 +2755,6 @@ in
         nurl
         nvme-cli
         nwg-clipman
-        nwg-dock-hyprland
         nwg-drawer
         obexftp
         oha
@@ -2758,6 +2773,7 @@ in
         parallel-full
         parted
         pbzx
+        pcb2gcode
         pciutils
         pdfarranger
         pe-bear
@@ -2777,6 +2793,7 @@ in
         podman-compose
         podman-tui
         poop # POOP = Performance Optimizer Observation Platform
+        printrun
         procps
         profile-cleaner
         progress
@@ -2809,10 +2826,12 @@ in
         rustc
         sbc
         sbom2dot
+        sbomnix
         schroedinger
         scope-tui
         screen
         sdrangel
+        seer # seergdb
         serial-studio
         share-preview
         shellclear
@@ -2829,6 +2848,7 @@ in
         sound-theme-freedesktop
         soundconverter
         sox
+        spectre-meltdown-checker
         spytrap-adb
         sqlit-tui
         sslscan
@@ -2840,6 +2860,7 @@ in
         subtitleedit
         svt-av1
         switcheroo
+        syft
         symlinks
         systemctl-tui
         szyszka
@@ -2856,6 +2877,7 @@ in
         tray-tui
         tree
         treegen
+        trueseeing
         trufflehog
         trustymail
         tsukae
@@ -2912,6 +2934,7 @@ in
         windowtolayer
         wl-clipboard
         wordbook
+        worldpainter
         wpprobe
         wvkbd # wvkbd-mobintl
         xar
@@ -2919,6 +2942,7 @@ in
         xdg-user-dirs
         xdg-utils
         xdot
+        xeol
         xfsdump
         xfsprogs
         xhost
@@ -3072,6 +3096,16 @@ in
           useQt = false;
           useGtk = true;
         })
+        (kicad.override {
+          with3d = true;
+          withI18n = true;
+          withNgspice = true;
+          withScripting = true;
+          addons = with pkgs.kicadAddons; [
+            kikit
+            kikit-library
+          ];
+        })
         (nemo-with-extensions.override {
           useDefaultExtensions = true;
           extensions = with pkgs; [
@@ -3084,6 +3118,9 @@ in
         })
         (nwg-displays.override {
           hyprlandSupport = true;
+        })
+        (orca-slicer.override {
+          withSystemd = true;
         })
         (p7zip.override {
           enableUnfree = true; # Unfree # Includes RAR
@@ -3919,12 +3956,7 @@ in
 
         "application/pdf" = "sioyek.desktop";
 
-        "font/collection" = "com.github.FontManager.FontViewer.desktop";
-        "font/otf" = "com.github.FontManager.FontViewer.desktop";
-        "font/sfnt" = "com.github.FontManager.FontViewer.desktop";
-        "font/ttf" = "com.github.FontManager.FontViewer.desktop";
-        "font/woff" = "com.github.FontManager.FontViewer.desktop";
-        "font/woff2" = "com.github.FontManager.FontViewer.desktop";
+        "model/stl" = "fstlapp-fstl.desktop";
 
         "application/gzip" = "org.gnome.FileRoller.desktop";
         "application/vnd.rar" = "org.gnome.FileRoller.desktop";
@@ -3935,6 +3967,13 @@ in
         "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More common than "application/vnd.rar"
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
+
+        "font/collection" = "com.github.FontManager.FontViewer.desktop";
+        "font/otf" = "com.github.FontManager.FontViewer.desktop";
+        "font/sfnt" = "com.github.FontManager.FontViewer.desktop";
+        "font/ttf" = "com.github.FontManager.FontViewer.desktop";
+        "font/woff" = "com.github.FontManager.FontViewer.desktop";
+        "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
@@ -4207,8 +4246,6 @@ in
 
                     hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
                     hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
-
-                    hl.exec_cmd("uwsm-app -- nwg-dock-hyprland -l overlay -p bottom -d -a center -nolauncher")
                   end
                 '')
               ];
@@ -4500,7 +4537,9 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- sh -c 'compgen -c | sort | uniq -i | tv'\")")
+                  (lib.generators.mkLuaInline ''
+                    hl.dsp.exec_cmd("uwsm-app -- xdg-terminal-exec -- --hold sh -c 'exec sh -c \"$(compgen -c | sort -u | tv)\"'")
+                  '')
                 ];
               }
               {
@@ -6117,7 +6156,7 @@ in
             extensions = with pkgs; [
               gh-contribs
               gh-notify
-              gh-skyline
+              gh-skyline # Generates STL File
             ];
 
             gitCredentialHelper = {
