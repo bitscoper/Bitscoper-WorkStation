@@ -219,6 +219,7 @@ in
       tmon
       turbostat
       usbip
+      v4l2loopback
       zfs_2_4
     ];
 
@@ -597,6 +598,7 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
+        8010 # pkgs.vlc.override { chromecastSupport = true; }
         config.home-manager.users.root.services.wayvnc.settings.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
@@ -828,6 +830,8 @@ in
       group = "i2c";
     };
 
+    alsa.enable = !config.services.pipewire.alsa.enable;
+
     graphics = {
       enable = true;
       enable32Bit = true;
@@ -971,7 +975,7 @@ in
       qemu = {
         # package = (
         #   pkgs.qemu_full.override {
-        #     alsaSupport = false;
+        #     alsaSupport = true;
         #     canokeySupport = false; # Marked as Broken
         #     capstoneSupport = true;
         #     cephSupport = true;
@@ -981,14 +985,14 @@ in
         #     glusterfsSupport = true;
         #     gtkSupport = true;
         #     guestAgentSupport = true;
-        #     jackSupport = false;
+        #     jackSupport = true;
         #     libiscsiSupport = true;
         #     ncursesSupport = true;
         #     numaSupport = true;
         #     openGLSupport = true;
         #     pipewireSupport = true;
         #     pluginsSupport = true;
-        #     pulseSupport = false;
+        #     pulseSupport = true;
         #     rutabagaSupport = true;
         #     sdlSupport = true;
         #     seccompSupport = true;
@@ -1133,7 +1137,7 @@ in
       enable = true;
       package = (
         pkgs.fwupd.override {
-          enableFlashrom = true;
+          enablePassim = false;
         }
       );
     };
@@ -1399,7 +1403,12 @@ in
 
       raopOpenFirewall = true;
     };
-    pulseaudio.enable = false;
+
+    pulseaudio.enable = !config.services.pipewire.pulse.enable;
+    jack = {
+      jackd.enable = !config.services.pipewire.jack.enable;
+      alsa.enable = !config.services.pipewire.jack.enable;
+    };
 
     printing = {
       enable = true;
@@ -1992,6 +2001,26 @@ in
       silent = false;
     };
 
+    wireshark = {
+      enable = true;
+      package = (
+        pkgs.wireshark.override {
+          libpcap = (
+            pkgs.libpcap.override {
+              withBluez = true;
+              withRdma = true;
+              withRemote = true;
+            }
+          );
+          withExtras = true;
+          withQt = true;
+        }
+      );
+
+      dumpcap.enable = true;
+      usbmon.enable = true;
+    };
+
     zoxide = {
       enable = true;
       package = (
@@ -2293,10 +2322,10 @@ in
       enable = true;
       package = (
         pkgs.obs-studio.override {
-          alsaSupport = false;
+          alsaSupport = true;
           browserSupport = true;
           pipewireSupport = true;
-          pulseaudioSupport = false;
+          pulseaudioSupport = true;
           scriptingSupport = true;
           withFdk = true;
         }
@@ -2333,7 +2362,7 @@ in
 
     localsend = {
       enable = true;
-      package = pkgs.jocalsend;
+      package = pkgs.localsend;
 
       openFirewall = true;
     };
@@ -2433,25 +2462,28 @@ in
         asnmap
         astroterm
         atac
+        audacity
         aurea
         autopsy
         avbroot
         avrdude
         banner
+        baobab
         bcachefs-tools
         bcg729
         binutils
         binwalk
         bleachbit
-        bluetui
         bluez-alsa
         bluez-tools
+        brasero
         brightnessctl
         btrfs-assistant
         btrfs-heatmap
         btrfs-progs
         bustle
         butt
+        bytecode-viewer
         calligraphy
         cbonsai
         cdrkit
@@ -2470,8 +2502,8 @@ in
         codec2
         codevis
         collision
+        colorgrind
         compose2nix
-        concurrently
         constrict
         cramfsprogs
         cron
@@ -2535,6 +2567,7 @@ in
         file
         file-roller
         fileinfo
+        findutils
         flake-checker
         flare-floss
         flatpak-builder
@@ -2546,13 +2579,14 @@ in
         fontfor
         fontpreview
         fork-cleaner
+        freac
         fritzing
         fstl
+        fwupd-efi
         gama-tui
         gawk
         gcc
         gdb
-        gdu
         gimp3-with-plugins
         git-big-picture
         git-filter-repo
@@ -2562,14 +2596,16 @@ in
         gittype
         glib
         globe-cli
+        gnome-characters
         gnome-firmware
+        gnome-graphs
         gnome-nettool
         gnugrep
         gnumake
         gnused
         gnutar
-        gollama
         google-lighthouse
+        gopeed
         gource
         gpg-tui
         gpredict
@@ -2580,13 +2616,13 @@ in
         gsm
         gtk-vnc
         gtt
+        gucharmap
         guestfs-tools
         gzip
         hashcat
         hashcat-utils
         hashes
         hdparm
-        hexpatch
         hfsprogs
         hieroglyphic
         host
@@ -2600,6 +2636,7 @@ in
         hyprland-qt-support
         hyprland-qtutils
         hyprland-workspaces-tui
+        hyprmagnifier
         hyprpicker
         hyprshutdown
         hyprtoolkit
@@ -2610,6 +2647,7 @@ in
         iaito
         iftop
         ifuse
+        imhex
         indent
         inetutils
         inkscape-with-extensions
@@ -2694,11 +2732,15 @@ in
         nixmate
         nixpkgs-reviewFull
         nmap
+        nmgui
         ntfs3g
         numactl
         numatop
         nurl
         nvme-cli
+        nwg-clipman
+        nwg-dock-hyprland
+        nwg-drawer
         obexftp
         oha
         onionshare-gui
@@ -2710,9 +2752,10 @@ in
         openjpeg
         openobex
         openssl
-        oterm
         otree
+        overskride
         paper-clip
+        parallel-full
         parted
         pbzx
         pciutils
@@ -2723,6 +2766,8 @@ in
         pgbadger
         pgmodeler
         pgread
+        picard
+        picard-tools
         pinta
         pipes
         pkg-config
@@ -2739,10 +2784,12 @@ in
         protonup-qt
         ps
         psmisc
+        pwvucontrol
         python3Packages.tkinter
         qalculate-gtk
         qemu-user
         qemu-utils
+        qjournalctl
         qr-backup
         qsstv
         qtrvsim
@@ -2751,6 +2798,7 @@ in
         raider
         rar # Unfree
         rclone-browser
+        recoll
         regex-tui
         rp-pppoe
         rpi-imager
@@ -2773,6 +2821,7 @@ in
         sipvicious
         sl
         sleuthkit
+        sloc
         smag
         smartmontools
         sof-tools
@@ -2795,9 +2844,9 @@ in
         systemctl-tui
         szyszka
         telegraph
+        termdown
         terminaltexteffects
         termscp
-        termshark
         texliveFull
         texlivePackages.latexmk
         time
@@ -2816,6 +2865,7 @@ in
         uefi-firmware-parser
         ugit
         undollar
+        unetbootin
         unhide
         unhide-gui
         uni2ascii
@@ -2834,6 +2884,7 @@ in
         video2x
         virt-top
         virt-v2v
+        vlc-bittorrent
         vorbis-tools
         vulkan-caps-viewer
         vulkan-tools
@@ -2848,6 +2899,7 @@ in
         waydroid-helper
         wayland-utils
         waylevel
+        wayscriber
         weathr
         webcamize
         webfontkitgenerator
@@ -2857,11 +2909,8 @@ in
         which
         whois
         whosthere
-        wifitui
         windowtolayer
-        wiremix
         wl-clipboard
-        wofi-emoji
         wordbook
         wpprobe
         wvkbd # wvkbd-mobintl
@@ -2869,10 +2918,12 @@ in
         xdg-dbus-proxy
         xdg-user-dirs
         xdg-utils
+        xdot
         xfsdump
         xfsprogs
         xhost
         xoscope
+        xscreenruler
         xvidcore
         yara-x
         yq
@@ -2882,6 +2933,9 @@ in
         zfs
         zip
         zizmor
+        (alpaca.override {
+          ollama = config.services.ollama.package;
+        })
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -2899,14 +2953,14 @@ in
           zstdSupport = true;
         })
         (blender.override {
-          jackaudioSupport = false;
+          jackaudioSupport = true;
           openUsdSupport = true;
           spaceNavSupport = true;
           waylandSupport = true;
         })
         (
           (ffmpeg-full.override {
-            withAlsa = false;
+            withAlsa = true;
             withAom = true;
             withAribb24 = true;
             withAribcaption = true;
@@ -2938,7 +2992,7 @@ in
             withHarfbuzz = true;
             withIconv = true;
             withIlbc = true;
-            withJack = false;
+            withJack = true;
             withJxl = true;
             withKvazaar = true;
             withLadspa = true;
@@ -2961,7 +3015,7 @@ in
             withOpenmpt = true;
             withOpus = true;
             withPlacebo = true;
-            withPulse = false;
+            withPulse = true;
             withQrencode = true;
             withQuirc = true;
             withRav1e = true;
@@ -3013,6 +3067,11 @@ in
             doCheck = false;
           })
         )
+        (guvcview.override {
+          pulseaudioSupport = true;
+          useQt = false;
+          useGtk = true;
+        })
         (nemo-with-extensions.override {
           useDefaultExtensions = true;
           extensions = with pkgs; [
@@ -3022,6 +3081,9 @@ in
             nemo-python
             nemo-seahorse
           ];
+        })
+        (nwg-displays.override {
+          hyprlandSupport = true;
         })
         (p7zip.override {
           enableUnfree = true; # Unfree # Includes RAR
@@ -3038,13 +3100,21 @@ in
           withReadline = true;
           withSqlite = true;
         })
+        (quassel.override {
+          client = false; # !monolithic
+          enableDaemon = false; # !monolithic
+          monolithic = true;
+          static = false;
+        })
         (qbittorrent.override {
           guiSupport = true;
           trackerSearch = true;
           webuiSupport = true;
         })
-        (qmplay2-qt6.override {
-          qtVersion = "6";
+        (remmina.override {
+          withLibsecret = true;
+          withWebkitGtk = true;
+          withVte = true;
         })
         (sdrpp.override {
           airspy_source = true;
@@ -3077,16 +3147,13 @@ in
           enableExtFs = true;
           enableNtfs = true;
         }) # qphotorec
-        (tigervnc.override {
-          waylandSupport = true;
-        })
         (tor-browser.override {
           audioSupport = true;
           libnotifySupport = true;
           libvaSupport = true;
           mediaSupport = true;
           pipewireSupport = true;
-          pulseaudioSupport = false;
+          pulseaudioSupport = true;
           waylandSupport = true;
         })
         (tree-sitter.override {
@@ -3097,8 +3164,13 @@ in
           withNtfs = true;
           withXfs = true;
         })
-        (virt-viewer.override {
-          spiceSupport = true;
+        (vlc.override {
+          chromecastSupport = true;
+          jackSupport = true;
+          onlyLibVLC = false;
+          skins2Support = true;
+          waylandSupport = true;
+          withQt5 = true;
         })
         (wget.override {
           withLibpsl = true;
@@ -3108,6 +3180,7 @@ in
         config.home-manager.users.root.programs.dircolors.package
         config.home-manager.users.root.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
+        config.programs.nix-index.package
         config.services.gnome.gcr-ssh-agent.package
         config.services.phpfpm.phpPackage
       ]
@@ -3161,14 +3234,14 @@ in
           webrtcAudioProcessingSupport = true;
         })
         (gst-plugins-base.override {
-          enableAlsa = false;
+          enableAlsa = true;
           enableCdparanoia = true;
           enableDocumentation = true;
           enableWayland = true;
         })
         (gst-plugins-good.override {
           enableDocumentation = true;
-          enableJack = false;
+          enableJack = true;
           enableWayland = true;
           gtkSupport = true;
           qt6Support = true;
@@ -3569,265 +3642,265 @@ in
         "image/x-emf" = "imv.desktop";
         "image/x-wmf" = "imv.desktop";
 
-        "audio/1d-interleaved-parityfec" = "QMPlay2.desktop";
-        "audio/32kadpcm" = "QMPlay2.desktop";
-        "audio/3gpp" = "QMPlay2.desktop";
-        "audio/3gpp2" = "QMPlay2.desktop";
-        "audio/aac" = "QMPlay2.desktop";
-        "audio/ac3" = "QMPlay2.desktop";
-        "audio/AMR-WB" = "QMPlay2.desktop";
-        "audio/amr-wb+" = "QMPlay2.desktop";
-        "audio/AMR" = "QMPlay2.desktop";
-        "audio/aptx" = "QMPlay2.desktop";
-        "audio/asc" = "QMPlay2.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "QMPlay2.desktop";
-        "audio/ATRAC-X" = "QMPlay2.desktop";
-        "audio/ATRAC3" = "QMPlay2.desktop";
-        "audio/basic" = "QMPlay2.desktop";
-        "audio/BV16" = "QMPlay2.desktop";
-        "audio/BV32" = "QMPlay2.desktop";
-        "audio/clearmode" = "QMPlay2.desktop";
-        "audio/CN" = "QMPlay2.desktop";
-        "audio/DAT12" = "QMPlay2.desktop";
-        "audio/dls" = "QMPlay2.desktop";
-        "audio/dsr-es201108" = "QMPlay2.desktop";
-        "audio/dsr-es202050" = "QMPlay2.desktop";
-        "audio/dsr-es202211" = "QMPlay2.desktop";
-        "audio/dsr-es202212" = "QMPlay2.desktop";
-        "audio/DV" = "QMPlay2.desktop";
-        "audio/DVI4" = "QMPlay2.desktop";
-        "audio/eac3" = "QMPlay2.desktop";
-        "audio/encaprtp" = "QMPlay2.desktop";
-        "audio/EVRC-QCP" = "QMPlay2.desktop";
-        "audio/EVRC" = "QMPlay2.desktop";
-        "audio/EVRC0" = "QMPlay2.desktop";
-        "audio/EVRC1" = "QMPlay2.desktop";
-        "audio/EVRCB" = "QMPlay2.desktop";
-        "audio/EVRCB0" = "QMPlay2.desktop";
-        "audio/EVRCB1" = "QMPlay2.desktop";
-        "audio/EVRCNW" = "QMPlay2.desktop";
-        "audio/EVRCNW0" = "QMPlay2.desktop";
-        "audio/EVRCNW1" = "QMPlay2.desktop";
-        "audio/EVRCWB" = "QMPlay2.desktop";
-        "audio/EVRCWB0" = "QMPlay2.desktop";
-        "audio/EVRCWB1" = "QMPlay2.desktop";
-        "audio/EVS" = "QMPlay2.desktop";
-        "audio/flac" = "QMPlay2.desktop";
-        "audio/flexfec" = "QMPlay2.desktop";
-        "audio/fwdred" = "QMPlay2.desktop";
-        "audio/G711-0" = "QMPlay2.desktop";
-        "audio/G719" = "QMPlay2.desktop";
-        "audio/G722" = "QMPlay2.desktop";
-        "audio/G7221" = "QMPlay2.desktop";
-        "audio/G723" = "QMPlay2.desktop";
-        "audio/G726-16" = "QMPlay2.desktop";
-        "audio/G726-24" = "QMPlay2.desktop";
-        "audio/G726-32" = "QMPlay2.desktop";
-        "audio/G726-40" = "QMPlay2.desktop";
-        "audio/G728" = "QMPlay2.desktop";
-        "audio/G729" = "QMPlay2.desktop";
-        "audio/G7291" = "QMPlay2.desktop";
-        "audio/G729D" = "QMPlay2.desktop";
-        "audio/G729E" = "QMPlay2.desktop";
-        "audio/GSM-EFR" = "QMPlay2.desktop";
-        "audio/GSM-HR-08" = "QMPlay2.desktop";
-        "audio/GSM" = "QMPlay2.desktop";
-        "audio/iLBC" = "QMPlay2.desktop";
-        "audio/ip-mr_v2.5" = "QMPlay2.desktop";
-        "audio/L16" = "QMPlay2.desktop";
-        "audio/L20" = "QMPlay2.desktop";
-        "audio/L24" = "QMPlay2.desktop";
-        "audio/L8" = "QMPlay2.desktop";
-        "audio/LPC" = "QMPlay2.desktop";
-        "audio/matroska" = "QMPlay2.desktop";
-        "audio/MELP" = "QMPlay2.desktop";
-        "audio/MELP1200" = "QMPlay2.desktop";
-        "audio/MELP2400" = "QMPlay2.desktop";
-        "audio/MELP600" = "QMPlay2.desktop";
-        "audio/mhas" = "QMPlay2.desktop";
-        "audio/midi-clip" = "QMPlay2.desktop";
-        "audio/mobile-xmf" = "QMPlay2.desktop";
-        "audio/mp4" = "QMPlay2.desktop";
-        "audio/MP4A-LATM" = "QMPlay2.desktop";
-        "audio/mpa-robust" = "QMPlay2.desktop";
-        "audio/MPA" = "QMPlay2.desktop";
-        "audio/mpeg" = "QMPlay2.desktop";
-        "audio/mpeg4-generic" = "QMPlay2.desktop";
-        "audio/ogg" = "QMPlay2.desktop";
-        "audio/opus" = "QMPlay2.desktop";
-        "audio/parityfec" = "QMPlay2.desktop";
-        "audio/PCMA-WB" = "QMPlay2.desktop";
-        "audio/PCMA" = "QMPlay2.desktop";
-        "audio/PCMU-WB" = "QMPlay2.desktop";
-        "audio/PCMU" = "QMPlay2.desktop";
-        "audio/prs.sid" = "QMPlay2.desktop";
-        "audio/QCELP" = "QMPlay2.desktop";
-        "audio/raptorfec" = "QMPlay2.desktop";
-        "audio/RED" = "QMPlay2.desktop";
-        "audio/rtp-enc-aescm128" = "QMPlay2.desktop";
-        "audio/rtp-midi" = "QMPlay2.desktop";
-        "audio/rtploopback" = "QMPlay2.desktop";
-        "audio/rtx" = "QMPlay2.desktop";
-        "audio/scip" = "QMPlay2.desktop";
-        "audio/SMV-QCP" = "QMPlay2.desktop";
-        "audio/SMV" = "QMPlay2.desktop";
-        "audio/SMV0" = "QMPlay2.desktop";
-        "audio/sofa" = "QMPlay2.desktop";
-        "audio/soundfont" = "QMPlay2.desktop";
-        "audio/sp-midi" = "QMPlay2.desktop";
-        "audio/speex" = "QMPlay2.desktop";
-        "audio/t140c" = "QMPlay2.desktop";
-        "audio/t38" = "QMPlay2.desktop";
-        "audio/telephone-event" = "QMPlay2.desktop";
-        "audio/TETRA_ACELP_BB" = "QMPlay2.desktop";
-        "audio/TETRA_ACELP" = "QMPlay2.desktop";
-        "audio/tone" = "QMPlay2.desktop";
-        "audio/TSVCIS" = "QMPlay2.desktop";
-        "audio/UEMCLIP" = "QMPlay2.desktop";
-        "audio/ulpfec" = "QMPlay2.desktop";
-        "audio/usac" = "QMPlay2.desktop";
-        "audio/VDVI" = "QMPlay2.desktop";
-        "audio/VMR-WB" = "QMPlay2.desktop";
-        "audio/vnd.3gpp.iufp" = "QMPlay2.desktop";
-        "audio/vnd.4SB" = "QMPlay2.desktop";
-        "audio/vnd.audiokoz" = "QMPlay2.desktop";
-        "audio/vnd.blockfact.facta" = "QMPlay2.desktop";
-        "audio/vnd.CELP" = "QMPlay2.desktop";
-        "audio/vnd.cisco.nse" = "QMPlay2.desktop";
-        "audio/vnd.cmles.radio-events" = "QMPlay2.desktop";
-        "audio/vnd.cns.anp1" = "QMPlay2.desktop";
-        "audio/vnd.cns.inf1" = "QMPlay2.desktop";
-        "audio/vnd.dece.audio" = "QMPlay2.desktop";
-        "audio/vnd.digital-winds" = "QMPlay2.desktop";
-        "audio/vnd.dlna.adts" = "QMPlay2.desktop";
-        "audio/vnd.dolby.heaac.1" = "QMPlay2.desktop";
-        "audio/vnd.dolby.heaac.2" = "QMPlay2.desktop";
-        "audio/vnd.dolby.mlp" = "QMPlay2.desktop";
-        "audio/vnd.dolby.mps" = "QMPlay2.desktop";
-        "audio/vnd.dolby.pl2" = "QMPlay2.desktop";
-        "audio/vnd.dolby.pl2x" = "QMPlay2.desktop";
-        "audio/vnd.dolby.pl2z" = "QMPlay2.desktop";
-        "audio/vnd.dolby.pulse.1" = "QMPlay2.desktop";
-        "audio/vnd.dra" = "QMPlay2.desktop";
-        "audio/vnd.dts.hd" = "QMPlay2.desktop";
-        "audio/vnd.dts.uhd" = "QMPlay2.desktop";
-        "audio/vnd.dts" = "QMPlay2.desktop";
-        "audio/vnd.dvb.file" = "QMPlay2.desktop";
-        "audio/vnd.everad.plj" = "QMPlay2.desktop";
-        "audio/vnd.hns.audio" = "QMPlay2.desktop";
-        "audio/vnd.lucent.voice" = "QMPlay2.desktop";
-        "audio/vnd.ms-playready.media.pya" = "QMPlay2.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "QMPlay2.desktop";
-        "audio/vnd.nortel.vbk" = "QMPlay2.desktop";
-        "audio/vnd.nuera.ecelp4800" = "QMPlay2.desktop";
-        "audio/vnd.nuera.ecelp7470" = "QMPlay2.desktop";
-        "audio/vnd.nuera.ecelp9600" = "QMPlay2.desktop";
-        "audio/vnd.octel.sbc" = "QMPlay2.desktop";
-        "audio/vnd.presonus.multitrack" = "QMPlay2.desktop";
-        "audio/vnd.qcelp" = "QMPlay2.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "QMPlay2.desktop";
-        "audio/vnd.rip" = "QMPlay2.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "QMPlay2.desktop";
-        "audio/vnd.vmx.cvsd" = "QMPlay2.desktop";
-        "audio/vorbis-config" = "QMPlay2.desktop";
-        "audio/vorbis" = "QMPlay2.desktop";
+        "audio/1d-interleaved-parityfec" = "vlc.desktop";
+        "audio/32kadpcm" = "vlc.desktop";
+        "audio/3gpp" = "vlc.desktop";
+        "audio/3gpp2" = "vlc.desktop";
+        "audio/aac" = "vlc.desktop";
+        "audio/ac3" = "vlc.desktop";
+        "audio/AMR-WB" = "vlc.desktop";
+        "audio/amr-wb+" = "vlc.desktop";
+        "audio/AMR" = "vlc.desktop";
+        "audio/aptx" = "vlc.desktop";
+        "audio/asc" = "vlc.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "vlc.desktop";
+        "audio/ATRAC-X" = "vlc.desktop";
+        "audio/ATRAC3" = "vlc.desktop";
+        "audio/basic" = "vlc.desktop";
+        "audio/BV16" = "vlc.desktop";
+        "audio/BV32" = "vlc.desktop";
+        "audio/clearmode" = "vlc.desktop";
+        "audio/CN" = "vlc.desktop";
+        "audio/DAT12" = "vlc.desktop";
+        "audio/dls" = "vlc.desktop";
+        "audio/dsr-es201108" = "vlc.desktop";
+        "audio/dsr-es202050" = "vlc.desktop";
+        "audio/dsr-es202211" = "vlc.desktop";
+        "audio/dsr-es202212" = "vlc.desktop";
+        "audio/DV" = "vlc.desktop";
+        "audio/DVI4" = "vlc.desktop";
+        "audio/eac3" = "vlc.desktop";
+        "audio/encaprtp" = "vlc.desktop";
+        "audio/EVRC-QCP" = "vlc.desktop";
+        "audio/EVRC" = "vlc.desktop";
+        "audio/EVRC0" = "vlc.desktop";
+        "audio/EVRC1" = "vlc.desktop";
+        "audio/EVRCB" = "vlc.desktop";
+        "audio/EVRCB0" = "vlc.desktop";
+        "audio/EVRCB1" = "vlc.desktop";
+        "audio/EVRCNW" = "vlc.desktop";
+        "audio/EVRCNW0" = "vlc.desktop";
+        "audio/EVRCNW1" = "vlc.desktop";
+        "audio/EVRCWB" = "vlc.desktop";
+        "audio/EVRCWB0" = "vlc.desktop";
+        "audio/EVRCWB1" = "vlc.desktop";
+        "audio/EVS" = "vlc.desktop";
+        "audio/flac" = "vlc.desktop";
+        "audio/flexfec" = "vlc.desktop";
+        "audio/fwdred" = "vlc.desktop";
+        "audio/G711-0" = "vlc.desktop";
+        "audio/G719" = "vlc.desktop";
+        "audio/G722" = "vlc.desktop";
+        "audio/G7221" = "vlc.desktop";
+        "audio/G723" = "vlc.desktop";
+        "audio/G726-16" = "vlc.desktop";
+        "audio/G726-24" = "vlc.desktop";
+        "audio/G726-32" = "vlc.desktop";
+        "audio/G726-40" = "vlc.desktop";
+        "audio/G728" = "vlc.desktop";
+        "audio/G729" = "vlc.desktop";
+        "audio/G7291" = "vlc.desktop";
+        "audio/G729D" = "vlc.desktop";
+        "audio/G729E" = "vlc.desktop";
+        "audio/GSM-EFR" = "vlc.desktop";
+        "audio/GSM-HR-08" = "vlc.desktop";
+        "audio/GSM" = "vlc.desktop";
+        "audio/iLBC" = "vlc.desktop";
+        "audio/ip-mr_v2.5" = "vlc.desktop";
+        "audio/L16" = "vlc.desktop";
+        "audio/L20" = "vlc.desktop";
+        "audio/L24" = "vlc.desktop";
+        "audio/L8" = "vlc.desktop";
+        "audio/LPC" = "vlc.desktop";
+        "audio/matroska" = "vlc.desktop";
+        "audio/MELP" = "vlc.desktop";
+        "audio/MELP1200" = "vlc.desktop";
+        "audio/MELP2400" = "vlc.desktop";
+        "audio/MELP600" = "vlc.desktop";
+        "audio/mhas" = "vlc.desktop";
+        "audio/midi-clip" = "vlc.desktop";
+        "audio/mobile-xmf" = "vlc.desktop";
+        "audio/mp4" = "vlc.desktop";
+        "audio/MP4A-LATM" = "vlc.desktop";
+        "audio/mpa-robust" = "vlc.desktop";
+        "audio/MPA" = "vlc.desktop";
+        "audio/mpeg" = "vlc.desktop";
+        "audio/mpeg4-generic" = "vlc.desktop";
+        "audio/ogg" = "vlc.desktop";
+        "audio/opus" = "vlc.desktop";
+        "audio/parityfec" = "vlc.desktop";
+        "audio/PCMA-WB" = "vlc.desktop";
+        "audio/PCMA" = "vlc.desktop";
+        "audio/PCMU-WB" = "vlc.desktop";
+        "audio/PCMU" = "vlc.desktop";
+        "audio/prs.sid" = "vlc.desktop";
+        "audio/QCELP" = "vlc.desktop";
+        "audio/raptorfec" = "vlc.desktop";
+        "audio/RED" = "vlc.desktop";
+        "audio/rtp-enc-aescm128" = "vlc.desktop";
+        "audio/rtp-midi" = "vlc.desktop";
+        "audio/rtploopback" = "vlc.desktop";
+        "audio/rtx" = "vlc.desktop";
+        "audio/scip" = "vlc.desktop";
+        "audio/SMV-QCP" = "vlc.desktop";
+        "audio/SMV" = "vlc.desktop";
+        "audio/SMV0" = "vlc.desktop";
+        "audio/sofa" = "vlc.desktop";
+        "audio/soundfont" = "vlc.desktop";
+        "audio/sp-midi" = "vlc.desktop";
+        "audio/speex" = "vlc.desktop";
+        "audio/t140c" = "vlc.desktop";
+        "audio/t38" = "vlc.desktop";
+        "audio/telephone-event" = "vlc.desktop";
+        "audio/TETRA_ACELP_BB" = "vlc.desktop";
+        "audio/TETRA_ACELP" = "vlc.desktop";
+        "audio/tone" = "vlc.desktop";
+        "audio/TSVCIS" = "vlc.desktop";
+        "audio/UEMCLIP" = "vlc.desktop";
+        "audio/ulpfec" = "vlc.desktop";
+        "audio/usac" = "vlc.desktop";
+        "audio/VDVI" = "vlc.desktop";
+        "audio/VMR-WB" = "vlc.desktop";
+        "audio/vnd.3gpp.iufp" = "vlc.desktop";
+        "audio/vnd.4SB" = "vlc.desktop";
+        "audio/vnd.audiokoz" = "vlc.desktop";
+        "audio/vnd.blockfact.facta" = "vlc.desktop";
+        "audio/vnd.CELP" = "vlc.desktop";
+        "audio/vnd.cisco.nse" = "vlc.desktop";
+        "audio/vnd.cmles.radio-events" = "vlc.desktop";
+        "audio/vnd.cns.anp1" = "vlc.desktop";
+        "audio/vnd.cns.inf1" = "vlc.desktop";
+        "audio/vnd.dece.audio" = "vlc.desktop";
+        "audio/vnd.digital-winds" = "vlc.desktop";
+        "audio/vnd.dlna.adts" = "vlc.desktop";
+        "audio/vnd.dolby.heaac.1" = "vlc.desktop";
+        "audio/vnd.dolby.heaac.2" = "vlc.desktop";
+        "audio/vnd.dolby.mlp" = "vlc.desktop";
+        "audio/vnd.dolby.mps" = "vlc.desktop";
+        "audio/vnd.dolby.pl2" = "vlc.desktop";
+        "audio/vnd.dolby.pl2x" = "vlc.desktop";
+        "audio/vnd.dolby.pl2z" = "vlc.desktop";
+        "audio/vnd.dolby.pulse.1" = "vlc.desktop";
+        "audio/vnd.dra" = "vlc.desktop";
+        "audio/vnd.dts.hd" = "vlc.desktop";
+        "audio/vnd.dts.uhd" = "vlc.desktop";
+        "audio/vnd.dts" = "vlc.desktop";
+        "audio/vnd.dvb.file" = "vlc.desktop";
+        "audio/vnd.everad.plj" = "vlc.desktop";
+        "audio/vnd.hns.audio" = "vlc.desktop";
+        "audio/vnd.lucent.voice" = "vlc.desktop";
+        "audio/vnd.ms-playready.media.pya" = "vlc.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "vlc.desktop";
+        "audio/vnd.nortel.vbk" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp4800" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp7470" = "vlc.desktop";
+        "audio/vnd.nuera.ecelp9600" = "vlc.desktop";
+        "audio/vnd.octel.sbc" = "vlc.desktop";
+        "audio/vnd.presonus.multitrack" = "vlc.desktop";
+        "audio/vnd.qcelp" = "vlc.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "vlc.desktop";
+        "audio/vnd.rip" = "vlc.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "vlc.desktop";
+        "audio/vnd.vmx.cvsd" = "vlc.desktop";
+        "audio/vorbis-config" = "vlc.desktop";
+        "audio/vorbis" = "vlc.desktop";
 
-        "video/1d-interleaved-parityfec" = "QMPlay2.desktop";
-        "video/3gpp-tt" = "QMPlay2.desktop";
-        "video/3gpp" = "QMPlay2.desktop";
-        "video/3gpp2" = "QMPlay2.desktop";
-        "video/AV1" = "QMPlay2.desktop";
-        "video/BMPEG" = "QMPlay2.desktop";
-        "video/BT656" = "QMPlay2.desktop";
-        "video/CelB" = "QMPlay2.desktop";
-        "video/DV" = "QMPlay2.desktop";
-        "video/encaprtp" = "QMPlay2.desktop";
-        "video/evc" = "QMPlay2.desktop";
-        "video/FFV1" = "QMPlay2.desktop";
-        "video/flexfec" = "QMPlay2.desktop";
-        "video/H261" = "QMPlay2.desktop";
-        "video/H263-1998" = "QMPlay2.desktop";
-        "video/H263-2000" = "QMPlay2.desktop";
-        "video/H263" = "QMPlay2.desktop";
-        "video/H264-RCDO" = "QMPlay2.desktop";
-        "video/H264-SVC" = "QMPlay2.desktop";
-        "video/H264" = "QMPlay2.desktop";
-        "video/H265" = "QMPlay2.desktop";
-        "video/H266" = "QMPlay2.desktop";
-        "video/iso.segment" = "QMPlay2.desktop";
-        "video/JPEG" = "QMPlay2.desktop";
-        "video/jpeg2000-scl" = "QMPlay2.desktop";
-        "video/jpeg2000" = "QMPlay2.desktop";
-        "video/jxsv" = "QMPlay2.desktop";
-        "video/lottie+json" = "QMPlay2.desktop";
-        "video/matroska-3d" = "QMPlay2.desktop";
-        "video/matroska" = "QMPlay2.desktop";
-        "video/mj2" = "QMPlay2.desktop";
-        "video/MP1S" = "QMPlay2.desktop";
-        "video/MP2P" = "QMPlay2.desktop";
-        "video/MP2T" = "QMPlay2.desktop";
-        "video/mp4" = "QMPlay2.desktop";
-        "video/MP4V-ES" = "QMPlay2.desktop";
-        "video/mpeg" = "QMPlay2.desktop";
-        "video/mpeg4-generic" = "QMPlay2.desktop";
-        "video/MPV" = "QMPlay2.desktop";
-        "video/nv" = "QMPlay2.desktop";
-        "video/ogg" = "QMPlay2.desktop";
-        "video/parityfec" = "QMPlay2.desktop";
-        "video/pointer" = "QMPlay2.desktop";
-        "video/quicktime" = "QMPlay2.desktop";
-        "video/raptorfec" = "QMPlay2.desktop";
-        "video/raw" = "QMPlay2.desktop";
-        "video/rtp-enc-aescm128" = "QMPlay2.desktop";
-        "video/rtploopback" = "QMPlay2.desktop";
-        "video/rtx" = "QMPlay2.desktop";
-        "video/scip" = "QMPlay2.desktop";
-        "video/smpte291" = "QMPlay2.desktop";
-        "video/SMPTE292M" = "QMPlay2.desktop";
-        "video/ulpfec" = "QMPlay2.desktop";
-        "video/vc1" = "QMPlay2.desktop";
-        "video/vc2" = "QMPlay2.desktop";
-        "video/vnd.blockfact.factv" = "QMPlay2.desktop";
-        "video/vnd.CCTV" = "QMPlay2.desktop";
-        "video/vnd.dece.hd" = "QMPlay2.desktop";
-        "video/vnd.dece.mobile" = "QMPlay2.desktop";
-        "video/vnd.dece.mp4" = "QMPlay2.desktop";
-        "video/vnd.dece.pd" = "QMPlay2.desktop";
-        "video/vnd.dece.sd" = "QMPlay2.desktop";
-        "video/vnd.dece.video" = "QMPlay2.desktop";
-        "video/vnd.directv.mpeg-tts" = "QMPlay2.desktop";
-        "video/vnd.directv.mpeg" = "QMPlay2.desktop";
-        "video/vnd.dlna.mpeg-tts" = "QMPlay2.desktop";
-        "video/vnd.dvb.file" = "QMPlay2.desktop";
-        "video/vnd.fvt" = "QMPlay2.desktop";
-        "video/vnd.hns.video" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.ttsavc" = "QMPlay2.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "QMPlay2.desktop";
-        "video/vnd.motorola.video" = "QMPlay2.desktop";
-        "video/vnd.motorola.videop" = "QMPlay2.desktop";
-        "video/vnd.mpegurl" = "QMPlay2.desktop";
-        "video/vnd.ms-playready.media.pyv" = "QMPlay2.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "QMPlay2.desktop";
-        "video/vnd.nokia.mp4vr" = "QMPlay2.desktop";
-        "video/vnd.nokia.videovoip" = "QMPlay2.desktop";
-        "video/vnd.objectvideo" = "QMPlay2.desktop";
-        "video/vnd.planar" = "QMPlay2.desktop";
-        "video/vnd.radgamettools.bink" = "QMPlay2.desktop";
-        "video/vnd.radgamettools.smacker" = "QMPlay2.desktop";
-        "video/vnd.sealed.mpeg1" = "QMPlay2.desktop";
-        "video/vnd.sealed.mpeg4" = "QMPlay2.desktop";
-        "video/vnd.sealed.swf" = "QMPlay2.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "QMPlay2.desktop";
-        "video/vnd.uvvu.mp4" = "QMPlay2.desktop";
-        "video/vnd.vivo" = "QMPlay2.desktop";
-        "video/vnd.youtube.yt" = "QMPlay2.desktop";
-        "video/VP8" = "QMPlay2.desktop";
-        "video/VP9" = "QMPlay2.desktop";
-        "video/x-matroska" = "QMPlay2.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "vlc.desktop";
+        "video/3gpp-tt" = "vlc.desktop";
+        "video/3gpp" = "vlc.desktop";
+        "video/3gpp2" = "vlc.desktop";
+        "video/AV1" = "vlc.desktop";
+        "video/BMPEG" = "vlc.desktop";
+        "video/BT656" = "vlc.desktop";
+        "video/CelB" = "vlc.desktop";
+        "video/DV" = "vlc.desktop";
+        "video/encaprtp" = "vlc.desktop";
+        "video/evc" = "vlc.desktop";
+        "video/FFV1" = "vlc.desktop";
+        "video/flexfec" = "vlc.desktop";
+        "video/H261" = "vlc.desktop";
+        "video/H263-1998" = "vlc.desktop";
+        "video/H263-2000" = "vlc.desktop";
+        "video/H263" = "vlc.desktop";
+        "video/H264-RCDO" = "vlc.desktop";
+        "video/H264-SVC" = "vlc.desktop";
+        "video/H264" = "vlc.desktop";
+        "video/H265" = "vlc.desktop";
+        "video/H266" = "vlc.desktop";
+        "video/iso.segment" = "vlc.desktop";
+        "video/JPEG" = "vlc.desktop";
+        "video/jpeg2000-scl" = "vlc.desktop";
+        "video/jpeg2000" = "vlc.desktop";
+        "video/jxsv" = "vlc.desktop";
+        "video/lottie+json" = "vlc.desktop";
+        "video/matroska-3d" = "vlc.desktop";
+        "video/matroska" = "vlc.desktop";
+        "video/mj2" = "vlc.desktop";
+        "video/MP1S" = "vlc.desktop";
+        "video/MP2P" = "vlc.desktop";
+        "video/MP2T" = "vlc.desktop";
+        "video/mp4" = "vlc.desktop";
+        "video/MP4V-ES" = "vlc.desktop";
+        "video/mpeg" = "vlc.desktop";
+        "video/mpeg4-generic" = "vlc.desktop";
+        "video/MPV" = "vlc.desktop";
+        "video/nv" = "vlc.desktop";
+        "video/ogg" = "vlc.desktop";
+        "video/parityfec" = "vlc.desktop";
+        "video/pointer" = "vlc.desktop";
+        "video/quicktime" = "vlc.desktop";
+        "video/raptorfec" = "vlc.desktop";
+        "video/raw" = "vlc.desktop";
+        "video/rtp-enc-aescm128" = "vlc.desktop";
+        "video/rtploopback" = "vlc.desktop";
+        "video/rtx" = "vlc.desktop";
+        "video/scip" = "vlc.desktop";
+        "video/smpte291" = "vlc.desktop";
+        "video/SMPTE292M" = "vlc.desktop";
+        "video/ulpfec" = "vlc.desktop";
+        "video/vc1" = "vlc.desktop";
+        "video/vc2" = "vlc.desktop";
+        "video/vnd.blockfact.factv" = "vlc.desktop";
+        "video/vnd.CCTV" = "vlc.desktop";
+        "video/vnd.dece.hd" = "vlc.desktop";
+        "video/vnd.dece.mobile" = "vlc.desktop";
+        "video/vnd.dece.mp4" = "vlc.desktop";
+        "video/vnd.dece.pd" = "vlc.desktop";
+        "video/vnd.dece.sd" = "vlc.desktop";
+        "video/vnd.dece.video" = "vlc.desktop";
+        "video/vnd.directv.mpeg-tts" = "vlc.desktop";
+        "video/vnd.directv.mpeg" = "vlc.desktop";
+        "video/vnd.dlna.mpeg-tts" = "vlc.desktop";
+        "video/vnd.dvb.file" = "vlc.desktop";
+        "video/vnd.fvt" = "vlc.desktop";
+        "video/vnd.hns.video" = "vlc.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "vlc.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "vlc.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "vlc.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "vlc.desktop";
+        "video/vnd.iptvforum.ttsavc" = "vlc.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "vlc.desktop";
+        "video/vnd.motorola.video" = "vlc.desktop";
+        "video/vnd.motorola.videop" = "vlc.desktop";
+        "video/vnd.mpegurl" = "vlc.desktop";
+        "video/vnd.ms-playready.media.pyv" = "vlc.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "vlc.desktop";
+        "video/vnd.nokia.mp4vr" = "vlc.desktop";
+        "video/vnd.nokia.videovoip" = "vlc.desktop";
+        "video/vnd.objectvideo" = "vlc.desktop";
+        "video/vnd.planar" = "vlc.desktop";
+        "video/vnd.radgamettools.bink" = "vlc.desktop";
+        "video/vnd.radgamettools.smacker" = "vlc.desktop";
+        "video/vnd.sealed.mpeg1" = "vlc.desktop";
+        "video/vnd.sealed.mpeg4" = "vlc.desktop";
+        "video/vnd.sealed.swf" = "vlc.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "vlc.desktop";
+        "video/vnd.uvvu.mp4" = "vlc.desktop";
+        "video/vnd.vivo" = "vlc.desktop";
+        "video/vnd.youtube.yt" = "vlc.desktop";
+        "video/VP8" = "vlc.desktop";
+        "video/VP9" = "vlc.desktop";
+        "video/x-matroska" = "vlc.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -3961,6 +4034,7 @@ in
         "uucp"
         "video"
         "wheel"
+        "wireshark"
       ];
 
       useDefaultShell = true;
@@ -4104,7 +4178,12 @@ in
 
           xwayland.enable = true;
 
+          configType = "lua";
           sourceFirst = true;
+
+          extraConfig = ''
+            require("monitors")
+          ''; # nwg-displays
 
           settings = {
             monitor = [
@@ -4114,21 +4193,7 @@ in
                 position = "auto";
                 transform = 0;
                 scale = 1;
-              }
-              {
-                output = "eDP-1";
-                mode = "highres";
-                position = "auto";
-                transform = 0;
-                scale = 1;
-              }
-              {
-                output = "HDMI-A-1";
-                mode = "highres";
-                position = "auto";
-                transform = 1; # 1 = 90 Degrees
-                scale = 1;
-              }
+              } # Default
             ];
 
             on = {
@@ -4142,6 +4207,8 @@ in
 
                     hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
                     hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
+
+                    hl.exec_cmd("uwsm-app -- nwg-dock-hyprland -l overlay -p bottom -d -a center -nolauncher")
                   end
                 '')
               ];
@@ -4427,19 +4494,19 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wofi --show drun --disable-history | xargs -r uwsm-app --\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term foot -fm nemo\")") # TODO: Use uwsm-app
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wofi --show run --disable-history | xargs -r uwsm-app --\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- sh -c 'compgen -c | sort | uniq -i | tv'\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + SPACE"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu | cliphist decode | wl-copy\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-clipman --numbers\")")
                 ];
               }
               {
@@ -4463,13 +4530,19 @@ in
               {
                 _args = [
                   "SUPER + CTRL + B"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- bluetui\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- overskride\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + CTRL + D"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-displays\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + CTRL + N"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- wifitui tui\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nmgui\")")
                 ];
               }
               {
@@ -4481,13 +4554,13 @@ in
               {
                 _args = [
                   "SUPER + CTRL + A"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- wiremix\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- pwvucontrol\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + Y"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- cal --year\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- --hold cal --year\")")
                 ];
               }
               {
@@ -4546,14 +4619,14 @@ in
               }
               {
                 _args = [
-                  "SUPER + D"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"dbgate\")")
+                  "SUPER + A"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
                 ];
               }
               {
                 _args = [
-                  "SUPER + O"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- oterm\")")
+                  "SUPER + D"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"dbgate\")")
                 ];
               }
               {
@@ -4891,17 +4964,6 @@ in
 
           configFile = {
             "mimeapps.list".force = true;
-
-            "gdu/gdu.yaml" = {
-              enable = true;
-
-              source = builtins.fetchurl {
-                url = "https://raw.githubusercontent.com/scarcekoi/gdu/refs/heads/main/themes/${config.catppuccin.flavor}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.yaml";
-              };
-
-              target = "gdu/gdu.yaml";
-              executable = null;
-            };
 
             "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
               enable = true;
@@ -6154,7 +6216,7 @@ in
                 enableVideoAcceleration = true;
                 enableVulkan = false; # Enabling Breaks Va-API
                 libvaSupport = true;
-                pulseSupport = false;
+                pulseSupport = true;
                 vulkanSupport = false; # Enabling Breaks Va-API
                 commandLineArgs = "";
               }
@@ -6260,61 +6322,6 @@ in
 
             enableBashIntegration = true;
             enableXsessionIntegration = false;
-          };
-
-          wofi = {
-            enable = true;
-            package = pkgs.wofi;
-
-            settings = {
-              normal_window = false;
-              layer = "overlay";
-              location = "center";
-
-              gtk_dark = true;
-              columns = 1;
-              dynamic_lines = false;
-              height = "50%";
-              width = "25%";
-              hide_scroll = false;
-
-              hide_search = false;
-              prompt = "Search";
-              show_all = true;
-              allow_markup = true;
-              allow_images = true;
-              image_size = 32;
-              no_actions = true;
-
-              insensitive = true;
-
-              single_click = true;
-
-              term = "foot";
-            };
-
-            style = ''
-              window {
-                border-radius: ${toString design_factor}px;
-              }
-
-              #outer-box {
-                padding: 16px;
-              }
-
-              #inner-box {
-                margin-top: 16px;
-              }
-
-              #entry {
-                margin-top: 4px;
-                margin-bottom: 4px;
-              }
-
-              #img {
-                margin-right: 4px;
-              }
-            '';
           };
 
           nix-index = {
