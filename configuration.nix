@@ -1926,7 +1926,7 @@ in
     bash = {
       vteIntegration = true;
 
-      blesh.enable = true;
+      blesh.enable = false; # ble.sh Prevents Cursor from Rendering
 
       completion = {
         enable = true;
@@ -1935,10 +1935,7 @@ in
 
       enableLsColors = true;
 
-      undistractMe = {
-        enable = true;
-        playSound = true;
-      };
+      undistractMe.enable = false; # Behaves Strangely
 
       # shellAliases = { };
 
@@ -1948,6 +1945,26 @@ in
       interactiveShellInit = ''
         PROMPT_COMMAND="history -a"
       '';
+    };
+
+    starship = {
+      enable = true;
+      package = pkgs.starship;
+
+      interactiveOnly = true;
+
+      presets = [
+        # "catppuccin-powerline"
+        "nerd-font-symbols"
+      ];
+
+      settings = {
+        follow_symlinks = true;
+
+        add_newline = true;
+
+        # palette = "catppuccin_${config.catppuccin.flavor}";
+      };
     };
 
     command-not-found.enable = true;
@@ -2242,63 +2259,6 @@ in
           };
         }
       ];
-    };
-
-    foot = {
-      enable = true;
-      package = pkgs.foot;
-
-      enableBashIntegration = true;
-
-      settings = {
-        main = {
-          term = "foot";
-          login-shell = "no";
-
-          dpi-aware = "yes";
-          initial-window-mode = "windowed";
-          initial-color-theme = "dark";
-          pad = "${toString (design_factor * 2)}x0x0x0 center-when-maximized-and-fullscreen"; # 32
-
-          font = "${fontPreferences.name.mono}:pixelsize=${toString design_factor}";
-          box-drawings-uses-font-glyphs = "yes";
-          horizontal-letter-offset = 0;
-          vertical-letter-offset = 0;
-
-          selection-target = "primary";
-        };
-
-        tweak = {
-          sixel = "yes";
-          surface-bit-depth = "auto";
-          font-monospace-warn = "yes";
-        };
-
-        security.osc52 = "enabled";
-
-        url = {
-          osc8-underline = "always";
-        };
-
-        bell = {
-          system = "yes";
-        };
-
-        scrollback = {
-          indicator-position = "relative";
-          indicator-format = "line";
-        };
-
-        cursor = {
-          style = "beam";
-          unfocused-style = "hollow";
-          blink = "yes";
-        };
-
-        mouse = {
-          hide-when-typing = "no";
-        };
-      };
     };
 
     seahorse.enable = true;
@@ -3453,7 +3413,7 @@ in
 
       settings = {
         default = [
-          "foot.desktop"
+          "kitty.desktop"
         ];
       };
     };
@@ -4531,7 +4491,7 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term foot -fm nemo\")") # TODO: Use uwsm-app
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term kitty -fm nemo\")") # TODO: Use uwsm-app
                 ];
               }
               {
@@ -5186,7 +5146,7 @@ in
             notify = true;
 
             settings = {
-              terminal = "${config.programs.foot.package}/bin/foot -D";
+              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -- --working-directory";
               file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
 
               menu = "nested";
@@ -5712,6 +5672,7 @@ in
               cursor_shape = "bar";
               cursor_blink = true;
 
+              soft_wrap = "editor_width";
               show_whitespaces = "all";
               show_wrap_guides = true;
               lsp_document_colors = "inlay";
@@ -6042,6 +6003,53 @@ in
             package = pkgs.cava;
           };
 
+          kitty = {
+            enable = true;
+            package = pkgs.kitty;
+
+            shellIntegration = {
+              enableBashIntegration = true;
+            };
+
+            enableGitIntegration = true;
+
+            font = {
+              name = fontPreferences.name.mono;
+              package = pkgs.nerd-fonts.noto;
+              size = fontPreferences.size;
+            };
+
+            extraConfig = {
+              enable_audio_bell = true;
+              sync_to_monitor = "no";
+            };
+
+            # environment = { };
+          };
+
+          bash = {
+            enable = true;
+
+            enableVteIntegration = config.programs.bash.vteIntegration;
+            enableCompletion = config.programs.bash.completion.enable;
+
+            shellAliases = config.programs.bash.shellAliases;
+          };
+
+          starship = {
+            enable = config.programs.starship.enable;
+            package = config.programs.starship.package;
+
+            # extraPackages = with pkgs; [ ];
+
+            enableBashIntegration = true;
+
+            enableInteractive = config.programs.starship.interactiveOnly;
+
+            presets = config.programs.starship.presets;
+            settings = config.programs.starship.settings;
+          };
+
           # texlive = { };
 
           ssh = {
@@ -6273,61 +6281,6 @@ in
             plugins = config.programs.obs-studio.plugins;
           };
 
-          foot = {
-            enable = config.programs.foot.enable;
-            package = config.programs.foot.package;
-
-            settings = {
-              main = {
-                term = config.programs.foot.settings.main.term;
-                login-shell = config.programs.foot.settings.main.login-shell;
-
-                dpi-aware = config.programs.foot.settings.main.dpi-aware;
-                initial-window-mode = config.programs.foot.settings.main.initial-window-mode;
-                initial-color-theme = config.programs.foot.settings.main.initial-color-theme;
-                pad = config.programs.foot.settings.main.pad;
-
-                font = config.programs.foot.settings.main.font;
-                box-drawings-uses-font-glyphs = config.programs.foot.settings.main.box-drawings-uses-font-glyphs;
-                horizontal-letter-offset = config.programs.foot.settings.main.horizontal-letter-offset;
-                vertical-letter-offset = config.programs.foot.settings.main.vertical-letter-offset;
-
-                selection-target = config.programs.foot.settings.main.selection-target;
-              };
-
-              tweak = {
-                sixel = config.programs.foot.settings.tweak.sixel;
-                surface-bit-depth = config.programs.foot.settings.tweak.surface-bit-depth;
-                font-monospace-warn = config.programs.foot.settings.tweak.font-monospace-warn;
-              };
-
-              security.osc52 = config.programs.foot.settings.security.osc52;
-
-              url = {
-                osc8-underline = config.programs.foot.settings.url.osc8-underline;
-              };
-
-              bell = {
-                system = config.programs.foot.settings.bell.system;
-              };
-
-              scrollback = {
-                indicator-position = config.programs.foot.settings.scrollback.indicator-position;
-                indicator-format = config.programs.foot.settings.scrollback.indicator-format;
-              };
-
-              cursor = {
-                style = config.programs.foot.settings.cursor.style;
-                unfocused-style = config.programs.foot.settings.cursor.unfocused-style;
-                blink = config.programs.foot.settings.cursor.blink;
-              };
-
-              mouse = {
-                hide-when-typing = config.programs.foot.settings.mouse.hide-when-typing;
-              };
-            };
-          };
-
           lutris = {
             enable = true;
             package = (
@@ -6424,6 +6377,12 @@ in
             transparent = true;
           };
 
+          kitty = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
+          };
+
           opencode = {
             enable = true;
 
@@ -6480,12 +6439,6 @@ in
             accent = config.catppuccin.accent;
 
             enableRounded = true;
-          };
-
-          foot = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
           };
 
           television = {
