@@ -6,6 +6,50 @@ My NixOS Configuration
 
 </div>
 
+## Stack
+
+### Base
+
+- **Kernel:** Linux XanMod
+- **Bootloader:** GRUB
+- **Boot and Shutdown Splash:** Plymouth
+- **Display Protocol:** Wayland
+- **Display Manager:** Simple Desktop Display Manager (SDDM)
+- **Compositor:** Hyprland
+
+### Multimedia
+
+- **Word Processor, Spreadsheet, and Presentation Editor:** OnlyOffice
+- **PDF Editor:** OnlyOffice, PDF Arranger
+- **PDF Viewer:** Sioyek, Brave
+- **UVC Capture Viewer:** Guvcview
+- **QR Code Generator:** CoBang
+- **Vector Graphics Editor:** Inkscape
+- **Raster Image Editor:** GNU Image Manipulation Program (GIMP)
+- **Raw Image Developer:** Darktable
+- **Audio Recorder and Editor:** Audacity
+- **Music Tag Editor:** MusicBrainz Picard
+- **Video Editor and Animator:** Blender
+- **Image Format Converter:** Switcheroo
+- **Image Compressor:** Curtail
+- **Video Compressor:** Constrict
+- **Image Viewer:** gThumb
+- **Media Player:** VLC
+
+### 2D Fabrication
+
+- **Cutter / Plotter Host:** Inkcut
+
+### 3D Fabrication
+
+- **Parametric CAD:** FreeCAD
+- **Organic Modeller:** Blender
+- **Mesh Processor:** MeshLab
+- **STL Viewer:** fstl
+- **FDM Slicer:** OrcaSlicer
+- **MSLA Resin Slicer:** mslicer
+- **Printer Host:** Printrun (Includes Pronterface)
+
 ## Run
 
 ```sh

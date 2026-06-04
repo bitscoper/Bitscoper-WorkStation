@@ -562,6 +562,17 @@ in
     useDHCP = false; # Managed by NetworkManager
     dhcpcd.enable = false;
 
+    modemmanager = {
+      enable = true;
+      package = (
+        pkgs.modemmanager.override {
+          withIntrospection = true;
+          withPolkit = true;
+          withSystemd = true;
+        }
+      );
+    };
+
     networkmanager = {
       enable = true;
       package = (
@@ -2432,8 +2443,10 @@ in
         baobab
         bcachefs-tools
         bcg729
+        binary
         binutils
         binwalk
+        blanket
         bleachbit
         bluez-alsa
         bluez-tools
@@ -2460,6 +2473,7 @@ in
         cliphist
         cloc
         cmake
+        cobang
         codec2
         codevis
         collision
@@ -2491,6 +2505,7 @@ in
         ddrescue
         ddrescueview
         debase
+        dialect
         diffoci
         dig
         disktui
@@ -2570,6 +2585,7 @@ in
         gnome-firmware
         gnome-graphs
         gnome-nettool
+        gnss-share
         gnugrep
         gnumake
         gnused
@@ -2582,10 +2598,11 @@ in
         gpu-viewer
         gradle-completion
         graphviz
+        greaseweazle
         groovy
         gsm
+        gthumb
         gtk-vnc
-        gtt
         gucharmap
         guestfs-tools
         gzip
@@ -2630,6 +2647,7 @@ in
         jmc2obj
         jmol
         jxrlib
+        kdePackages.kmahjongg
         kernel-hardening-checker
         kernelshark
         kexec-tools
@@ -2693,6 +2711,7 @@ in
         mfoc
         minikube
         mmtui
+        modem-manager-gui
         monkeys-audio
         mousam
         moxnotify
@@ -2701,6 +2720,7 @@ in
         mtools
         mysqltuner
         nethogs
+        newsflash
         nilfs-utils
         ninja
         nix-diff
@@ -2727,6 +2747,7 @@ in
         openjpeg
         openobex
         openssl
+        orbvis
         otree
         overskride
         paper-clip
@@ -2784,6 +2805,8 @@ in
         rubyPackages.cocoapods
         runme
         rustc
+        satdump
+        satellite
         sbc
         sbom2dot
         sbomnix
@@ -2862,6 +2885,7 @@ in
         usbutils
         util-linux
         valgrind
+        valuta
         vex-tui
         video2x
         virt-top
@@ -3553,91 +3577,91 @@ in
         "text/xml" = "dev.zed.Zed.desktop";
         "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
-        "image/aces" = "imv.desktop";
-        "image/apng" = "imv.desktop";
-        "image/avci" = "imv.desktop";
-        "image/avcs" = "imv.desktop";
-        "image/avif" = "imv.desktop";
-        "image/bmp" = "imv.desktop";
-        "image/cgm" = "imv.desktop";
-        "image/dicom-rle" = "imv.desktop";
-        "image/dpx" = "imv.desktop";
-        "image/emf" = "imv.desktop";
-        "image/fits" = "imv.desktop";
-        "image/g3fax" = "imv.desktop";
-        "image/gif" = "imv.desktop";
-        "image/heic-sequence" = "imv.desktop";
-        "image/heic" = "imv.desktop";
-        "image/heif-sequence" = "imv.desktop";
-        "image/heif" = "imv.desktop";
-        "image/hej2k" = "imv.desktop";
-        "image/hsj2" = "imv.desktop";
-        "image/ief" = "imv.desktop";
-        "image/j2c" = "imv.desktop";
-        "image/jaii" = "imv.desktop";
-        "image/jais" = "imv.desktop";
-        "image/jls" = "imv.desktop";
-        "image/jp2" = "imv.desktop";
-        "image/jpeg" = "imv.desktop";
-        "image/jph" = "imv.desktop";
-        "image/jphc" = "imv.desktop";
-        "image/jpm" = "imv.desktop";
-        "image/jpx" = "imv.desktop";
-        "image/jxl" = "imv.desktop";
-        "image/jxr" = "imv.desktop";
-        "image/jxrA" = "imv.desktop";
-        "image/jxrS" = "imv.desktop";
-        "image/jxs" = "imv.desktop";
-        "image/jxsc" = "imv.desktop";
-        "image/jxsi" = "imv.desktop";
-        "image/jxss" = "imv.desktop";
-        "image/ktx" = "imv.desktop";
-        "image/ktx2" = "imv.desktop";
-        "image/naplps" = "imv.desktop";
-        "image/png" = "imv.desktop";
-        "image/prs.btif" = "imv.desktop";
-        "image/prs.pti" = "imv.desktop";
-        "image/pwg-raster" = "imv.desktop";
-        "image/svg+xml" = "imv.desktop";
-        "image/t38" = "imv.desktop";
-        "image/tiff-fx" = "imv.desktop";
-        "image/tiff" = "imv.desktop";
-        "image/vnd.adobe.photoshop" = "imv.desktop";
-        "image/vnd.airzip.accelerator.azv" = "imv.desktop";
-        "image/vnd.blockfact.facti" = "imv.desktop";
-        "image/vnd.clip" = "imv.desktop";
-        "image/vnd.cns.inf2" = "imv.desktop";
-        "image/vnd.dece.graphic" = "imv.desktop";
-        "image/vnd.djvu" = "imv.desktop";
-        "image/vnd.dvb.subtitle" = "imv.desktop";
-        "image/vnd.dwg" = "imv.desktop";
-        "image/vnd.dxf" = "imv.desktop";
-        "image/vnd.fastbidsheet" = "imv.desktop";
-        "image/vnd.fpx" = "imv.desktop";
-        "image/vnd.fst" = "imv.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "imv.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "imv.desktop";
-        "image/vnd.globalgraphics.pgb" = "imv.desktop";
-        "image/vnd.microsoft.icon" = "imv.desktop";
-        "image/vnd.mix" = "imv.desktop";
-        "image/vnd.mozilla.apng" = "imv.desktop";
-        "image/vnd.ms-modi" = "imv.desktop";
-        "image/vnd.net-fpx" = "imv.desktop";
-        "image/vnd.pco.b16" = "imv.desktop";
-        "image/vnd.radiance" = "imv.desktop";
-        "image/vnd.sealed.png" = "imv.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "imv.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "imv.desktop";
-        "image/vnd.svf" = "imv.desktop";
-        "image/vnd.tencent.tap" = "imv.desktop";
-        "image/vnd.valve.source.texture" = "imv.desktop";
-        "image/vnd.wap.wbmp" = "imv.desktop";
-        "image/vnd.xiff" = "imv.desktop";
-        "image/vnd.zbrush.pcx" = "imv.desktop";
-        "image/webp" = "imv.desktop";
-        "image/wmf" = "imv.desktop";
-        "image/x-emf" = "imv.desktop";
-        "image/x-wmf" = "imv.desktop";
+        "image/aces" = "org.gnome.gThumb.desktop";
+        "image/apng" = "org.gnome.gThumb.desktop";
+        "image/avci" = "org.gnome.gThumb.desktop";
+        "image/avcs" = "org.gnome.gThumb.desktop";
+        "image/avif" = "org.gnome.gThumb.desktop";
+        "image/bmp" = "org.gnome.gThumb.desktop";
+        "image/cgm" = "org.gnome.gThumb.desktop";
+        "image/dicom-rle" = "org.gnome.gThumb.desktop";
+        "image/dpx" = "org.gnome.gThumb.desktop";
+        "image/emf" = "org.gnome.gThumb.desktop";
+        "image/fits" = "org.gnome.gThumb.desktop";
+        "image/g3fax" = "org.gnome.gThumb.desktop";
+        "image/gif" = "org.gnome.gThumb.desktop";
+        "image/heic-sequence" = "org.gnome.gThumb.desktop";
+        "image/heic" = "org.gnome.gThumb.desktop";
+        "image/heif-sequence" = "org.gnome.gThumb.desktop";
+        "image/heif" = "org.gnome.gThumb.desktop";
+        "image/hej2k" = "org.gnome.gThumb.desktop";
+        "image/hsj2" = "org.gnome.gThumb.desktop";
+        "image/ief" = "org.gnome.gThumb.desktop";
+        "image/j2c" = "org.gnome.gThumb.desktop";
+        "image/jaii" = "org.gnome.gThumb.desktop";
+        "image/jais" = "org.gnome.gThumb.desktop";
+        "image/jls" = "org.gnome.gThumb.desktop";
+        "image/jp2" = "org.gnome.gThumb.desktop";
+        "image/jpeg" = "org.gnome.gThumb.desktop";
+        "image/jph" = "org.gnome.gThumb.desktop";
+        "image/jphc" = "org.gnome.gThumb.desktop";
+        "image/jpm" = "org.gnome.gThumb.desktop";
+        "image/jpx" = "org.gnome.gThumb.desktop";
+        "image/jxl" = "org.gnome.gThumb.desktop";
+        "image/jxr" = "org.gnome.gThumb.desktop";
+        "image/jxrA" = "org.gnome.gThumb.desktop";
+        "image/jxrS" = "org.gnome.gThumb.desktop";
+        "image/jxs" = "org.gnome.gThumb.desktop";
+        "image/jxsc" = "org.gnome.gThumb.desktop";
+        "image/jxsi" = "org.gnome.gThumb.desktop";
+        "image/jxss" = "org.gnome.gThumb.desktop";
+        "image/ktx" = "org.gnome.gThumb.desktop";
+        "image/ktx2" = "org.gnome.gThumb.desktop";
+        "image/naplps" = "org.gnome.gThumb.desktop";
+        "image/png" = "org.gnome.gThumb.desktop";
+        "image/prs.btif" = "org.gnome.gThumb.desktop";
+        "image/prs.pti" = "org.gnome.gThumb.desktop";
+        "image/pwg-raster" = "org.gnome.gThumb.desktop";
+        "image/svg+xml" = "org.gnome.gThumb.desktop";
+        "image/t38" = "org.gnome.gThumb.desktop";
+        "image/tiff-fx" = "org.gnome.gThumb.desktop";
+        "image/tiff" = "org.gnome.gThumb.desktop";
+        "image/vnd.adobe.photoshop" = "org.gnome.gThumb.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.gnome.gThumb.desktop";
+        "image/vnd.blockfact.facti" = "org.gnome.gThumb.desktop";
+        "image/vnd.clip" = "org.gnome.gThumb.desktop";
+        "image/vnd.cns.inf2" = "org.gnome.gThumb.desktop";
+        "image/vnd.dece.graphic" = "org.gnome.gThumb.desktop";
+        "image/vnd.djvu" = "org.gnome.gThumb.desktop";
+        "image/vnd.dvb.subtitle" = "org.gnome.gThumb.desktop";
+        "image/vnd.dwg" = "org.gnome.gThumb.desktop";
+        "image/vnd.dxf" = "org.gnome.gThumb.desktop";
+        "image/vnd.fastbidsheet" = "org.gnome.gThumb.desktop";
+        "image/vnd.fpx" = "org.gnome.gThumb.desktop";
+        "image/vnd.fst" = "org.gnome.gThumb.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.gThumb.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.gThumb.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.gnome.gThumb.desktop";
+        "image/vnd.microsoft.icon" = "org.gnome.gThumb.desktop";
+        "image/vnd.mix" = "org.gnome.gThumb.desktop";
+        "image/vnd.mozilla.apng" = "org.gnome.gThumb.desktop";
+        "image/vnd.ms-modi" = "org.gnome.gThumb.desktop";
+        "image/vnd.net-fpx" = "org.gnome.gThumb.desktop";
+        "image/vnd.pco.b16" = "org.gnome.gThumb.desktop";
+        "image/vnd.radiance" = "org.gnome.gThumb.desktop";
+        "image/vnd.sealed.png" = "org.gnome.gThumb.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.gThumb.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.gThumb.desktop";
+        "image/vnd.svf" = "org.gnome.gThumb.desktop";
+        "image/vnd.tencent.tap" = "org.gnome.gThumb.desktop";
+        "image/vnd.valve.source.texture" = "org.gnome.gThumb.desktop";
+        "image/vnd.wap.wbmp" = "org.gnome.gThumb.desktop";
+        "image/vnd.xiff" = "org.gnome.gThumb.desktop";
+        "image/vnd.zbrush.pcx" = "org.gnome.gThumb.desktop";
+        "image/webp" = "org.gnome.gThumb.desktop";
+        "image/wmf" = "org.gnome.gThumb.desktop";
+        "image/x-emf" = "org.gnome.gThumb.desktop";
+        "image/x-wmf" = "org.gnome.gThumb.desktop";
 
         "audio/1d-interleaved-parityfec" = "vlc.desktop";
         "audio/32kadpcm" = "vlc.desktop";
@@ -5273,11 +5297,6 @@ in
             activeTheme = "catppuccin-${config.catppuccin.flavor}";
           };
 
-          imv = {
-            enable = true;
-            package = pkgs.imv;
-          };
-
           lazygit = {
             enable = true;
             package = pkgs.lazygit;
@@ -6019,10 +6038,73 @@ in
               size = fontPreferences.size;
             };
 
-            extraConfig = {
-              enable_audio_bell = true;
-              sync_to_monitor = "no";
+            diffConfig = {
+              extraConfig = ''
+                mark_moved_lines yes
+              '';
             };
+
+            extraConfig = ''
+              allow_remote_control no
+
+              term xterm-kitty
+              shell_integration enabled
+              close_on_child_death no
+
+              hide_window_decorations no
+              wayland_titlebar_color system
+              wayland_enable_ime yes
+              window_title_bar top
+              draw_minimal_borders yes
+              draw_window_borders_for_single_window no
+              remember_window_position no
+              remember_window_size no
+              sync_to_monitor no
+              focus_follows_mouse yes
+
+              enable_audio_bell yes
+              window_alert_on_bell no
+              notify_on_cmd_finish invisible
+
+              dynamic_background_opacity yes
+              window_padding_width ${toString (design_factor / 4)} ${toString (design_factor / 2)} ${toString (design_factor / 4)} ${toString (design_factor / 2)}
+               # 4, 8, 4, 8 # Top, Right, Bottom, Left
+
+              tab_bar_edge top
+              tab_switch_strategy previous
+
+              scrollbar always
+              scrollbar_interactive yes
+              scrollbar_jump_on_click yes
+              scrollback_fill_enlarged_window yes
+              pixel_scroll yes
+
+              text_composition_strategy platform
+              force_ltr no
+              disable_ligatures cursor
+
+              cursor_shape beam
+              cursor_shape_unfocused hollow
+
+              default_pointer_shape beam
+              pointer_shape_when_grabbed arrow
+              pointer_shape_when_dragging beam crosshair
+
+              progress_bar bottom
+
+              allow_hyperlinks yes
+              detect_urls yes
+              show_hyperlink_targets always
+              underline_hyperlinks hover
+              url_style straight
+              open_url_with default
+
+              copy_on_select no
+              strip_trailing_spaces never
+              clear_selection_on_clipboard_loss no
+
+              confirm_os_window_close -1 count-background
+            '';
 
             # environment = { };
           };
@@ -6485,12 +6567,6 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           }; # TODO: Check
-
-          imv = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
 
           kvantum = {
             enable = config.catppuccin.enable;
