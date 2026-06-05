@@ -11,8 +11,14 @@ My NixOS Configuration
 ### Base
 
 - **Kernel:** Linux XanMod
+
+&nbsp;
+
 - **Bootloader:** GRUB
 - **Boot and Shutdown Splash:** Plymouth
+
+&nbsp;
+
 - **Display Protocol:** Wayland
 - **Display Manager:** Simple Desktop Display Manager (SDDM)
 - **Compositor:** Hyprland
@@ -22,19 +28,41 @@ My NixOS Configuration
 - **Word Processor, Spreadsheet, and Presentation Editor:** OnlyOffice
 - **PDF Editor:** OnlyOffice, PDF Arranger
 - **PDF Viewer:** Sioyek, Brave
+
+&nbsp;
+
 - **UVC Capture Viewer:** Guvcview
 - **QR Code Generator:** CoBang
+
+&nbsp;
+
 - **Vector Graphics Editor:** Inkscape
 - **Raster Image Editor:** GNU Image Manipulation Program (GIMP)
 - **Raw Image Developer:** Darktable
+
+&nbsp;
+
 - **Audio Recorder and Editor:** Audacity
 - **Music Tag Editor:** MusicBrainz Picard
+
+&nbsp;
+
 - **Video Editor and Animator:** Blender
+
+&nbsp;
+
 - **Image Format Converter:** Switcheroo
+
+&nbsp;
+
 - **Image Compressor:** Curtail
 - **Video Compressor:** Constrict
+
+&nbsp;
+
 - **Image Viewer:** gThumb
-- **Media Player:** VLC
+- **Audio Player:** DeadBeeF
+- **Video Player:** Clapper
 
 ### 2D Fabrication
 
@@ -44,10 +72,22 @@ My NixOS Configuration
 
 - **Parametric CAD:** FreeCAD
 - **Organic Modeller:** Blender
+
+&nbsp;
+
 - **Mesh Processor:** MeshLab
+
+&nbsp;
+
 - **STL Viewer:** fstl
+
+&nbsp;
+
 - **FDM Slicer:** OrcaSlicer
 - **MSLA Resin Slicer:** mslicer
+
+&nbsp;
+
 - **Printer Host:** Printrun (Includes Pronterface)
 
 ## Run
