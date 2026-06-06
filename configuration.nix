@@ -20,6 +20,7 @@ let
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
+  ironbarFlake = builtins.getFlake "github:JakeStanger/ironbar/master";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
@@ -396,18 +397,21 @@ in
       sandbox = true;
       auto-optimise-store = true;
 
-      require-sigs = true;
-      trusted-substituters = config.nix.settings.substituters;
-      trusted-public-keys = [
-        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-      ];
       trusted-users = [
         "root"
         "@wheel"
       ];
 
       substituters = [
-        "https://hyprland.cachix.org"
+        "https://hyprland.cachix.org/"
+        "https://jakestanger.cachix.org/"
+      ];
+
+      require-sigs = true;
+      trusted-substituters = config.nix.settings.substituters;
+      trusted-public-keys = [
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        "jakestanger.cachix.org-1:VWJE7AWNe5/KOEvCQRxoE8UsI2Xs2nHULJ7TEjYm7mM="
       ];
 
       cores = 0; # 0 = All
@@ -484,6 +488,10 @@ in
           }
         );
       })
+
+      # (final: prev: {
+      #   ironbar = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
+      # })
 
       (final: prev: {
         openldap = prev.openldap.overrideAttrs {
@@ -610,7 +618,6 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
-        8010 # pkgs.vlc.override { chromecastSupport = true; }
         config.home-manager.users.root.services.wayvnc.settings.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
@@ -1926,7 +1933,7 @@ in
     bash = {
       vteIntegration = true;
 
-      blesh.enable = false; # FIXME: ble.sh Prevents Cursor from Rendering
+      blesh.enable = true; # FIXME: ble.sh Prevents Cursor from Rendering
 
       completion = {
         enable = true;
@@ -2124,6 +2131,10 @@ in
           email = "bitscoper@tutanota.com";
         };
       };
+    };
+
+    nm-applet = {
+      enable = false;
     };
 
     nix-index = {
@@ -2399,6 +2410,7 @@ in
         act
         actionlint
         addlicense
+        aeskeyfind
         aircrack-ng
         alac
         alsa-plugins
@@ -2417,12 +2429,10 @@ in
         ascii
         ascii-draw
         ascii-image-converter
-        asciicam
         asciinema
         asciinema-agg
         asciiquarium-transparent
         asnmap
-        astroterm
         atac
         audacity
         aurea
@@ -2449,6 +2459,7 @@ in
         butt
         bytecode-viewer
         calligraphy
+        cavasik
         cbonsai
         cdrkit
         celestia
@@ -2456,6 +2467,7 @@ in
         certbot-full
         certdump
         cicero-tui
+        citations
         clang-analyzer
         clang-tools
         clang_22
@@ -2488,7 +2500,7 @@ in
         d-spy
         daemon
         darktable
-        dbgate
+        dbeaver-bin # Disabling Theming Enables Using GTK Theme
         dconf-editor
         dconf2nix
         ddcui
@@ -2548,7 +2560,6 @@ in
         font-manager
         fontfor
         fontforge-gtk
-        fontpreview
         fork-cleaner
         freac
         freecad
@@ -2569,13 +2580,14 @@ in
         git-repo
         github-changelog-generator
         gitlogue
-        gittype
         glib
         globe-cli
         gnome-characters
         gnome-firmware
         gnome-graphs
+        gnome-multi-writer
         gnome-nettool
+        gnome-podcasts
         gnss-share
         gnugrep
         gnumake
@@ -2592,8 +2604,8 @@ in
         graphviz
         greaseweazle
         groovy
-        gsimplecal
         gsm
+        gsmartcontrol
         gthumb
         gtk-frdp
         gtk-vnc
@@ -2617,7 +2629,6 @@ in
         hyprland-protocols
         hyprland-qt-support
         hyprland-qtutils
-        hyprland-workspaces-tui
         hyprmagnifier
         hyprpicker
         hyprshutdown
@@ -2630,6 +2641,7 @@ in
         iftop
         ifuse
         imhex
+        impression
         indent
         inetutils
         inkcut
@@ -2644,6 +2656,7 @@ in
         jmol
         jstest-gtk
         jxrlib
+        karlender
         kdePackages.kmahjongg
         kernel-hardening-checker
         kernelshark
@@ -2657,7 +2670,6 @@ in
         kubescape
         kubeshark
         lazyjournal
-        lazyssh
         libaom
         libarchive
         libde265
@@ -2672,7 +2684,6 @@ in
         libopus
         libqalculate # qalc
         libsecret
-        libsixel
         libultrahdr
         libva-utils
         libvpx
@@ -2702,7 +2713,6 @@ in
         md-tui
         mdns-scanner
         meld
-        meow
         mermaid-cli
         mesa-demos
         meshlab
@@ -2710,7 +2720,6 @@ in
         mfcuk
         mfoc
         minikube
-        mmtui
         modem-manager-gui
         monkeys-audio
         mousam
@@ -2725,6 +2734,7 @@ in
         nilfs-utils
         ninja
         nix-diff
+        nix-health
         nix-info
         nix-query-tree-viewer
         nixmate
@@ -2751,6 +2761,7 @@ in
         orbvis
         otree
         overskride
+        pana
         paper-clip
         parallel-full
         parted
@@ -2762,7 +2773,6 @@ in
         pev
         pg_top
         pgbadger
-        pgmodeler
         pgread
         picard
         picard-tools
@@ -2801,6 +2811,7 @@ in
         rclone-browser
         recoll
         regex-tui
+        resources
         rp-pppoe
         rpi-imager
         rpmextract
@@ -2814,6 +2825,7 @@ in
         sbom2dot
         sbomnix
         schroedinger
+        scorecard
         screen
         sdrangel
         seer # seergdb
@@ -2837,7 +2849,6 @@ in
         spectre-meltdown-checker
         speedtest
         spytrap-adb
-        sqlit-tui
         srain
         sslscan
         steam-run-free
@@ -2855,14 +2866,12 @@ in
         telegraph
         termdown
         terminaltexteffects
-        termscp
         texliveFull
         texlivePackages.latexmk
         time
         tpm2-tools
         traceroute
         traitor
-        tray-tui
         tree
         treegen
         trueseeing
@@ -2875,7 +2884,6 @@ in
         uefi-firmware-parser
         ugit
         undollar
-        unetbootin
         unhide
         unhide-gui
         uni2ascii
@@ -2895,7 +2903,6 @@ in
         video2x
         virt-top
         virt-v2v
-        vlc-bittorrent
         vorbis-tools
         vulkan-caps-viewer
         vulkan-tools
@@ -2920,6 +2927,7 @@ in
         which
         whois
         whosthere
+        wike
         windowtolayer
         wl-clipboard
         worldpainter
@@ -3156,6 +3164,10 @@ in
 
         (p7zip.override {
           enableUnfree = true; # Unfree # Includes RAR
+        })
+
+        (parabolic.override {
+          yt-dlp = config.home-manager.users.root.programs.yt-dlp.package;
         })
 
         (python315FreeThreading.override {
@@ -3470,7 +3482,10 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      clean_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
+      commands = "uwsm-app -- xdg-terminal-exec -- bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash -i'";
+
+      clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
+      clean_repair_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
     };
 
     # extraInit = '''';
@@ -4176,7 +4191,7 @@ in
 
       enableRounded = true;
     };
-  };
+  }; # From catppuccinThemeFlake
 
   home-manager = {
     useGlobalPkgs = true;
@@ -4185,6 +4200,7 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
+      ironbarFlake.homeManagerModules.default
       catppuccinThemeFlake.homeModules.catppuccin
 
       {
@@ -4282,7 +4298,6 @@ in
                 (lib.generators.mkLuaInline ''
                   function()
                     hl.exec_cmd("pidof moxnotify || uwsm-app -- moxnotify")
-                    hl.exec_cmd("pidof tray-tui || uwsm-app -- xdg-terminal-exec -- tray-tui", {workspace = "special:magic"})
                     hl.exec_cmd("pidof soteria || uwsm-app -- soteria") -- Fallback
 
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
@@ -4577,9 +4592,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline ''
-                    hl.dsp.exec_cmd("uwsm-app -- xdg-terminal-exec -- bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash -i'")
-                  '')
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"commands\")") # Alias # FIXME: Not Working
                 ];
               }
               {
@@ -4638,18 +4651,6 @@ in
               }
               {
                 _args = [
-                  "SUPER + Y"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- gsimplecal\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + C"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- clock-rs\")")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + K"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc\")")
                 ];
@@ -4658,12 +4659,6 @@ in
                 _args = [
                   "SUPER + ALT + K"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + U"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec -- btop\")")
                 ];
               }
               {
@@ -4686,12 +4681,6 @@ in
               }
               {
                 _args = [
-                  "SUPER + M"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + E"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
                 ];
@@ -4700,12 +4689,6 @@ in
                 _args = [
                   "SUPER + A"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + D"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"dbgate\")")
                 ];
               }
               {
@@ -6066,6 +6049,19 @@ in
             enableBashIntegration = true;
           };
 
+          ironbar = {
+            enable = true;
+            package = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
+
+            # features = [ ];
+
+            systemd = true;
+
+            # config = { };
+
+            # style = { };
+          }; # From ironbarFlake
+
           mcp = {
             enable = true;
           };
@@ -6088,11 +6084,6 @@ in
             # config.startup_commands = [
             #   "toggle_dark_mode"
             # ];
-          };
-
-          cava = {
-            enable = true;
-            package = pkgs.cava;
           };
 
           kitty = {
@@ -6225,18 +6216,6 @@ in
 
           command-not-found.enable = config.programs.command-not-found.enable;
 
-          clock-rs = {
-            enable = true;
-            package = pkgs.clock-rs;
-
-            settings = {
-              general = {
-                blink = true;
-                bold = true;
-              };
-            };
-          };
-
           fastfetch = {
             enable = true;
             package = (
@@ -6265,11 +6244,6 @@ in
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
-          };
-
-          btop = {
-            enable = true;
-            package = pkgs.btop;
           };
 
           k9s = {
@@ -6510,21 +6484,7 @@ in
             flavor = config.catppuccin.flavor;
           };
 
-          btop = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
           k9s = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-
-            transparent = true;
-          };
-
-          cava = {
             enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
@@ -6676,7 +6636,7 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           };
-        };
+        }; # From catppuccinThemeFlake
 
         manual = {
           manpages.enable = true;
@@ -6690,7 +6650,7 @@ in
     users.bitscoper = { };
 
     verbose = true;
-  };
+  }; # From homeManagerFlake
 }
 
 # FIXME: 05ac-033e-Gamepad > Rumble
