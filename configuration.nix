@@ -500,6 +500,10 @@ in
       }) # Fixes Build Failure of Lutris
 
       (final: prev: {
+        seabird = stableNixPackages.seabird;
+      }) # Fixed Building Forever
+
+      (final: prev: {
         vte = stableNixPackages.vte;
       }) # Fixes Build Failure
 
@@ -2046,21 +2050,6 @@ in
       usbmon.enable = true;
     };
 
-    zoxide = {
-      enable = true;
-      package = (
-        pkgs.zoxide.override {
-          withFzf = false;
-        }
-      );
-
-      enableBashIntegration = true;
-
-      flags = [
-        "--cmd cd"
-      ];
-    };
-
     gnupg = {
       package = (
         pkgs.gnupg1.override {
@@ -2397,9 +2386,8 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
-        # metadata # FIXME: Build Failure
+        # metadata # FIXME: Build Failurek
         # reiser4progs # Marked as Broken
-        # seabird # FIXME: Builds Forever
         # xfstests # FIXME: Build Failure
         aalib
         aapt
@@ -2746,6 +2734,7 @@ in
         numatop
         nurl
         nvme-cli
+        nwg-bar
         nwg-drawer
         obexftp
         oha
@@ -2828,6 +2817,7 @@ in
         scorecard
         screen
         sdrangel
+        seabird
         seer # seergdb
         semver-tool
         serial-studio
@@ -2915,6 +2905,8 @@ in
         wayback_machine_downloader
         waycheck
         waydroid-helper
+        wayland-protocols
+        wayland-scanner
         wayland-utils
         waylevel
         wayscriber
@@ -3343,6 +3335,12 @@ in
         (gstreamer.override {
           enableDocumentation = true;
         })
+      ])
+
+      ++ (with kdePackages; [
+        kcachegrind
+        kjournald # kjournaldbrowser
+        kmahjongg
       ])
 
       ++ (with linphonePackages; [
@@ -4310,13 +4308,7 @@ in
               {
                 _args = [
                   "SUPER + L"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"loginctl lock-session\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + CTRL + L"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- wleave --service=false --show-keybinds=true --no-version-info=true\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
                 ];
               }
               {
@@ -4586,13 +4578,13 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term kitty -fm nemo\")") # TODO: Use uwsm-app
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term kitty -fm nemo\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"commands\")") # Alias # FIXME: Not Working
+                  (lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Made Interactive to Use Alias
                 ];
               }
               {
@@ -5027,6 +5019,79 @@ in
           configFile = {
             "mimeapps.list".force = true;
 
+            "nwg-bar/bar.json" = {
+              enable = true;
+
+              source = pkgs.writeText "nwg-bar.json" ''
+                [
+                  {
+                    "label": "_Lock",
+                    "exec": "loginctl lock-session",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-lock-screen.svg"
+                  },
+                  {
+                    "label": "_Exit",
+                    "exec": "uwsm stop",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-log-out.svg"
+                  },
+                  {
+                    "label": "_Shutdown",
+                    "exec": "systemctl -i poweroff",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-shutdown.svg"
+                  },
+                  {
+                    "label": "_Reboot",
+                    "exec": "systemctl reboot",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-reboot.svg"
+                  }
+                ]''; # FIXME: hyprshutdown Does Not Work
+
+              target = "nwg-bar/bar.json";
+              executable = null;
+            };
+
+            "nwg-bar/style.css" = {
+              enable = true;
+
+              source = pkgs.writeText "nwg-bar.css" ''
+                #bar {
+                  margin: ${toString (design_factor * 2)}px;
+                  font-size: ${toString design_factor}px;
+                  font-family: ${fontPreferences.name.sans_serif};
+                }
+
+                button,
+                image {
+                  box-shadow: none;
+                  border-style: none;
+                  background: none;
+                  color: rgb(205, 214, 244);
+                }
+
+                button {
+                  margin: ${toString (design_factor / 4)}px;
+                  padding-top: ${toString (design_factor / 2)}px;
+                }
+
+                button:hover {
+                  background-color: rgb(137, 180, 250);
+                }
+
+                button:focus {
+                  background-color: rgb(137, 180, 250);
+                }
+
+                grid {
+                  box-shadow: 0 0 ${toString (design_factor * 3)}px rgb(137, 180, 250);
+                  border-radius: ${toString (design_factor / 2)}px;
+                  background-color: rgba(0, 0, 0, 0.75);
+                  padding: ${toString (design_factor / 2)}px;
+                }'';
+
+              target = "nwg-bar/style.css";
+              executable = null;
+            };
+
             "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
               enable = true;
 
@@ -5303,11 +5368,6 @@ in
             };
           };
 
-          wleave = {
-            enable = true;
-            package = pkgs.wleave;
-          };
-
           dircolors = {
             enable = true;
             package = (
@@ -5388,7 +5448,6 @@ in
                 yaml-language-server
               ]
               ++ [
-                config.home-manager.users.root.programs.opencode.package
                 config.home-manager.users.root.programs.sioyek.package
               ];
 
@@ -5446,7 +5505,6 @@ in
               "markdownlint"
               "mermaid"
               "nix"
-              "opencode"
               "pbxproj"
               "php"
               "php-snippets"
@@ -6066,17 +6124,6 @@ in
             enable = true;
           };
 
-          opencode = {
-            enable = true;
-            package = pkgs.opencode;
-
-            enableMcpIntegration = true;
-
-            web = {
-              enable = false;
-            };
-          };
-
           sioyek = {
             enable = true;
             package = pkgs.sioyek;
@@ -6244,11 +6291,6 @@ in
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
-          };
-
-          k9s = {
-            enable = true;
-            package = pkgs.k9s;
           };
 
           kubecolor = {
@@ -6484,21 +6526,7 @@ in
             flavor = config.catppuccin.flavor;
           };
 
-          k9s = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-
-            transparent = true;
-          };
-
           kitty = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          opencode = {
             enable = true;
 
             flavor = config.catppuccin.flavor;
@@ -6508,15 +6536,6 @@ in
             enable = true;
 
             flavor = config.catppuccin.flavor;
-          };
-
-          wleave = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            iconStyle = "wleave";
           };
 
           brave = {
