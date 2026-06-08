@@ -21,6 +21,7 @@ let
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
   ironbarFlake = builtins.getFlake "github:JakeStanger/ironbar/master";
+  cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
   freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
@@ -437,9 +438,9 @@ in
     };
 
     overlays = [
-      (final: prev: {
+      (final: previous: {
         catppuccin-grub =
-          (prev.catppuccin-grub.override {
+          (previous.catppuccin-grub.override {
             flavor = config.catppuccin.flavor;
           }).overrideAttrs
             (old: {
@@ -463,9 +464,9 @@ in
             });
       })
 
-      (final: prev: {
+      (final: previous: {
         catppuccin-plymouth =
-          (prev.catppuccin-plymouth.override {
+          (previous.catppuccin-plymouth.override {
             variant = config.catppuccin.flavor;
           }).overrideAttrs
             (old: {
@@ -478,7 +479,15 @@ in
             });
       })
 
-      (final: prev: {
+      (final: previous: {
+        cromite = cromiteFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      }) # Addition
+
+      (final: previous: {
+        freesm-launcher = freesmLauncherFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      }) # Addition
+
+      (final: previous: {
         hyprland = (
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
             debug = false;
@@ -489,25 +498,25 @@ in
         );
       })
 
-      # (final: prev: {
-      #   ironbar = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
-      # })
+      (final: previous: {
+        ironbar = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
+      }) # Addition
 
-      (final: prev: {
-        openldap = prev.openldap.overrideAttrs {
-          doCheck = !prev.stdenv.hostPlatform.isi686;
+      (final: previous: {
+        openldap = previous.openldap.overrideAttrs {
+          doCheck = !previous.stdenv.hostPlatform.isi686;
         };
       }) # Fixes Build Failure of Lutris
 
-      (final: prev: {
+      (final: previous: {
         seabird = stableNixPackages.seabird;
       }) # Fixed Building Forever
 
-      (final: prev: {
+      (final: previous: {
         vte = stableNixPackages.vte;
       }) # Fixes Build Failure
 
-      (final: prev: {
+      (final: previous: {
         xdg-desktop-portal-hyprland =
           hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
             {
@@ -2472,6 +2481,7 @@ in
         constrict
         cramfsprogs
         crlfuzz
+        cromite # From config.nixpkgs.overlays
         cron
         crosspipe
         cryptsetup
@@ -2552,7 +2562,7 @@ in
         freac
         freecad
         freerouting
-        freesmLauncherFlake.packages.${pkgs.stdenv.hostPlatform.system}.default
+        freesm-launcher # From config.nixpkgs.overlays
         fritzing
         fstl
         fwupd-efi
@@ -2711,7 +2721,6 @@ in
         modem-manager-gui
         monkeys-audio
         mousam
-        moxnotify
         mslicer
         mt-st
         mtools
@@ -2774,6 +2783,7 @@ in
         podman-compose
         pods
         poop # POOP = Performance Optimizer Observation Platform
+        powershell
         printrun
         procps
         profile-cleaner
@@ -3464,7 +3474,7 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      CHROME_EXECUTABLE = "${config.home-manager.users.root.programs.chromium.package}/bin/brave";
+      CHROME_EXECUTABLE = "cromite";
     };
 
     sessionVariables = {
@@ -4032,8 +4042,8 @@ in
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
-        "x-scheme-handler/http" = "com.brave.Browser.desktop";
-        "x-scheme-handler/https" = "com.brave.Browser.desktop";
+        "x-scheme-handler/http" = "cromite.desktop";
+        "x-scheme-handler/https" = "cromite.desktop";
 
         "x-scheme-handler/mailto" = "tutanota-desktop.desktop";
       };
@@ -4295,7 +4305,6 @@ in
                 "hyprland.start"
                 (lib.generators.mkLuaInline ''
                   function()
-                    hl.exec_cmd("pidof moxnotify || uwsm-app -- moxnotify")
                     hl.exec_cmd("pidof soteria || uwsm-app -- soteria") -- Fallback
 
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
@@ -4619,6 +4628,12 @@ in
               }
               {
                 _args = [
+                  "SUPER + N"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"swaync-client -t\")")
+                ];
+              }
+              {
+                _args = [
                   "SUPER + CTRL + D"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-displays\")")
                 ];
@@ -4656,13 +4671,13 @@ in
               {
                 _args = [
                   "SUPER + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave --incognito\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite --incognito\")")
                 ];
               }
               {
@@ -5054,6 +5069,11 @@ in
               enable = true;
 
               source = pkgs.writeText "nwg-bar.css" ''
+                window {
+                  border: 1px solid rgb(88, 91, 112);
+                  border-radius: ${toString (design_factor / 2)}px;
+                }
+
                 #bar {
                   margin: ${toString (design_factor * 2)}px;
                   font-size: ${toString design_factor}px;
@@ -5074,19 +5094,24 @@ in
                 }
 
                 button:hover {
-                  background-color: rgb(137, 180, 250);
+                  background-color: rgb(49, 50, 68);
                 }
 
                 button:focus {
-                  background-color: rgb(137, 180, 250);
+                  background-color: rgb(49, 50, 68);
                 }
 
                 grid {
-                  box-shadow: 0 0 ${toString (design_factor * 3)}px rgb(137, 180, 250);
+                  box-shadow: 0 0 ${toString (design_factor * 3)}px rgb(49, 50, 68);
                   border-radius: ${toString (design_factor / 2)}px;
-                  background-color: rgba(0, 0, 0, 0.75);
+                  background-color: rgb(17, 17, 27);
                   padding: ${toString (design_factor / 2)}px;
                 }'';
+              # Catppuccin Mocha
+              # "Surface 2" rgb(88, 91, 112)
+              # "Text" rgb(205, 214, 244)
+              # "Surface 0" rgb(49, 50, 68)
+              # "Crust" rgb(17, 17, 27)
 
               target = "nwg-bar/style.css";
               executable = null;
@@ -5100,6 +5125,19 @@ in
               };
 
               target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
+              executable = null;
+            }; # FIXME: Looks Weird
+          };
+
+          dataFile = {
+            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
+              enable = true;
+
+              source = builtins.fetchurl {
+                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
+              };
+
+              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
               executable = null;
             };
           };
@@ -5295,6 +5333,11 @@ in
               transition-time = 250;
               timeout = 2; # 2 Seconds
             };
+          };
+
+          swaync = {
+            enable = true;
+            package = pkgs.swaynotificationcenter;
           };
 
           hypridle = {
@@ -6109,7 +6152,7 @@ in
 
           ironbar = {
             enable = true;
-            package = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
+            package = pkgs.ironbar;
 
             # features = [ ];
 
@@ -6427,25 +6470,6 @@ in
             );
           };
 
-          chromium = {
-            enable = true;
-            package = (
-              pkgs.brave.override {
-                enableVideoAcceleration = true;
-                enableVulkan = false; # Enabling Breaks Va-API
-                libvaSupport = true;
-                pulseSupport = true;
-                vulkanSupport = false; # Enabling Breaks Va-API
-                commandLineArgs = "";
-              }
-            );
-
-            nativeMessagingHosts = [
-              config.home-manager.users.root.programs.keepassxc.package
-            ];
-          };
-          brave.nativeMessagingHosts = config.home-manager.users.root.programs.chromium.nativeMessagingHosts;
-
           obs-studio = {
             enable = config.programs.obs-studio.enable;
             package = config.programs.obs-studio.package;
@@ -6538,12 +6562,6 @@ in
             flavor = config.catppuccin.flavor;
           };
 
-          brave = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
           delta = {
             enable = config.catppuccin.enable;
 
@@ -6563,6 +6581,21 @@ in
             };
 
             italics = false;
+          };
+
+          swaync = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
+
+            font = fontPreferences.name.sans_serif;
+            fontSize = toString fontPreferences.size;
+          };
+
+          starship = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
           };
 
           fcitx5 = {
