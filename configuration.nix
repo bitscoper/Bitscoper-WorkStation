@@ -1946,12 +1946,12 @@ in
     bash = {
       vteIntegration = true;
 
-      blesh.enable = true; # FIXME: ble.sh Prevents Cursor from Rendering
-
       completion = {
         enable = true;
         package = pkgs.bash-completion;
       };
+
+      blesh.enable = true; # Prevents Cursor from Rendering
 
       enableLsColors = true;
 
@@ -1960,11 +1960,51 @@ in
       # shellAliases = { };
 
       # loginShellInit = '''';
+
       # shellInit = '''';
 
       interactiveShellInit = ''
         PROMPT_COMMAND="history -a"
       '';
+
+      # promptInit = '''';
+
+      # logout = '''';
+    };
+
+    fish = {
+      enable = true;
+      package = (
+        pkgs.fish.override {
+          useOperatingSystemEtc = true;
+          usePython = true;
+        }
+      );
+
+      vendor = {
+        config.enable = true;
+        functions.enable = true;
+        completions.enable = true;
+      };
+
+      generateCompletions = true;
+      # extraCompletionPackages = with pkgs; [ ];
+
+      useBabelfish = false; # Errors # Disabling Uses foreign-env
+
+      # shellAbbrs = { };
+
+      # shellAliases = { };
+
+      # loginShellInit = '''';
+
+      # shellInit = '''';
+
+      interactiveShellInit = ''
+        set -g fish_greeting
+      '';
+
+      # promptInit = '''';
     };
 
     starship = {
@@ -2031,10 +2071,15 @@ in
       enable = true;
       package = pkgs.direnv;
 
-      nix-direnv.enable = true;
+      nix-direnv = {
+        enable = true;
+        package = pkgs.nix-direnv;
+      };
+
       loadInNixShell = true;
 
       enableBashIntegration = true;
+      enableFishIntegration = true;
 
       silent = false;
     };
@@ -2139,6 +2184,7 @@ in
       package = pkgs.nix-index;
 
       enableBashIntegration = true;
+      enableFishIntegration = true;
     };
 
     nh = {
@@ -2206,6 +2252,14 @@ in
 
       withUWSM = true;
       xwayland.enable = true;
+    };
+
+    television = {
+      enable = true;
+      package = pkgs.television;
+
+      enableBashIntegration = true;
+      enableFishIntegration = true;
     };
 
     gamemode = {
@@ -2381,7 +2435,8 @@ in
 
   environment = {
     shells = [
-      config.users.defaultUserShell
+      config.home-manager.users.root.programs.bash.package
+      config.programs.fish.package
     ];
 
     enableAllTerminfo = true;
@@ -2663,11 +2718,11 @@ in
         kind
         kmod
         kotlin
+        krapslog
         kubectl
         kubernetes-controller-tools
         kubescape
         kubeshark
-        lazyjournal
         libaom
         libarchive
         libde265
@@ -2798,7 +2853,6 @@ in
         qalculate-gtk
         qemu-user
         qemu-utils
-        qjournalctl
         qr-backup
         qsstv
         qtrvsim
@@ -2845,6 +2899,7 @@ in
         songrec
         sound-theme-freedesktop
         soundconverter
+        sourcegit
         sox
         spectre-meltdown-checker
         speedtest
@@ -3139,10 +3194,10 @@ in
           withI18n = true;
           withNgspice = true;
           withScripting = true;
-          addons = with pkgs.kicadAddons; [
-            kikit
-            kikit-library
-          ];
+          # addons = with pkgs.kicadAddons; [
+          #   kikit
+          #   kikit-library
+          # ]; # FIXME: Build Failure
         })
 
         (nemo-with-extensions.override {
@@ -3387,6 +3442,7 @@ in
         tree-sitter-dockerfile
         tree-sitter-dot
         tree-sitter-dtd
+        tree-sitter-fish
         tree-sitter-git-config
         tree-sitter-git-rebase
         tree-sitter-gitattributes
@@ -4088,11 +4144,7 @@ in
     enforceIdUniqueness = true;
     mutableUsers = true;
 
-    defaultUserShell = (
-      pkgs.bash.override {
-        interactive = true;
-      }
-    );
+    defaultUserShell = config.programs.fish.package;
 
     motd = "Welcome to ${config.networking.fqdn}";
 
@@ -4191,6 +4243,12 @@ in
 
     gtk.icon.enable = false;
 
+    fish = {
+      enable = true;
+
+      flavor = config.catppuccin.flavor;
+    };
+
     fcitx5 = {
       enable = config.catppuccin.enable;
 
@@ -4220,6 +4278,7 @@ in
           shell = {
             enableShellIntegration = true;
             enableBashIntegration = true;
+            enableFishIntegration = true;
           };
 
           preferXdgDirectories = true;
@@ -5140,7 +5199,27 @@ in
               target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
               executable = null;
             };
+
+            "SourceGit/Catppuccin_${lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)}${
+              builtins.substring 1 255 config.catppuccin.flavor
+            }.json" =
+              {
+                enable = true;
+
+                source = builtins.fetchurl {
+                  url = "https://raw.githubusercontent.com/sourcegit-scm/sourcegit-theme/refs/heads/main/themes/Catpuccin_Mocha.json";
+                };
+
+                target = "SourceGit/Catppuccin_${
+                  lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
+                }${builtins.substring 1 255 config.catppuccin.flavor}.json";
+                executable = null;
+              }; # Non-Standard Path
           };
+
+          # stateFile = { };
+
+          # cacheFile = { };
         };
 
         gtk = {
@@ -5411,6 +5490,21 @@ in
             };
           };
 
+          direnv = {
+            enable = config.programs.direnv.enable;
+            package = config.programs.direnv.package;
+
+            nix-direnv = {
+              enable = config.programs.direnv.nix-direnv.enable;
+              package = config.programs.direnv.nix-direnv.package;
+            };
+
+            enableBashIntegration = config.programs.direnv.enableBashIntegration;
+            enableFishIntegration = config.programs.direnv.enableFishIntegration;
+
+            silent = config.programs.direnv.silent;
+          };
+
           dircolors = {
             enable = true;
             package = (
@@ -5421,6 +5515,7 @@ in
             );
 
             enableBashIntegration = true;
+            enableFishIntegration = true;
           };
 
           bat = {
@@ -5434,16 +5529,10 @@ in
             package = pkgs.vivid;
 
             enableBashIntegration = true;
+            enableFishIntegration = true;
 
             colorMode = "24-bit";
             activeTheme = "catppuccin-${config.catppuccin.flavor}";
-          };
-
-          lazygit = {
-            enable = true;
-            package = pkgs.lazygit;
-
-            enableBashIntegration = true;
           };
 
           onlyoffice = {
@@ -5519,6 +5608,7 @@ in
               "editorconfig"
               "emoji-completions"
               "env"
+              "fish"
               "flutter-snippets"
               "git-firefly"
               "github-actions"
@@ -6144,10 +6234,11 @@ in
           };
 
           television = {
-            enable = true;
-            package = pkgs.television;
+            enable = config.programs.television.enable;
+            package = config.programs.television.package;
 
-            enableBashIntegration = true;
+            enableBashIntegration = config.programs.television.enableBashIntegration;
+            enableFishIntegration = config.programs.television.enableFishIntegration;
           };
 
           ironbar = {
@@ -6182,6 +6273,7 @@ in
 
             shellIntegration = {
               enableBashIntegration = true;
+              enableFishIntegration = true;
             };
 
             enableGitIntegration = true;
@@ -6265,11 +6357,100 @@ in
 
           bash = {
             enable = true;
+            package = pkgs.bashInteractive;
 
             enableVteIntegration = config.programs.bash.vteIntegration;
             enableCompletion = config.programs.bash.completion.enable;
 
+            # sessionVariables = { };
+
             shellAliases = config.programs.bash.shellAliases;
+
+            # profileExtra = '''';
+
+            # initExtra = '''';
+
+            # logoutExtra = '''';
+          };
+
+          fish = {
+            enable = config.programs.fish.enable;
+            package = config.programs.fish.package;
+
+            plugins = with pkgs.fishPlugins; [
+              {
+                name = "autopair";
+                src = autopair.src;
+              }
+              {
+                name = "bang-bang";
+                src = bang-bang.src;
+              }
+              {
+                name = "colored-man-pages";
+                src = colored-man-pages.src;
+              }
+              {
+                name = "done";
+                src = done.src;
+              }
+              {
+                name = "fish-bd";
+                src = fish-bd.src;
+              }
+              {
+                name = "fish-you-should-use";
+                src = fish-you-should-use.src;
+              }
+              {
+                name = "foreign-env";
+                src = foreign-env.src;
+              }
+              {
+                name = "humantime-fish";
+                src = humantime-fish.src;
+              }
+              {
+                name = "puffer";
+                src = puffer.src;
+              }
+              {
+                name = "spark";
+                src = spark.src;
+              }
+            ];
+
+            generateCompletions = config.programs.fish.generateCompletions;
+
+            shellAbbrs = config.programs.fish.shellAbbrs;
+            shellAliases = config.programs.fish.shellAliases;
+            preferAbbrs = false;
+
+            loginShellInit = config.programs.fish.loginShellInit;
+            shellInit = config.programs.fish.shellInit;
+            interactiveShellInit = config.programs.fish.interactiveShellInit;
+
+            # shellInitLast = '''';
+          };
+
+          tirith = {
+            enable = true;
+            package = pkgs.tirith;
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+          };
+
+          nix-your-shell = {
+            enable = true;
+            package = pkgs.nix-your-shell;
+
+            enableFishIntegration = true;
+
+            nix-output-monitor = {
+              enable = true;
+              package = pkgs.nix-output-monitor;
+            };
           };
 
           starship = {
@@ -6279,6 +6460,7 @@ in
             # extraPackages = with pkgs; [ ];
 
             enableBashIntegration = true;
+            enableFishIntegration = true;
 
             enableInteractive = config.programs.starship.interactiveOnly;
 
@@ -6508,6 +6690,8 @@ in
             package = pkgs.keychain;
 
             enableBashIntegration = true;
+            enableFishIntegration = true;
+
             enableXsessionIntegration = false;
           };
 
@@ -6516,6 +6700,7 @@ in
             package = config.programs.nix-index.package;
 
             enableBashIntegration = config.programs.nix-index.enableBashIntegration;
+            enableFishIntegration = config.programs.nix-index.enableFishIntegration;
           };
 
           man = {
@@ -6608,6 +6793,12 @@ in
             enableRounded = true;
           };
 
+          fish = {
+            enable = config.catppuccin.fish.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
           television = {
             enable = config.catppuccin.enable;
 
@@ -6657,13 +6848,6 @@ in
             enable = config.catppuccin.enable;
             assertStyle = true;
             apply = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          lazygit = {
-            enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
