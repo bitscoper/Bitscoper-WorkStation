@@ -207,7 +207,7 @@ in
         "net.ipv4.tcp_ecn" = 1;
         "net.ipv4.tcp_mtu_probing" = 1;
         "net.ipv4.tcp_syncookies" = 1;
-        "net.ipv4.tcp_tw_reuse" = 2; # Loopback Only
+        "net.ipv4.tcp_tw_reuse" = 2; # 2 = Loopback Only
         "net.ipv4.tcp_window_scaling" = 1;
       };
     };
@@ -429,12 +429,13 @@ in
   nixpkgs = {
     config = {
       allowUnfree = true;
-      android_sdk.accept_license = true;
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
         "ventoy-gtk3-1.1.12"
       ];
+
+      android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
     };
 
     overlays = [
@@ -510,7 +511,7 @@ in
 
       (final: previous: {
         seabird = stableNixPackages.seabird;
-      }) # Fixed Building Forever
+      }) # Fixes Building Forever
 
       (final: previous: {
         vte = stableNixPackages.vte;
@@ -580,7 +581,7 @@ in
       enableHardening = true;
     };
 
-    useDHCP = false; # Managed by NetworkManager
+    useDHCP = false; # Managed by NetworkManager Instead
     dhcpcd.enable = false;
 
     modemmanager = {
@@ -840,7 +841,7 @@ in
   };
 
   hardware = {
-    enableAllFirmware = true; # Unfree
+    enableAllFirmware = config.nixpkgs.config.allowUnfree;
     enableRedistributableFirmware = true;
     firmware = with pkgs; [
       alsa-firmware
@@ -942,7 +943,7 @@ in
         Policy = {
           AutoEnable = true;
 
-          ResumeDelay = 2; # Seconds
+          ResumeDelay = 2; # 2 Seconds
           ReconnectAttempts = 7;
           ReconnectIntervals = "1, 2, 4, 8, 16, 32, 64";
         };
@@ -977,9 +978,7 @@ in
           withSystemd = true;
         }
       );
-      # extraBackends = with pkgs; [
-
-      # ];
+      # extraBackends = with pkgs; [ ];
       snapshot = false;
 
       openFirewall = true;
@@ -1060,9 +1059,7 @@ in
     podman = {
       enable = true;
       package = pkgs.podman;
-      # extraPackages = with pkgs; [
-
-      # ];
+      # extraPackages = with pkgs; [ ];
       extraRuntimes = with pkgs; [
         runc
       ];
@@ -1256,7 +1253,7 @@ in
     };
 
     smartd = {
-      enable = false; # FIXME: Fails to Start
+      enable = true;
 
       autodetect = true;
 
@@ -1819,7 +1816,7 @@ in
 
       domains = "csl:${config.networking.fqdn}";
       selector = "default";
-    }; # Marked as Insecure
+    };
 
     dovecot2 = {
       enable = true;
@@ -1951,11 +1948,11 @@ in
         package = pkgs.bash-completion;
       };
 
-      blesh.enable = true; # Prevents Cursor from Rendering
+      blesh.enable = true; # FIXME: Enabling Prevents Cursor from Rendering
 
       enableLsColors = true;
 
-      undistractMe.enable = false; # Behaves Strangely
+      undistractMe.enable = false; # FIXME: Disabled due to Misbehavior
 
       # shellAliases = { };
 
@@ -1990,7 +1987,7 @@ in
       generateCompletions = true;
       # extraCompletionPackages = with pkgs; [ ];
 
-      useBabelfish = false; # Errors # Disabling Uses foreign-env
+      useBabelfish = false; # Errors if Enabled # Disabling Uses foreign-env
 
       # shellAbbrs = { };
 
@@ -2014,7 +2011,6 @@ in
       interactiveOnly = true;
 
       presets = [
-        # "catppuccin-powerline"
         "nerd-font-symbols"
       ];
 
@@ -2022,8 +2018,6 @@ in
         follow_symlinks = true;
 
         add_newline = true;
-
-        # palette = "catppuccin_${config.catppuccin.flavor}";
       };
     };
 
@@ -2394,15 +2388,19 @@ in
 
   fonts = {
     enableDefaultPackages = false;
-    packages = with pkgs; [
-      corefonts # Unfree
-      nerd-fonts.noto
-      noto-fonts
-      noto-fonts-cjk-sans
-      noto-fonts-cjk-serif
-      noto-fonts-color-emoji
-      noto-fonts-lgc-plus
-    ];
+    packages =
+      with pkgs;
+      [
+        nerd-fonts.noto
+        noto-fonts
+        noto-fonts-cjk-sans
+        noto-fonts-cjk-serif
+        noto-fonts-color-emoji
+        noto-fonts-lgc-plus
+      ]
+      ++ lib.optionals config.nixpkgs.config.allowUnfree [
+        corefonts
+      ];
 
     fontconfig = {
       enable = true;
@@ -2450,12 +2448,10 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
-        # metadata # FIXME: Build Failurek
         # reiser4progs # Marked as Broken
         # xfstests # FIXME: Build Failure
         aalib
         aapt
-        above
         acl
         acpica-tools
         acpidump-all
@@ -2470,12 +2466,11 @@ in
         alsa-utils
         alsa-utils-nhlt
         android-backup-extractor
-        androidComposition.androidsdk # Custom Composition # Unfree
         ansilove
-        anydesk # Unfree
         apfsprogs
         apkeep
         apkleaks
+        app-icon-preview
         appimageupdate-qt
         arduino-cli
         ascii
@@ -2491,7 +2486,7 @@ in
         autopsy
         avbroot
         avrdude
-        banner
+        bada-bib
         baobab
         bcachefs-tools
         bcg729
@@ -2511,18 +2506,21 @@ in
         butt
         bytecode-viewer
         calligraphy
+        cartero
         cavasik
         cbonsai
         cdrkit
+        celeste
         celestia
         celt
+        censor
         certbot-full
         certdump
         cicero-tui
-        citations
         clang-analyzer
         clang-tools
         clang_22
+        clapgrep
         clapper
         clapper-enhancers
         clinfo
@@ -2533,7 +2531,11 @@ in
         codevis
         colorgrind
         compose2nix
+        concessio
         constrict
+        contrast
+        coulomb
+        cozy
         cramfsprogs
         crlfuzz
         cromite # From config.nixpkgs.overlays
@@ -2553,7 +2555,7 @@ in
         d-spy
         daemon
         darktable
-        dbeaver-bin # Disabling Theming Enables Using GTK Theme
+        dbeaver-bin # Disabling Theming Allows to Use GTK Theme
         dconf-editor
         dconf2nix
         ddcui
@@ -2561,13 +2563,16 @@ in
         ddrescue
         ddrescueview
         debase
+        delineate
         dialect
         diffoci
         dig
+        dippi
         dive
         dmg2img
         dmidecode
         dnsrecon
+        door-knocker
         dosfstools
         dot2tex
         dtui
@@ -2578,7 +2583,7 @@ in
         efibootmgr
         efivar
         egypt
-        element
+        elastic
         elf-dissector
         emblem
         esptool
@@ -2599,6 +2604,7 @@ in
         ffmpegthumbnailer
         ffpb
         fh
+        field-monitor
         file
         file-roller
         fileinfo
@@ -2610,6 +2616,7 @@ in
         flawz
         flutter
         folder-color-switcher
+        foliate
         font-manager
         fontfor
         fontforge-gtk
@@ -2622,9 +2629,11 @@ in
         fstl
         fwupd-efi
         gama-tui
+        gamepad-mirror
         gawk
         gcc
         gdb
+        gearlever
         genealogos-cli
         gerbolyze
         gimp3-with-plugins
@@ -2637,10 +2646,12 @@ in
         globe-cli
         gnome-characters
         gnome-firmware
+        gnome-frog
         gnome-graphs
         gnome-multi-writer
         gnome-nettool
         gnome-podcasts
+        gnome-tecla
         gnss-share
         gnugrep
         gnumake
@@ -2666,6 +2677,7 @@ in
         gucharmap
         guestfs-tools
         gzip
+        halftone
         hashcat
         hashcat-utils
         hashes
@@ -2691,6 +2703,7 @@ in
         hyprwire
         i2c-tools
         iaito
+        iconic
         iftop
         ifuse
         imhex
@@ -2709,6 +2722,7 @@ in
         jmol
         jstest-gtk
         jxrlib
+        karere
         karlender
         kdePackages.kmahjongg
         kernel-hardening-checker
@@ -2723,6 +2737,9 @@ in
         kubernetes-controller-tools
         kubescape
         kubeshark
+        learn6502
+        lenspect
+        letterpress
         libaom
         libarchive
         libde265
@@ -2742,9 +2759,11 @@ in
         libvpx
         linux-exploit-suggester
         linuxConsoleTools
+        livecaptions
         lld_22
         llmfit
         llvm_22
+        lock
         logtop
         lorem
         lsb-release
@@ -2769,23 +2788,30 @@ in
         mermaid-cli
         mesa-demos
         meshlab
+        metadata
         metadata-cleaner
+        metronome
         mfcuk
         mfoc
+        millisecond
         minikube
         modem-manager-gui
         monkeys-audio
+        morphosis
         mousam
         mslicer
         mt-st
         mtools
         mysqltuner
         nethogs
+        netpeek
         networkmanagerapplet # Provides nm-connection-editor
+        newelle
         newsflash
         nilfs-utils
         ninja
         nix-diff
+        nix-forecast
         nix-health
         nix-info
         nix-query-tree-viewer
@@ -2793,7 +2819,9 @@ in
         nixpkgs-reviewFull
         nmap
         nmgui
+        nocturne
         ntfs3g
+        nucleus
         numactl
         numatop
         nurl
@@ -2814,6 +2842,7 @@ in
         orbvis
         otree
         overskride
+        paleta
         pana
         paper-clip
         parallel-full
@@ -2845,6 +2874,7 @@ in
         progress
         protocol
         proton-vpn
+        protonplus
         protonup-qt
         ps
         psmisc
@@ -2860,10 +2890,6 @@ in
         quick-lookup
         radare2
         raider
-        rar # Unfree
-        rclone-browser
-        recoll
-        regex-tui
         resources
         rp-pppoe
         rpi-imager
@@ -2884,10 +2910,10 @@ in
         seabird
         seer # seergdb
         semver-tool
-        serial-studio
         share-preview
         shellclear
         sherlock
+        shortwave
         simple-scan
         sipvicious
         sl
@@ -2909,16 +2935,20 @@ in
         steam-run-free
         stellarium
         stenc
+        stockpile
         streamlit
         subfinder
         subtitleeditor
         svt-av1
         switcheroo
         syft
+        symbolic-preview
         symlinks
         systemctl-tui
         szyszka
+        tauno-monitor
         telegraph
+        teleprompter
         termdown
         terminaltexteffects
         texliveFull
@@ -2934,6 +2964,7 @@ in
         trustymail
         tsukae
         ttl
+        turnon
         tutanota-desktop
         udftools
         uefi-firmware-parser
@@ -2945,7 +2976,6 @@ in
         unimatrix
         universal-android-debloater # uad-ng
         unix-privesc-check
-        unrar # Unfree
         unzip
         upnp-router-control
         upscayl
@@ -2985,6 +3015,7 @@ in
         whois
         whosthere
         wike
+        wildcard
         windowtolayer
         wl-clipboard
         worldpainter
@@ -3038,31 +3069,6 @@ in
           openUsdSupport = true;
           spaceNavSupport = true;
           waylandSupport = true;
-        })
-
-        (deadbeef-with-plugins.override {
-          deadbeef = pkgs.deadbeef.override {
-            aacSupport = true;
-            alsaSupport = true;
-            apeSupport = true;
-            artworkSupport = true;
-            cdaSupport = true;
-            ffmpegSupport = true;
-            flacSupport = true;
-            hotkeysSupport = true;
-            mp123Support = true;
-            opusSupport = true;
-            osdSupport = true;
-            overloadSupport = true;
-            pipewireSupport = true;
-            pulseSupport = true;
-            remoteSupport = true;
-            resamplerSupport = true;
-            vorbisSupport = true;
-            wavSupport = true;
-            wavpackSupport = true;
-            zipSupport = true;
-          };
         })
 
         (
@@ -3144,7 +3150,7 @@ in
             withTheora = true;
             withTwolame = true;
             withUavs3d = true;
-            withUnfree = true; # Unfree
+            withUnfree = config.nixpkgs.config.allowUnfree;
             withV4l2 = true;
             withV4l2M2m = true;
             withVaapi = true;
@@ -3174,10 +3180,6 @@ in
             doCheck = false;
           })
         )
-
-        (gimagereader.override {
-          withQt6 = false;
-        })
 
         (gparted-full.override {
           withAllTools = true;
@@ -3220,7 +3222,7 @@ in
         })
 
         (p7zip.override {
-          enableUnfree = true; # Unfree # Includes RAR
+          enableUnfree = config.nixpkgs.config.allowUnfree; # Includes RAR
         })
 
         (parabolic.override {
@@ -3244,12 +3246,6 @@ in
           guiSupport = true;
           trackerSearch = true;
           webuiSupport = true;
-        })
-
-        (remmina.override {
-          withLibsecret = true;
-          withWebkitGtk = true;
-          withVte = true;
         })
 
         (sdrpp.override {
@@ -3313,11 +3309,19 @@ in
 
         config.hardware.firmware
         config.home-manager.users.root.programs.dircolors.package
+        config.home-manager.users.root.programs.tirith.package
         config.home-manager.users.root.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
         config.services.gnome.gcr-ssh-agent.package
         config.services.phpfpm.phpPackage
+      ]
+
+      ++ lib.optionals config.nixpkgs.config.allowUnfree [
+        androidComposition.androidsdk # Custom Composition
+        anydesk
+        rar
+        unrar
       ]
 
       ++ config.boot.extraModulePackages
@@ -3517,10 +3521,6 @@ in
     };
 
     variables = {
-      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk"; # Unfree
-      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk"; # Unfree
-      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle"; # Unfree
-
       LD_LIBRARY_PATH = lib.mkForce "${
         pkgs.lib.makeLibraryPath (
           with pkgs;
@@ -3529,14 +3529,19 @@ in
           ]
         )
       }:$LD_LIBRARY_PATH";
-
-      CHROME_EXECUTABLE = "cromite";
+    }
+    // lib.optionalAttrs config.nixpkgs.config.allowUnfree {
+      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
+      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
     };
 
     sessionVariables = {
+      ADW_DISABLE_PORTAL = 1;
+
       NIXOS_OZONE_WL = 1;
 
-      ADW_DISABLE_PORTAL = 1;
+      CHROME_EXECUTABLE = "cromite";
 
       XCURSOR_THEME = config.home-manager.users.root.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.root.home.pointerCursor.size;
@@ -3553,8 +3558,11 @@ in
     };
 
     # extraInit = '''';
+
     # loginShellInit = '''';
+
     # shellInit = '''';
+
     # interactiveShellInit = '''';
 
     enableDebugInfo = false;
@@ -3799,168 +3807,168 @@ in
         "image/x-emf" = "org.gnome.gThumb.desktop";
         "image/x-wmf" = "org.gnome.gThumb.desktop";
 
-        "audio/1d-interleaved-parityfec" = "deadbeef.desktop";
-        "audio/32kadpcm" = "deadbeef.desktop";
-        "audio/3gpp" = "deadbeef.desktop";
-        "audio/3gpp2" = "deadbeef.desktop";
-        "audio/aac" = "deadbeef.desktop";
-        "audio/ac3" = "deadbeef.desktop";
-        "audio/AMR-WB" = "deadbeef.desktop";
-        "audio/amr-wb+" = "deadbeef.desktop";
-        "audio/AMR" = "deadbeef.desktop";
-        "audio/aptx" = "deadbeef.desktop";
-        "audio/asc" = "deadbeef.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "deadbeef.desktop";
-        "audio/ATRAC-X" = "deadbeef.desktop";
-        "audio/ATRAC3" = "deadbeef.desktop";
-        "audio/basic" = "deadbeef.desktop";
-        "audio/BV16" = "deadbeef.desktop";
-        "audio/BV32" = "deadbeef.desktop";
-        "audio/clearmode" = "deadbeef.desktop";
-        "audio/CN" = "deadbeef.desktop";
-        "audio/DAT12" = "deadbeef.desktop";
-        "audio/dls" = "deadbeef.desktop";
-        "audio/dsr-es201108" = "deadbeef.desktop";
-        "audio/dsr-es202050" = "deadbeef.desktop";
-        "audio/dsr-es202211" = "deadbeef.desktop";
-        "audio/dsr-es202212" = "deadbeef.desktop";
-        "audio/DV" = "deadbeef.desktop";
-        "audio/DVI4" = "deadbeef.desktop";
-        "audio/eac3" = "deadbeef.desktop";
-        "audio/encaprtp" = "deadbeef.desktop";
-        "audio/EVRC-QCP" = "deadbeef.desktop";
-        "audio/EVRC" = "deadbeef.desktop";
-        "audio/EVRC0" = "deadbeef.desktop";
-        "audio/EVRC1" = "deadbeef.desktop";
-        "audio/EVRCB" = "deadbeef.desktop";
-        "audio/EVRCB0" = "deadbeef.desktop";
-        "audio/EVRCB1" = "deadbeef.desktop";
-        "audio/EVRCNW" = "deadbeef.desktop";
-        "audio/EVRCNW0" = "deadbeef.desktop";
-        "audio/EVRCNW1" = "deadbeef.desktop";
-        "audio/EVRCWB" = "deadbeef.desktop";
-        "audio/EVRCWB0" = "deadbeef.desktop";
-        "audio/EVRCWB1" = "deadbeef.desktop";
-        "audio/EVS" = "deadbeef.desktop";
-        "audio/flac" = "deadbeef.desktop";
-        "audio/flexfec" = "deadbeef.desktop";
-        "audio/fwdred" = "deadbeef.desktop";
-        "audio/G711-0" = "deadbeef.desktop";
-        "audio/G719" = "deadbeef.desktop";
-        "audio/G722" = "deadbeef.desktop";
-        "audio/G7221" = "deadbeef.desktop";
-        "audio/G723" = "deadbeef.desktop";
-        "audio/G726-16" = "deadbeef.desktop";
-        "audio/G726-24" = "deadbeef.desktop";
-        "audio/G726-32" = "deadbeef.desktop";
-        "audio/G726-40" = "deadbeef.desktop";
-        "audio/G728" = "deadbeef.desktop";
-        "audio/G729" = "deadbeef.desktop";
-        "audio/G7291" = "deadbeef.desktop";
-        "audio/G729D" = "deadbeef.desktop";
-        "audio/G729E" = "deadbeef.desktop";
-        "audio/GSM-EFR" = "deadbeef.desktop";
-        "audio/GSM-HR-08" = "deadbeef.desktop";
-        "audio/GSM" = "deadbeef.desktop";
-        "audio/iLBC" = "deadbeef.desktop";
-        "audio/ip-mr_v2.5" = "deadbeef.desktop";
-        "audio/L16" = "deadbeef.desktop";
-        "audio/L20" = "deadbeef.desktop";
-        "audio/L24" = "deadbeef.desktop";
-        "audio/L8" = "deadbeef.desktop";
-        "audio/LPC" = "deadbeef.desktop";
-        "audio/matroska" = "deadbeef.desktop";
-        "audio/MELP" = "deadbeef.desktop";
-        "audio/MELP1200" = "deadbeef.desktop";
-        "audio/MELP2400" = "deadbeef.desktop";
-        "audio/MELP600" = "deadbeef.desktop";
-        "audio/mhas" = "deadbeef.desktop";
-        "audio/midi-clip" = "deadbeef.desktop";
-        "audio/mobile-xmf" = "deadbeef.desktop";
-        "audio/mp4" = "deadbeef.desktop";
-        "audio/MP4A-LATM" = "deadbeef.desktop";
-        "audio/mpa-robust" = "deadbeef.desktop";
-        "audio/MPA" = "deadbeef.desktop";
-        "audio/mpeg" = "deadbeef.desktop";
-        "audio/mpeg4-generic" = "deadbeef.desktop";
-        "audio/ogg" = "deadbeef.desktop";
-        "audio/opus" = "deadbeef.desktop";
-        "audio/parityfec" = "deadbeef.desktop";
-        "audio/PCMA-WB" = "deadbeef.desktop";
-        "audio/PCMA" = "deadbeef.desktop";
-        "audio/PCMU-WB" = "deadbeef.desktop";
-        "audio/PCMU" = "deadbeef.desktop";
-        "audio/prs.sid" = "deadbeef.desktop";
-        "audio/QCELP" = "deadbeef.desktop";
-        "audio/raptorfec" = "deadbeef.desktop";
-        "audio/RED" = "deadbeef.desktop";
-        "audio/rtp-enc-aescm128" = "deadbeef.desktop";
-        "audio/rtp-midi" = "deadbeef.desktop";
-        "audio/rtploopback" = "deadbeef.desktop";
-        "audio/rtx" = "deadbeef.desktop";
-        "audio/scip" = "deadbeef.desktop";
-        "audio/SMV-QCP" = "deadbeef.desktop";
-        "audio/SMV" = "deadbeef.desktop";
-        "audio/SMV0" = "deadbeef.desktop";
-        "audio/sofa" = "deadbeef.desktop";
-        "audio/soundfont" = "deadbeef.desktop";
-        "audio/sp-midi" = "deadbeef.desktop";
-        "audio/speex" = "deadbeef.desktop";
-        "audio/t140c" = "deadbeef.desktop";
-        "audio/t38" = "deadbeef.desktop";
-        "audio/telephone-event" = "deadbeef.desktop";
-        "audio/TETRA_ACELP_BB" = "deadbeef.desktop";
-        "audio/TETRA_ACELP" = "deadbeef.desktop";
-        "audio/tone" = "deadbeef.desktop";
-        "audio/TSVCIS" = "deadbeef.desktop";
-        "audio/UEMCLIP" = "deadbeef.desktop";
-        "audio/ulpfec" = "deadbeef.desktop";
-        "audio/usac" = "deadbeef.desktop";
-        "audio/VDVI" = "deadbeef.desktop";
-        "audio/VMR-WB" = "deadbeef.desktop";
-        "audio/vnd.3gpp.iufp" = "deadbeef.desktop";
-        "audio/vnd.4SB" = "deadbeef.desktop";
-        "audio/vnd.audiokoz" = "deadbeef.desktop";
-        "audio/vnd.blockfact.facta" = "deadbeef.desktop";
-        "audio/vnd.CELP" = "deadbeef.desktop";
-        "audio/vnd.cisco.nse" = "deadbeef.desktop";
-        "audio/vnd.cmles.radio-events" = "deadbeef.desktop";
-        "audio/vnd.cns.anp1" = "deadbeef.desktop";
-        "audio/vnd.cns.inf1" = "deadbeef.desktop";
-        "audio/vnd.dece.audio" = "deadbeef.desktop";
-        "audio/vnd.digital-winds" = "deadbeef.desktop";
-        "audio/vnd.dlna.adts" = "deadbeef.desktop";
-        "audio/vnd.dolby.heaac.1" = "deadbeef.desktop";
-        "audio/vnd.dolby.heaac.2" = "deadbeef.desktop";
-        "audio/vnd.dolby.mlp" = "deadbeef.desktop";
-        "audio/vnd.dolby.mps" = "deadbeef.desktop";
-        "audio/vnd.dolby.pl2" = "deadbeef.desktop";
-        "audio/vnd.dolby.pl2x" = "deadbeef.desktop";
-        "audio/vnd.dolby.pl2z" = "deadbeef.desktop";
-        "audio/vnd.dolby.pulse.1" = "deadbeef.desktop";
-        "audio/vnd.dra" = "deadbeef.desktop";
-        "audio/vnd.dts.hd" = "deadbeef.desktop";
-        "audio/vnd.dts.uhd" = "deadbeef.desktop";
-        "audio/vnd.dts" = "deadbeef.desktop";
-        "audio/vnd.dvb.file" = "deadbeef.desktop";
-        "audio/vnd.everad.plj" = "deadbeef.desktop";
-        "audio/vnd.hns.audio" = "deadbeef.desktop";
-        "audio/vnd.lucent.voice" = "deadbeef.desktop";
-        "audio/vnd.ms-playready.media.pya" = "deadbeef.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "deadbeef.desktop";
-        "audio/vnd.nortel.vbk" = "deadbeef.desktop";
-        "audio/vnd.nuera.ecelp4800" = "deadbeef.desktop";
-        "audio/vnd.nuera.ecelp7470" = "deadbeef.desktop";
-        "audio/vnd.nuera.ecelp9600" = "deadbeef.desktop";
-        "audio/vnd.octel.sbc" = "deadbeef.desktop";
-        "audio/vnd.presonus.multitrack" = "deadbeef.desktop";
-        "audio/vnd.qcelp" = "deadbeef.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "deadbeef.desktop";
-        "audio/vnd.rip" = "deadbeef.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "deadbeef.desktop";
-        "audio/vnd.vmx.cvsd" = "deadbeef.desktop";
-        "audio/vorbis-config" = "deadbeef.desktop";
-        "audio/vorbis" = "deadbeef.desktop";
+        "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
+        "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
+        "audio/3gpp" = "com.jeffser.Nocturne.desktop";
+        "audio/3gpp2" = "com.jeffser.Nocturne.desktop";
+        "audio/aac" = "com.jeffser.Nocturne.desktop";
+        "audio/ac3" = "com.jeffser.Nocturne.desktop";
+        "audio/AMR-WB" = "com.jeffser.Nocturne.desktop";
+        "audio/amr-wb+" = "com.jeffser.Nocturne.desktop";
+        "audio/AMR" = "com.jeffser.Nocturne.desktop";
+        "audio/aptx" = "com.jeffser.Nocturne.desktop";
+        "audio/asc" = "com.jeffser.Nocturne.desktop";
+        "audio/ATRAC-ADVANCED-LOSSLESS" = "com.jeffser.Nocturne.desktop";
+        "audio/ATRAC-X" = "com.jeffser.Nocturne.desktop";
+        "audio/ATRAC3" = "com.jeffser.Nocturne.desktop";
+        "audio/basic" = "com.jeffser.Nocturne.desktop";
+        "audio/BV16" = "com.jeffser.Nocturne.desktop";
+        "audio/BV32" = "com.jeffser.Nocturne.desktop";
+        "audio/clearmode" = "com.jeffser.Nocturne.desktop";
+        "audio/CN" = "com.jeffser.Nocturne.desktop";
+        "audio/DAT12" = "com.jeffser.Nocturne.desktop";
+        "audio/dls" = "com.jeffser.Nocturne.desktop";
+        "audio/dsr-es201108" = "com.jeffser.Nocturne.desktop";
+        "audio/dsr-es202050" = "com.jeffser.Nocturne.desktop";
+        "audio/dsr-es202211" = "com.jeffser.Nocturne.desktop";
+        "audio/dsr-es202212" = "com.jeffser.Nocturne.desktop";
+        "audio/DV" = "com.jeffser.Nocturne.desktop";
+        "audio/DVI4" = "com.jeffser.Nocturne.desktop";
+        "audio/eac3" = "com.jeffser.Nocturne.desktop";
+        "audio/encaprtp" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRC-QCP" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRC" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRC0" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRC1" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCB" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCB0" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCB1" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCNW" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCNW0" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCNW1" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCWB" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCWB0" = "com.jeffser.Nocturne.desktop";
+        "audio/EVRCWB1" = "com.jeffser.Nocturne.desktop";
+        "audio/EVS" = "com.jeffser.Nocturne.desktop";
+        "audio/flac" = "com.jeffser.Nocturne.desktop";
+        "audio/flexfec" = "com.jeffser.Nocturne.desktop";
+        "audio/fwdred" = "com.jeffser.Nocturne.desktop";
+        "audio/G711-0" = "com.jeffser.Nocturne.desktop";
+        "audio/G719" = "com.jeffser.Nocturne.desktop";
+        "audio/G722" = "com.jeffser.Nocturne.desktop";
+        "audio/G7221" = "com.jeffser.Nocturne.desktop";
+        "audio/G723" = "com.jeffser.Nocturne.desktop";
+        "audio/G726-16" = "com.jeffser.Nocturne.desktop";
+        "audio/G726-24" = "com.jeffser.Nocturne.desktop";
+        "audio/G726-32" = "com.jeffser.Nocturne.desktop";
+        "audio/G726-40" = "com.jeffser.Nocturne.desktop";
+        "audio/G728" = "com.jeffser.Nocturne.desktop";
+        "audio/G729" = "com.jeffser.Nocturne.desktop";
+        "audio/G7291" = "com.jeffser.Nocturne.desktop";
+        "audio/G729D" = "com.jeffser.Nocturne.desktop";
+        "audio/G729E" = "com.jeffser.Nocturne.desktop";
+        "audio/GSM-EFR" = "com.jeffser.Nocturne.desktop";
+        "audio/GSM-HR-08" = "com.jeffser.Nocturne.desktop";
+        "audio/GSM" = "com.jeffser.Nocturne.desktop";
+        "audio/iLBC" = "com.jeffser.Nocturne.desktop";
+        "audio/ip-mr_v2.5" = "com.jeffser.Nocturne.desktop";
+        "audio/L16" = "com.jeffser.Nocturne.desktop";
+        "audio/L20" = "com.jeffser.Nocturne.desktop";
+        "audio/L24" = "com.jeffser.Nocturne.desktop";
+        "audio/L8" = "com.jeffser.Nocturne.desktop";
+        "audio/LPC" = "com.jeffser.Nocturne.desktop";
+        "audio/matroska" = "com.jeffser.Nocturne.desktop";
+        "audio/MELP" = "com.jeffser.Nocturne.desktop";
+        "audio/MELP1200" = "com.jeffser.Nocturne.desktop";
+        "audio/MELP2400" = "com.jeffser.Nocturne.desktop";
+        "audio/MELP600" = "com.jeffser.Nocturne.desktop";
+        "audio/mhas" = "com.jeffser.Nocturne.desktop";
+        "audio/midi-clip" = "com.jeffser.Nocturne.desktop";
+        "audio/mobile-xmf" = "com.jeffser.Nocturne.desktop";
+        "audio/mp4" = "com.jeffser.Nocturne.desktop";
+        "audio/MP4A-LATM" = "com.jeffser.Nocturne.desktop";
+        "audio/mpa-robust" = "com.jeffser.Nocturne.desktop";
+        "audio/MPA" = "com.jeffser.Nocturne.desktop";
+        "audio/mpeg" = "com.jeffser.Nocturne.desktop";
+        "audio/mpeg4-generic" = "com.jeffser.Nocturne.desktop";
+        "audio/ogg" = "com.jeffser.Nocturne.desktop";
+        "audio/opus" = "com.jeffser.Nocturne.desktop";
+        "audio/parityfec" = "com.jeffser.Nocturne.desktop";
+        "audio/PCMA-WB" = "com.jeffser.Nocturne.desktop";
+        "audio/PCMA" = "com.jeffser.Nocturne.desktop";
+        "audio/PCMU-WB" = "com.jeffser.Nocturne.desktop";
+        "audio/PCMU" = "com.jeffser.Nocturne.desktop";
+        "audio/prs.sid" = "com.jeffser.Nocturne.desktop";
+        "audio/QCELP" = "com.jeffser.Nocturne.desktop";
+        "audio/raptorfec" = "com.jeffser.Nocturne.desktop";
+        "audio/RED" = "com.jeffser.Nocturne.desktop";
+        "audio/rtp-enc-aescm128" = "com.jeffser.Nocturne.desktop";
+        "audio/rtp-midi" = "com.jeffser.Nocturne.desktop";
+        "audio/rtploopback" = "com.jeffser.Nocturne.desktop";
+        "audio/rtx" = "com.jeffser.Nocturne.desktop";
+        "audio/scip" = "com.jeffser.Nocturne.desktop";
+        "audio/SMV-QCP" = "com.jeffser.Nocturne.desktop";
+        "audio/SMV" = "com.jeffser.Nocturne.desktop";
+        "audio/SMV0" = "com.jeffser.Nocturne.desktop";
+        "audio/sofa" = "com.jeffser.Nocturne.desktop";
+        "audio/soundfont" = "com.jeffser.Nocturne.desktop";
+        "audio/sp-midi" = "com.jeffser.Nocturne.desktop";
+        "audio/speex" = "com.jeffser.Nocturne.desktop";
+        "audio/t140c" = "com.jeffser.Nocturne.desktop";
+        "audio/t38" = "com.jeffser.Nocturne.desktop";
+        "audio/telephone-event" = "com.jeffser.Nocturne.desktop";
+        "audio/TETRA_ACELP_BB" = "com.jeffser.Nocturne.desktop";
+        "audio/TETRA_ACELP" = "com.jeffser.Nocturne.desktop";
+        "audio/tone" = "com.jeffser.Nocturne.desktop";
+        "audio/TSVCIS" = "com.jeffser.Nocturne.desktop";
+        "audio/UEMCLIP" = "com.jeffser.Nocturne.desktop";
+        "audio/ulpfec" = "com.jeffser.Nocturne.desktop";
+        "audio/usac" = "com.jeffser.Nocturne.desktop";
+        "audio/VDVI" = "com.jeffser.Nocturne.desktop";
+        "audio/VMR-WB" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.3gpp.iufp" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.4SB" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.audiokoz" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.blockfact.facta" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.CELP" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.cisco.nse" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.cmles.radio-events" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.cns.anp1" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.cns.inf1" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dece.audio" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.digital-winds" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dlna.adts" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.heaac.1" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.heaac.2" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.mlp" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.mps" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.pl2" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.pl2x" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.pl2z" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dolby.pulse.1" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dra" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dts.hd" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dts.uhd" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dts" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.dvb.file" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.everad.plj" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.hns.audio" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.lucent.voice" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.ms-playready.media.pya" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.nokia.mobile-xmf" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.nortel.vbk" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.nuera.ecelp4800" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.nuera.ecelp7470" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.nuera.ecelp9600" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.octel.sbc" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.presonus.multitrack" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.qcelp" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.rhetorex.32kadpcm" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.rip" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.sealedmedia.softseal.mpeg" = "com.jeffser.Nocturne.desktop";
+        "audio/vnd.vmx.cvsd" = "com.jeffser.Nocturne.desktop";
+        "audio/vorbis-config" = "com.jeffser.Nocturne.desktop";
+        "audio/vorbis" = "com.jeffser.Nocturne.desktop";
 
         "video/1d-interleaved-parityfec" = "com.github.rafostar.Clapper.desktop";
         "video/3gpp-tt" = "com.github.rafostar.Clapper.desktop";
@@ -4084,7 +4092,7 @@ in
         "application/x-arj" = "org.gnome.FileRoller.desktop";
         "application/x-bzip2" = "org.gnome.FileRoller.desktop";
         "application/x-gtar" = "org.gnome.FileRoller.desktop";
-        "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More common than "application/vnd.rar"
+        "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More Common Than "application/vnd.rar"
         "application/x-tar" = "org.gnome.FileRoller.desktop";
         "application/zip" = "org.gnome.FileRoller.desktop";
 
@@ -4154,10 +4162,10 @@ in
       name = "bitscoper";
       description = "Abdullah As-Sadeed"; # Full Name
 
-      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs Out
+      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs User Out
 
       extraGroups = [
-        "adbusers" # Not in builtins.attrNames config.users.groups
+        "adbusers" # Not Listed in builtins.attrNames config.users.groups
         "adm"
         "audio"
         "avahi"
@@ -4206,7 +4214,7 @@ in
     flavor = "mocha";
     accent = "lavender";
 
-    grub.enable = false; # Done Manually
+    grub.enable = false; # Done Manually Instead
 
     tty = {
       enable = config.catppuccin.enable;
@@ -4214,7 +4222,7 @@ in
       flavor = config.catppuccin.flavor;
     };
 
-    plymouth.enable = false; # Done Manually
+    plymouth.enable = false; # Done Manually Instead
 
     sddm = {
       enable = true;
@@ -4652,7 +4660,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Made Interactive to Use Alias
+                  (lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
                 ];
               }
               {
@@ -5185,7 +5193,7 @@ in
 
               target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
               executable = null;
-            }; # FIXME: Looks Weird
+            }; # Looks Weird
           };
 
           dataFile = {
@@ -5538,15 +5546,6 @@ in
           onlyoffice = {
             enable = true;
             package = pkgs.onlyoffice-desktopeditors;
-          };
-
-          rclone = {
-            enable = true;
-            package = (
-              pkgs.rclone.override {
-                enableCmount = true;
-              }
-            );
           };
 
           zed-editor = {
@@ -6079,6 +6078,7 @@ in
                       #   "--language"
                       #   "postgresql"
                       # ];
+                      # # Or
                       # arguments = [
                       #   "--language"
                       #   "mariadb"
@@ -6116,7 +6116,7 @@ in
                 #   settings = {
                 #     include_all_symbols = true;
                 #   };
-                # };
+                # }; # FIXME: Errors
 
                 nixd = {
                   initialization_options = {
@@ -6261,10 +6261,6 @@ in
           sioyek = {
             enable = true;
             package = pkgs.sioyek;
-
-            # config.startup_commands = [
-            #   "toggle_dark_mode"
-            # ];
           };
 
           kitty = {
@@ -6842,7 +6838,7 @@ in
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
-          }; # TODO: Check
+          };
 
           kvantum = {
             enable = config.catppuccin.enable;
@@ -6888,6 +6884,3 @@ in
     verbose = true;
   }; # From homeManagerFlake
 }
-
-# FIXME: 05ac-033e-Gamepad > Rumble
-# FIXME: ELAN7001 SPI Fingerprint Sensor
