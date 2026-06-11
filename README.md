@@ -1,6 +1,6 @@
 <div align="center">
 
-# Bitscoper NixOS Configuration
+# Bitscoper-WorkStation
 
 My NixOS Configuration
 
@@ -27,7 +27,7 @@ My NixOS Configuration
 
 - **Word Processor, Spreadsheet, and Presentation Editor:** OnlyOffice
 - **PDF Editor:** OnlyOffice, PDF Arranger
-- **PDF Viewer:** Sioyek, Brave
+- **PDF Viewer:** Evince, Cromite
 
 &nbsp;
 
@@ -61,7 +61,7 @@ My NixOS Configuration
 &nbsp;
 
 - **Image Viewer:** gThumb
-- **Audio Player:** DeadBeeF
+- **Audio Player:** Nocturne
 - **Video Player:** Clapper
 
 ### 2D Fabrication

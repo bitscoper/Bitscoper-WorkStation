@@ -632,7 +632,7 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
-        config.home-manager.users.root.services.wayvnc.settings.port
+        config.home-manager.users.normal.services.wayvnc.settings.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
@@ -1464,7 +1464,7 @@ in
         ServerName ${config.networking.fqdn}
         ServerAlias *
         ServerTokens Full
-        ServerAdmin bitscoper@${config.networking.fqdn}
+        ServerAdmin root@${config.networking.fqdn}
         BrowseLocalProtocols all
         BrowseWebIF On
         HostNameLookups On
@@ -1861,13 +1861,13 @@ in
       };
 
       admin = {
-        user = "bitscoper";
+        user = "root";
         password = config.secrets.password_1;
       };
 
       extraConfig = ''
         <location>${config.networking.fqdn}</location>
-        <admin>bitscoper@${config.networking.fqdn}</admin>
+        <admin>root@${config.networking.fqdn}</admin>
         <authentication>
           <source-password>${config.secrets.password_2}</source-password>
           <relay-password>${config.secrets.password_2}</relay-password>
@@ -2164,10 +2164,20 @@ in
         credential.helper = "${config.programs.git.package}/bin/git-credential-libsecret";
 
         user = {
-          name = "Abdullah As-Sadeed";
+          name = config.users.users.normal.description;
           email = "bitscoper@tutanota.com";
         };
       };
+    };
+
+    evince = {
+      enable = true;
+      package = (
+        pkgs.evince.override {
+          supportMultimedia = true;
+          withLibsecret = true;
+        }
+      );
     };
 
     nm-applet = {
@@ -2433,7 +2443,7 @@ in
 
   environment = {
     shells = [
-      config.home-manager.users.root.programs.bash.package
+      config.home-manager.users.normal.programs.bash.package
       config.programs.fish.package
     ];
 
@@ -2585,6 +2595,7 @@ in
         egypt
         elastic
         elf-dissector
+        eloquent
         emblem
         esptool
         etherape
@@ -2758,6 +2769,7 @@ in
         libva-utils
         libvpx
         linux-exploit-suggester
+        linux-wifi-hotspot
         linuxConsoleTools
         livecaptions
         lld_22
@@ -2819,6 +2831,7 @@ in
         nixpkgs-reviewFull
         nmap
         nmgui
+        noaa-apt
         nocturne
         ntfs3g
         nucleus
@@ -3226,7 +3239,7 @@ in
         })
 
         (parabolic.override {
-          yt-dlp = config.home-manager.users.root.programs.yt-dlp.package;
+          yt-dlp = config.home-manager.users.normal.programs.yt-dlp.package;
         })
 
         (python315FreeThreading.override {
@@ -3308,9 +3321,9 @@ in
         })
 
         config.hardware.firmware
-        config.home-manager.users.root.programs.dircolors.package
-        config.home-manager.users.root.programs.tirith.package
-        config.home-manager.users.root.services.udiskie.package
+        config.home-manager.users.normal.programs.dircolors.package
+        config.home-manager.users.normal.programs.tirith.package
+        config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
         config.services.gnome.gcr-ssh-agent.package
@@ -3329,10 +3342,10 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
-      ++ config.home-manager.users.root.programs.gh.extensions
-      ++ config.home-manager.users.root.programs.lutris.extraPackages
-      ++ config.home-manager.users.root.programs.lutris.winePackages
-      ++ config.home-manager.users.root.programs.zed-editor.extraPackages
+      ++ config.home-manager.users.normal.programs.gh.extensions
+      ++ config.home-manager.users.normal.programs.lutris.extraPackages
+      ++ config.home-manager.users.normal.programs.lutris.winePackages
+      ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
@@ -3513,7 +3526,7 @@ in
       enable = true;
       lists = {
         WORDLISTS = [
-          "${config.home-manager.users.root.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
+          "${config.home-manager.users.normal.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
           "${pkgs.rockyou}/share/wordlists/rockyou.txt"
           # (builtins.toFile "extra-wordlist" '''')
         ];
@@ -3543,8 +3556,8 @@ in
 
       CHROME_EXECUTABLE = "cromite";
 
-      XCURSOR_THEME = config.home-manager.users.root.home.pointerCursor.name;
-      XCURSOR_SIZE = config.home-manager.users.root.home.pointerCursor.size;
+      XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
+      XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
     };
 
     shellAliases = {
@@ -3581,28 +3594,28 @@ in
 
       settings = {
         default = [
-          "kitty.desktop"
+          "org.gnome.Ptyxis.desktop"
         ];
       };
     };
 
     portal = {
       enable = true;
-      extraPortals = [
-        config.programs.hyprland.portalPackage
-        pkgs.xdg-desktop-portal-gtk
-      ];
+      extraPortals =
+        with pkgs;
+        [
+          xdg-desktop-portal-gtk
+          xdg-desktop-portal-luminous
+        ]
+        ++ [
+          config.programs.hyprland.portalPackage
+        ];
 
-      xdgOpenUsePortal = true;
+      xdgOpenUsePortal = false; # TODO: Check
 
       config = {
         common = {
           default = [
-            "hyprland"
-            "gtk"
-          ];
-
-          "org.freedesktop.impl.portal.FileChooser" = [
             "gtk"
           ];
 
@@ -3611,7 +3624,41 @@ in
           ];
         };
 
-      };
+        hyprland = {
+          default = [
+            "luminous"
+            "hyprland"
+            "gtk"
+          ];
+
+          "org.freedesktop.impl.portal.FileChooser" = [
+            "gtk"
+          ];
+          "org.freedesktop.impl.portal.OpenURI" = [
+            "gtk"
+          ];
+
+          "org.freedesktop.impl.portal.ScreenShot" = [
+            "luminous"
+          ];
+          "org.freedesktop.impl.portal.ScreenCast" = [
+            "luminous"
+          ];
+          "org.freedesktop.impl.portal.InputCapture" = [
+            "luminous"
+          ];
+          "org.freedesktop.impl.portal.RemoteDesktop" = [
+            "luminous"
+          ];
+          "org.freedesktop.impl.portal.Settings" = [
+            "luminous"
+          ];
+
+          "org.freedesktop.impl.portal.GlobalShortcuts" = [
+            "hyprland"
+          ];
+        };
+      }; # FIXME: Does Not Work
     };
 
     mime = {
@@ -4082,7 +4129,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "sioyek.desktop";
+        "application/pdf" = "org.gnome.Evince.desktop";
 
         "model/stl" = "fstlapp-fstl.desktop";
 
@@ -4151,56 +4198,78 @@ in
   users = {
     enforceIdUniqueness = true;
     mutableUsers = true;
+    manageLingering = true;
 
     defaultUserShell = config.programs.fish.package;
 
     motd = "Welcome to ${config.networking.fqdn}";
 
-    users.bitscoper = {
-      isNormalUser = true;
+    users = {
+      root = {
+        enable = true;
 
-      name = "bitscoper";
-      description = "Abdullah As-Sadeed"; # Full Name
+        isSystemUser = true;
+        isNormalUser = false;
 
-      # extraGroups = builtins.attrNames config.users.groups; # Risky and Logs User Out
+        createHome = true;
+        homeMode = "700";
 
-      extraGroups = [
-        "adbusers" # Not Listed in builtins.attrNames config.users.groups
-        "adm"
-        "audio"
-        "avahi"
-        "cdrom"
-        "dialout"
-        "disk"
-        "floppy"
-        "fwupd-refresh"
-        "greeter"
-        "i2c"
-        "input"
-        "jellyfin"
-        "kvm"
-        "libvirtd"
-        "lp"
-        "lpadmin"
-        "networkmanager"
-        "nm-openvpn"
-        "pipewire"
-        "plugdev"
-        "podman"
-        "qemu-libvirtd"
-        "render"
-        "scanner"
-        "systemd-journal"
-        "tape"
-        "tty"
-        "users"
-        "uucp"
-        "video"
-        "wheel"
-        "wireshark"
-      ];
+        linger = true;
+      };
 
-      useDefaultShell = true;
+      normal = {
+        enable = true;
+
+        isSystemUser = false;
+        isNormalUser = true;
+
+        createHome = true;
+        homeMode = "700";
+
+        uid = 1000;
+        name = "normal";
+        description = "Abdullah As-Sadeed"; # Full Name
+
+        extraGroups = [
+          "adbusers" # Not Listed in builtins.attrNames config.users.groups
+          "adm"
+          "audio"
+          "avahi"
+          "cdrom"
+          "dialout"
+          "disk"
+          "floppy"
+          "fwupd-refresh"
+          "greeter"
+          "i2c"
+          "input"
+          "jellyfin"
+          "kvm"
+          "libvirtd"
+          "lp"
+          "lpadmin"
+          "networkmanager"
+          "nm-openvpn"
+          "pipewire"
+          "plugdev"
+          "podman"
+          "qemu-libvirtd"
+          "render"
+          "scanner"
+          "systemd-journal"
+          "tape"
+          "tty"
+          "users"
+          "uucp"
+          "video"
+          "wheel"
+          "wireshark"
+        ];
+
+        linger = true;
+
+        useDefaultShell = true;
+      };
     };
   };
 
@@ -4297,12 +4366,12 @@ in
 
             hyprcursor = {
               enable = true;
-              size = config.home-manager.users.root.home.pointerCursor.size;
+              size = config.home-manager.users.normal.home.pointerCursor.size;
             };
 
             gtk = {
               enable = true;
-              size = config.home-manager.users.root.home.pointerCursor.size;
+              size = config.home-manager.users.normal.home.pointerCursor.size;
             };
 
             x11.enable = false;
@@ -4654,7 +4723,7 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.root.gtk.theme.name} -i ${config.home-manager.users.root.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term kitty -fm nemo\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nemo\")")
                 ];
               }
               {
@@ -5267,59 +5336,59 @@ in
           };
 
           cursorTheme = {
-            name = config.home-manager.users.root.home.pointerCursor.name;
-            size = config.home-manager.users.root.home.pointerCursor.size;
+            name = config.home-manager.users.normal.home.pointerCursor.name;
+            size = config.home-manager.users.normal.home.pointerCursor.size;
           };
 
           gtk4 = {
             enable = true;
 
-            colorScheme = config.home-manager.users.root.gtk.colorScheme;
+            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
             theme = {
-              name = config.home-manager.users.root.gtk.theme.name;
-              package = config.home-manager.users.root.gtk.theme.package;
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             font = {
-              name = config.home-manager.users.root.gtk.font.name;
-              package = config.home-manager.users.root.gtk.font.package;
-              size = config.home-manager.users.root.gtk.font.size;
+              name = config.home-manager.users.normal.gtk.font.name;
+              package = config.home-manager.users.normal.gtk.font.package;
+              size = config.home-manager.users.normal.gtk.font.size;
             };
 
             iconTheme = {
-              name = config.home-manager.users.root.gtk.iconTheme.name;
-              package = config.home-manager.users.root.gtk.iconTheme.package;
+              name = config.home-manager.users.normal.gtk.iconTheme.name;
+              package = config.home-manager.users.normal.gtk.iconTheme.package;
             };
 
             cursorTheme = {
-              name = config.home-manager.users.root.gtk.cursorTheme.name;
-              size = config.home-manager.users.root.gtk.cursorTheme.size;
+              name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
 
           gtk3 = {
             enable = true;
 
-            colorScheme = config.home-manager.users.root.gtk.colorScheme;
+            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
             theme = {
-              name = config.home-manager.users.root.gtk.theme.name;
-              package = config.home-manager.users.root.gtk.theme.package;
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             font = {
-              name = config.home-manager.users.root.gtk.font.name;
-              package = config.home-manager.users.root.gtk.font.package;
-              size = config.home-manager.users.root.gtk.font.size;
+              name = config.home-manager.users.normal.gtk.font.name;
+              package = config.home-manager.users.normal.gtk.font.package;
+              size = config.home-manager.users.normal.gtk.font.size;
             };
 
             iconTheme = {
-              name = config.home-manager.users.root.gtk.iconTheme.name;
-              package = config.home-manager.users.root.gtk.iconTheme.package;
+              name = config.home-manager.users.normal.gtk.iconTheme.name;
+              package = config.home-manager.users.normal.gtk.iconTheme.package;
             };
 
             cursorTheme = {
-              name = config.home-manager.users.root.gtk.cursorTheme.name;
-              size = config.home-manager.users.root.gtk.cursorTheme.size;
+              name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
 
@@ -5327,24 +5396,24 @@ in
             enable = true;
 
             theme = {
-              name = config.home-manager.users.root.gtk.theme.name;
-              package = config.home-manager.users.root.gtk.theme.package;
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             font = {
-              name = config.home-manager.users.root.gtk.font.name;
-              package = config.home-manager.users.root.gtk.font.package;
-              size = config.home-manager.users.root.gtk.font.size;
+              name = config.home-manager.users.normal.gtk.font.name;
+              package = config.home-manager.users.normal.gtk.font.package;
+              size = config.home-manager.users.normal.gtk.font.size;
             };
 
             iconTheme = {
-              name = config.home-manager.users.root.gtk.iconTheme.name;
-              package = config.home-manager.users.root.gtk.iconTheme.package;
+              name = config.home-manager.users.normal.gtk.iconTheme.name;
+              package = config.home-manager.users.normal.gtk.iconTheme.package;
             };
 
             cursorTheme = {
-              name = config.home-manager.users.root.gtk.cursorTheme.name;
-              size = config.home-manager.users.root.gtk.cursorTheme.size;
+              name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
         };
@@ -5370,9 +5439,9 @@ in
 
           qt5ctSettings = {
             Appearance = {
-              style = config.home-manager.users.root.qt.qt6ctSettings.Appearance.style;
-              color_scheme_path = config.home-manager.users.root.qt.qt6ctSettings.Appearance.color_scheme_path;
-              standard_dialogs = config.home-manager.users.root.qt.qt6ctSettings.Appearance.standard_dialogs;
+              style = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.style;
+              color_scheme_path = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.color_scheme_path;
+              standard_dialogs = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.standard_dialogs;
             };
           };
 
@@ -5399,7 +5468,7 @@ in
             notify = true;
 
             settings = {
-              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -- --working-directory";
+              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -- -d"; # TODO: Check
               file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
 
               menu = "nested";
@@ -5513,6 +5582,11 @@ in
             silent = config.programs.direnv.silent;
           };
 
+          ptyxis = {
+            enable = true;
+            package = pkgs.ptyxis;
+          };
+
           dircolors = {
             enable = true;
             package = (
@@ -5579,7 +5653,7 @@ in
                 yaml-language-server
               ]
               ++ [
-                config.home-manager.users.root.programs.sioyek.package
+                config.programs.evince.package
               ];
 
             installRemoteServer = true;
@@ -6192,18 +6266,12 @@ in
                         forwardSearchAfter = true;
                       };
                       forwardSearch = {
-                        executable = "sioyek";
+                        executable = "evince-synctex";
                         args = [
-                          "--reuse-window"
-                          "--execute-command"
-                          "toggle_synctex"
-                          "--inverse-search"
-                          "texlab inverse-search -i \"%%1\" -l %%2"
-                          "--forward-search-file"
-                          "%f"
-                          "--forward-search-line"
+                          "-f"
                           "%l"
                           "%p"
+                          "\"texlab -i %f -l %l\""
                         ];
                       };
                     };
@@ -6256,99 +6324,6 @@ in
 
           mcp = {
             enable = true;
-          };
-
-          sioyek = {
-            enable = true;
-            package = pkgs.sioyek;
-          };
-
-          kitty = {
-            enable = true;
-            package = pkgs.kitty;
-
-            shellIntegration = {
-              enableBashIntegration = true;
-              enableFishIntegration = true;
-            };
-
-            enableGitIntegration = true;
-
-            font = {
-              name = fontPreferences.name.mono;
-              package = pkgs.nerd-fonts.noto;
-              size = fontPreferences.size;
-            };
-
-            diffConfig = {
-              extraConfig = ''
-                mark_moved_lines yes
-              '';
-            };
-
-            extraConfig = ''
-              allow_remote_control no
-
-              term xterm-kitty
-              shell_integration enabled
-              close_on_child_death no
-
-              hide_window_decorations no
-              wayland_titlebar_color system
-              wayland_enable_ime yes
-              window_title_bar top
-              draw_minimal_borders yes
-              draw_window_borders_for_single_window no
-              remember_window_position no
-              remember_window_size no
-              sync_to_monitor no
-              focus_follows_mouse yes
-
-              enable_audio_bell yes
-              window_alert_on_bell no
-              notify_on_cmd_finish invisible
-
-              dynamic_background_opacity yes
-              window_padding_width ${toString (design_factor / 4)} ${toString (design_factor / 2)} ${toString (design_factor / 4)} ${toString (design_factor / 2)}
-               # 4, 8, 4, 8 # Top, Right, Bottom, Left
-
-              tab_bar_edge top
-              tab_switch_strategy previous
-
-              scrollbar always
-              scrollbar_interactive yes
-              scrollbar_jump_on_click yes
-              scrollback_fill_enlarged_window yes
-              pixel_scroll yes
-
-              text_composition_strategy platform
-              force_ltr no
-              disable_ligatures cursor
-
-              cursor_shape beam
-              cursor_shape_unfocused hollow
-
-              default_pointer_shape beam
-              pointer_shape_when_grabbed arrow
-              pointer_shape_when_dragging beam crosshair
-
-              progress_bar bottom
-
-              allow_hyperlinks yes
-              detect_urls yes
-              show_hyperlink_targets always
-              underline_hyperlinks hover
-              url_style straight
-              open_url_with default
-
-              copy_on_select no
-              strip_trailing_spaces never
-              clear_selection_on_clipboard_loss no
-
-              confirm_os_window_close -1 count-background
-            '';
-
-            # environment = { };
           };
 
           bash = {
@@ -6671,7 +6646,7 @@ in
                 winetricks
               ]
               ++ [
-                config.home-manager.users.root.programs.mangohud.package
+                config.home-manager.users.normal.programs.mangohud.package
               ];
             winePackages = with pkgs; [
               wineWow64Packages.waylandFull
@@ -6727,18 +6702,6 @@ in
 
           bat = {
             enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          kitty = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          sioyek = {
-            enable = true;
 
             flavor = config.catppuccin.flavor;
           };
@@ -6878,8 +6841,10 @@ in
       }
     ];
 
-    users.root = { };
-    users.bitscoper = { };
+    users = {
+      root = { };
+      normal = { };
+    };
 
     verbose = true;
   }; # From homeManagerFlake
