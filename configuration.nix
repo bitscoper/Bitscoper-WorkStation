@@ -510,6 +510,25 @@ in
       }) # Fixes Build Failure of Lutris
 
       (final: previous: {
+        psono = final.appimageTools.wrapType2 {
+          pname = "psono";
+          version = "latest";
+
+          src = final.fetchurl {
+            url = "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage";
+            hash = "sha256-YJnEG4OgdX4gTniG8XYPaJs4le0VelPlz47pXdx+0r0=";
+          };
+
+          extraPkgs =
+            pkgs: with pkgs; [
+              libepoxy
+              libsoup_3
+              webkitgtk_4_1
+            ];
+        };
+      }) # Addition # TODO: .desktop
+
+      (final: previous: {
         seabird = stableNixPackages.seabird;
       }) # Fixes Building Forever
 
@@ -2043,6 +2062,8 @@ in
           extraPkgs =
             pkgs: with pkgs; [
               libepoxy
+              libsoup_3
+              webkitgtk_4_1
             ];
         }
       );
@@ -2891,6 +2912,7 @@ in
         protonup-qt
         ps
         psmisc
+        psono # From config.nixpkgs.overlays
         pwvucontrol
         python3Packages.tkinter
         qalculate-gtk
@@ -3526,7 +3548,6 @@ in
       enable = true;
       lists = {
         WORDLISTS = [
-          "${config.home-manager.users.normal.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
           "${pkgs.rockyou}/share/wordlists/rockyou.txt"
           # (builtins.toFile "extra-wordlist" '''')
         ];
@@ -3564,7 +3585,7 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "uwsm-app -- xdg-terminal-exec -- bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash -i'";
+      commands = "uwsm-app -- xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec fish'";
 
       clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
       clean_repair_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
@@ -4746,6 +4767,12 @@ in
               }
               {
                 _args = [
+                  "SUPER + P"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- psono\")")
+                ];
+              }
+              {
+                _args = [
                   "XF86Explorer"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
@@ -4790,18 +4817,6 @@ in
                 _args = [
                   "SUPER + CTRL + A"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- pwvucontrol\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + K"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + K"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
                 ];
               }
               {
@@ -5207,12 +5222,12 @@ in
               source = pkgs.writeText "nwg-bar.css" ''
                 window {
                   border: 1px solid rgb(88, 91, 112);
-                  border-radius: ${toString (design_factor / 2)}px;
+                  border-radius: ${toString (builtins.floor (design_factor / 2))}px;
                 }
 
                 #bar {
-                  margin: ${toString (design_factor * 2)}px;
-                  font-size: ${toString design_factor}px;
+                  margin: ${toString (builtins.floor (design_factor * 2))}px;
+                  font-size: ${toString (builtins.floor design_factor)}px;
                   font-family: ${fontPreferences.name.sans_serif};
                 }
 
@@ -5225,8 +5240,8 @@ in
                 }
 
                 button {
-                  margin: ${toString (design_factor / 4)}px;
-                  padding-top: ${toString (design_factor / 2)}px;
+                  margin: ${toString (builtins.floor (design_factor / 4))}px;
+                  padding-top: ${toString (builtins.floor (design_factor / 2))}px;
                 }
 
                 button:hover {
@@ -5238,10 +5253,10 @@ in
                 }
 
                 grid {
-                  box-shadow: 0 0 ${toString (design_factor * 3)}px rgb(49, 50, 68);
-                  border-radius: ${toString (design_factor / 2)}px;
+                  box-shadow: 0 0 ${toString (builtins.floor (design_factor * 3))}px rgb(49, 50, 68);
+                  border-radius: ${toString (builtins.floor (design_factor / 2))}px;
                   background-color: rgb(17, 17, 27);
-                  padding: ${toString (design_factor / 2)}px;
+                  padding: ${toString (builtins.floor (design_factor / 2))}px;
                 }'';
               # Catppuccin Mocha
               # "Surface 2" rgb(88, 91, 112)
@@ -5468,7 +5483,7 @@ in
             notify = true;
 
             settings = {
-              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -- -d"; # TODO: Check
+              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -d"; # TODO: Check
               file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
 
               menu = "nested";
@@ -5841,7 +5856,7 @@ in
                 };
 
                 font_family = fontPreferences.name.mono;
-                font_size = design_factor;
+                font_size = builtins.floor design_factor;
                 line_height = "comfortable";
 
                 cursor_shape = "bar";
@@ -5988,10 +6003,10 @@ in
               show_call_status_icon = true;
 
               ui_font_family = fontPreferences.name.sans_serif;
-              ui_font_size = design_factor;
+              ui_font_size = builtins.floor design_factor;
 
               buffer_font_family = fontPreferences.name.mono;
-              buffer_font_size = design_factor;
+              buffer_font_size = builtins.floor design_factor;
               buffer_font_features = {
                 calt = false; # Ligatures
               };
@@ -6315,9 +6330,99 @@ in
 
             # features = [ ];
 
-            systemd = true;
+            systemd = false; # TODO: Enable
 
-            # config = { };
+            config = {
+              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
+              double_click_time = "gtk";
+
+              layer = "overlay";
+              position = "top";
+              anchor_to_edges = true;
+              exclusive_zone = false;
+
+              margin = {
+                top = 0;
+                right = 0;
+                bottom = 0;
+                left = 0;
+              };
+
+              height = builtins.floor (design_factor * 2.50); # 40
+              popup_gap = builtins.floor (design_factor / 4); # 4
+
+              start_hidden = true;
+              autohide = 500; # 500 ms
+              popup_autohide = false;
+
+              start = [
+                {
+                  type = "workspaces";
+
+                  all_monitors = false;
+                  sort = "index";
+
+                  icon_size = builtins.floor (design_factor * 2); # 32
+                }
+
+                {
+                  type = "focused";
+
+                  show_icon = true;
+                  show_title = false;
+
+                  icon_size = builtins.floor (design_factor * 2); # 32
+                }
+                {
+                  type = "tray";
+
+                  prefer_theme_icons = true;
+
+                  direction = "horizontal";
+                  iron_size = builtins.floor (design_factor * 2); # 32
+
+                  on_click_left = "default";
+                  on_click_right = "menu";
+                  on_click_middle = "secondary";
+                  on_click_left_double = "none";
+                  on_click_right_double = "none";
+                  on_click_middle_double = "none";
+                }
+              ];
+
+              center = [
+                {
+                  type = "clock";
+
+                  orientation = "horizontal";
+                  justify = "center";
+
+                  format = "%a, %d %b, %H:%M %p"; # Wed, 07 Jan, 13:07 PM
+                  format_popup = "%d %B %Y"; # 07 January 2026
+                  show_week_numbers = true;
+                }
+              ];
+
+              end = [
+                {
+                  type = "sys_info";
+
+                  format = [
+                    "{cpu_percent}% "
+                    "{memory_percent}% "
+                  ];
+
+                  interval = {
+                    cpu = 1; # 1 Second
+                  };
+                }
+
+                {
+                  type = "battery";
+                  show_if = "ls /sys/class/power_supply/ | grep --quiet '^BAT'";
+                }
+              ];
+            };
 
             # style = { };
           }; # From ironbarFlake
@@ -6606,21 +6711,6 @@ in
                 }
               ];
             }; # Addition
-          };
-
-          keepassxc = {
-            enable = true;
-            package = (
-              pkgs.keepassxc.override {
-                withKeePassBrowser = true;
-                withKeePassBrowserPasskeys = true;
-                withKeePassFDOSecrets = true;
-                withKeePassKeeShare = true;
-                withKeePassNetworking = true;
-                withKeePassSSHAgent = true;
-                withKeePassYubiKey = true;
-              }
-            );
           };
 
           obs-studio = {
