@@ -161,14 +161,12 @@ in
 
       substituters = [
         "https://hyprland.cachix.org/"
-        "https://jakestanger.cachix.org/"
       ];
 
       require-sigs = true;
       trusted-substituters = config.nix.settings.substituters;
       trusted-public-keys = [
         "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-        "jakestanger.cachix.org-1:VWJE7AWNe5/KOEvCQRxoE8UsI2Xs2nHULJ7TEjYm7mM="
       ];
 
       cores = 0; # 0 = All
@@ -1259,6 +1257,10 @@ in
         libmtp.out
         rtl-sdr
       ];
+
+      extraRules = ''
+        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
+      ''; # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
     };
 
     smartd = {
@@ -2300,7 +2302,7 @@ in
     };
 
     waybar = {
-      enable = true;
+      enable = false; # Started by Home Manager Instead
       package = (
         pkgs.waybar.override {
           cavaSupport = true;
@@ -2593,7 +2595,6 @@ in
         crlfuzz
         cromite # From config.nixpkgs.overlays
         cron
-        crosspipe
         cryptsetup
         cscope
         ctagsWrapped
@@ -2611,8 +2612,6 @@ in
         dbeaver-bin # Disabling Theming Allows to Use GTK Theme
         dconf-editor
         dconf2nix
-        ddcui
-        ddcutil
         ddrescue
         ddrescueview
         debase
@@ -2735,6 +2734,7 @@ in
         hashcat-utils
         hashes
         hdparm
+        helvum
         hfsprogs
         hieroglyphic
         host
@@ -3361,7 +3361,7 @@ in
         })
 
         config.hardware.firmware
-        config.home-manager.users.normal.programs.dircolors.package
+        config.home-manager.users.normal.programs.dircolors.package # Overriden coreutils-full
         config.home-manager.users.normal.programs.tirith.package
         config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
@@ -4460,7 +4460,7 @@ in
           sourceFirst = true;
 
           extraConfig = ''
-            require("monitors")
+            pcall(require, "monitors") -- Import if available.
           ''; # nwg-displays
 
           settings = {
@@ -4802,42 +4802,6 @@ in
               }
               {
                 _args = [
-                  "SUPER + CTRL + B"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- overskride\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + N"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"swaync-client -t\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + CTRL + D"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-displays\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + CTRL + N"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nmgui\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + CTRL + ALT + N"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nm-connection-editor\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + CTRL + A"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- pwvucontrol\")")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + W"
                   (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite\")")
                 ];
@@ -4869,7 +4833,7 @@ in
               {
                 _args = [
                   "XF86MonBrightnessUp"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl s 1%+\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
                   {
                     repeating = true;
                     locked = true;
@@ -4879,7 +4843,7 @@ in
               {
                 _args = [
                   "XF86MonBrightnessDown"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl s 1%-\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
                   {
                     repeating = true;
                     locked = true;
@@ -4987,7 +4951,7 @@ in
                   }
                 ];
               }
-            ];
+            ]; # TODO: Sort
 
             config = {
               binds = {
@@ -5129,7 +5093,9 @@ in
                 use_nearest_neighbor = true;
               };
 
-              # windowrule = [ ];
+              # layerrule = [ ];
+
+              # windowrulev2 = [ ];
 
               input = {
                 kb_layout = "us";
@@ -5632,9 +5598,631 @@ in
               enableDebug = false;
             };
 
-            # settings = { };
+            settings = {
+              top_bar = {
+                start_hidden = false;
+                reload_style_on_change = true;
+                position = "top";
+                exclusive = true;
+                layer = "top";
+                passthrough = false;
+                fixed-center = true;
+                spacing = 4;
 
-            # style = '''';
+                modules-left = [
+                  "group/backlight-and-ppd-and-idle-inhibitor"
+                  "group/pulseaudio-and-bluetooth"
+                  "group/hardware-statistics"
+                  "network"
+                  "privacy"
+                ];
+
+                modules-center = [
+                  "clock"
+                ];
+
+                modules-right = [
+                  "group/swaync-and-systemd"
+                  "tray"
+                  "group/workspaces-and-taskbar"
+                ];
+
+                clock = {
+                  timezone = config.time.timeZone;
+                  locale = "en_US";
+                  interval = 1;
+
+                  format = "{:%I:%M %p}";
+                  format-alt = "{:%A, %B %d, %Y}";
+
+                  tooltip = true;
+                  tooltip-format = "<tt><small>{calendar}</small></tt>";
+
+                  calendar = {
+                    mode = "year";
+                    mode-mon-col = 3;
+                    weeks-pos = "right";
+
+                    format = {
+                      months = "<b>{}</b>";
+                      days = "{}";
+                      weekdays = "<b>{}</b>";
+                      weeks = "<i>{:%U}</i>";
+                      today = "<u>{}</u>";
+                    };
+                  };
+                };
+
+                "group/backlight-and-ppd-and-idle-inhibitor" = {
+                  modules = [
+                    "backlight"
+                    "power-profiles-daemon"
+                    "idle_inhibitor"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                backlight = {
+                  interval = 1;
+
+                  format = "{percent}% {icon}";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ];
+
+                  tooltip = true;
+                  tooltip-format = "{percent}% {icon}";
+
+                  on-scroll-up = "brightnessctl set +1%";
+                  on-scroll-down = "brightnessctl set 1%-";
+                  reverse-scrolling = false;
+                  reverse-mouse-scrolling = false;
+                  scroll-step = 1.0;
+
+                  on-click = "uwsm-app -- nwg-displays & uwsm-app -- com.sidevesh.Luminance";
+                };
+
+                power-profiles-daemon = {
+                  format = "{icon}";
+                  format-icons = {
+                    performance = "";
+                    balanced = "";
+                    power-saver = "";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "Driver: {driver}\nProfile: {profile}";
+                };
+
+                idle_inhibitor = {
+                  start-activated = false;
+
+                  format = "{icon}";
+                  format-icons = {
+                    activated = "";
+                    deactivated = "";
+                  };
+
+                  tooltip = true;
+                  tooltip-format-activated = "{status}";
+                  tooltip-format-deactivated = "{status}";
+                };
+
+                "group/pulseaudio-and-bluetooth" = {
+                  modules = [
+                    "pulseaudio"
+                    "bluetooth"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                pulseaudio = {
+                  format = "{volume}% {icon} {format_source}";
+                  format-muted = "{icon} {format_source}";
+
+                  format-bluetooth = "{volume}% {icon} 󰂱 {format_source}";
+                  format-bluetooth-muted = "{icon} 󰂱 {format_source}";
+
+                  format-source = " {volume}% ";
+                  format-source-muted = "";
+
+                  format-icons = {
+                    default = [
+                      ""
+                      ""
+                      ""
+                    ];
+                    default-muted = "";
+
+                    speaker = "󰓃";
+                    speaker-muted = "󰓄";
+
+                    headphone = "󰋋";
+                    headphone-muted = "󰟎";
+
+                    headset = "󰋎";
+                    headset-muted = "󰋐";
+
+                    hands-free = "󰏳";
+                    hands-free-muted = "󰗿";
+
+                    phone = "";
+                    phone-muted = "";
+
+                    portable = "";
+                    portable-muted = "";
+
+                    hdmi = "󰽟";
+                    hdmi-muted = "󰽠";
+
+                    hifi = "󰴸";
+                    hifi-muted = "󰓄";
+
+                    car = "󰄋";
+                    car-muted = "󰸜";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "{desc}";
+
+                  scroll-step = 1.0;
+                  reverse-scrolling = false;
+                  reverse-mouse-scrolling = false;
+                  max-volume = 100;
+                  on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
+                  on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
+
+                  on-click = "uwsm-app -- pwvucontrol & uwsm-app -- helvum";
+                };
+
+                bluetooth = {
+                  format = "{status} {icon}";
+                  format-disabled = "Disabled {icon}";
+                  format-off = "Off {icon}";
+                  format-on = "On {icon}";
+                  format-connected = "{device_alias} {icon}";
+                  format-connected-battery = "{device_alias} 󰂱 ({device_battery_percentage}%)";
+                  format-icons = {
+                    no-controller = "󰂲";
+                    disabled = "󰂲";
+                    off = "󰂲";
+                    on = "󰂯";
+                    connected = "󰂱";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "Status: {status}\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
+                  tooltip-format-disabled = "Status: Disabled";
+                  tooltip-format-off = "Status: Off";
+                  tooltip-format-on = "Status: On\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
+                  tooltip-format-connected = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
+                  tooltip-format-connected-battery = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
+                  tooltip-format-enumerate-connected = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}";
+                  tooltip-format-enumerate-connected-battery = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}\n\tBattery: {device_battery_percentage}%";
+
+                  on-click = "uwsm-app -- overskride";
+                };
+
+                "group/hardware-statistics" = {
+                  modules = [
+                    "battery"
+                    "cpu"
+                    "memory"
+                    "disk"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                battery = {
+                  bat = "BAT0";
+                  adapter = "AC0";
+                  design-capacity = false;
+                  weighted-average = true;
+                  interval = 1;
+
+                  full-at = 100;
+                  states = {
+                    warning = 25;
+                    critical = 10;
+                  };
+
+                  format = "{capacity}% {icon}";
+                  format-plugged = "{capacity}% ";
+                  format-charging = "{capacity}% ";
+                  format-full = "{capacity}% {icon}";
+                  format-alt = "{time} {icon}";
+                  format-time = "{H} h {m} min";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ];
+
+                  tooltip = true;
+                  tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                cpu = {
+                  interval = 1;
+
+                  format = "{usage}% ";
+
+                  tooltip = true;
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                memory = {
+                  interval = 1;
+
+                  format = "{percentage}% ";
+
+                  tooltip = true;
+                  tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                disk = {
+                  path = "/";
+                  unit = "GB";
+                  interval = 1;
+
+                  format = "{percentage_used}% 󰋊";
+
+                  tooltip = true;
+                  tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                network = {
+                  interval = 1;
+
+                  format = "{bandwidthUpBytes} {bandwidthDownBytes}";
+                  format-disconnected = "Disconnected 󱘖";
+                  format-linked = "No IP 󰀦";
+                  format-ethernet = "{bandwidthUpBytes}   {bandwidthDownBytes}";
+                  format-wifi = "{bandwidthUpBytes}   {bandwidthDownBytes}";
+
+                  tooltip = true;
+                  tooltip-format = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+                  tooltip-format-disconnected = "Disconnected";
+                  tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+                  tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+
+                  on-click = "uwsm-app -- nmgui & uwsm-app -- nm-connection-editor";
+                };
+
+                privacy = {
+                  icon-size = fontPreferences.size;
+                  icon-spacing = builtins.floor (design_factor * 0.50); # 8
+                  transition-duration = 200;
+
+                  modules = [
+                    {
+                      type = "screenshare";
+                      tooltip = true;
+                      tooltip-icon-size = fontPreferences.size;
+                    }
+                    {
+                      type = "audio-in";
+                      tooltip = true;
+                      tooltip-icon-size = fontPreferences.size;
+                    }
+                  ];
+                };
+
+                "group/swaync-and-systemd" = {
+                  modules = [
+                    "custom/swaync"
+                    "systemd-failed-units"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = false;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                "custom/swaync" = {
+                  format = "{} {icon}";
+                  format-icons = {
+                    notification = "<span foreground=\"@yellow\"><sup></sup></span>";
+                    none = "";
+
+                    inhibited-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
+                    inhibited-none = "";
+
+                    dnd-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
+                    dnd-none = "";
+
+                    dnd-inhibited-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
+                    dnd-inhibited-none = "";
+                  };
+
+                  tooltip = false;
+
+                  return-type = "json";
+                  exec-if = "which swaync-client";
+                  exec = "swaync-client -swb";
+                  on-click = "swaync-client -t -sw";
+                  on-click-right = "swaync-client -d -sw";
+                  escape = true;
+                }; # FIXME
+
+                systemd-failed-units = {
+                  system = true;
+                  user = true;
+
+                  hide-on-ok = false;
+
+                  format = "{nr_failed_system}, {nr_failed_user} ";
+                  format-ok = "";
+
+                  on-click = "uwsm-app -- xdg-terminal-exec systemctl-tui";
+                };
+
+                tray = {
+                  show-passive-items = true;
+                  reverse-direction = false;
+                  icon-size = fontPreferences.size;
+                  spacing = 4;
+                };
+
+                "group/workspaces-and-taskbar" = {
+                  modules = [
+                    "hyprland/workspaces"
+                    "wlr/taskbar"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = false;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                "hyprland/workspaces" = {
+                  all-outputs = false;
+                  show-special = true;
+                  special-visible-only = false;
+                  active-only = false;
+                  format = "{name}";
+                  move-to-monitor = false;
+
+                  on-click = "activate"; # FIXME: Does Not Work
+                };
+
+                "wlr/taskbar" = {
+                  all-outputs = false;
+                  active-first = false;
+                  sort-by-app-id = false;
+                  format = "{icon}";
+                  icon-size = fontPreferences.size;
+                  markup = true;
+
+                  tooltip = true;
+                  tooltip-format = "Title: {title}\nName: {name}\nID: {app_id}\nState: {state}";
+
+                  on-click = "activate";
+                };
+              };
+            };
+
+            style = ''
+              * {
+                font-family: ${fontPreferences.name.sans_serif};
+                font-size: ${toString fontPreferences.size}px;
+              }
+
+              window#waybar {
+                border: none;
+                background-color: transparent;
+              }
+
+              .modules-right > widget:last-child > #workspaces {
+                margin-right: 0px;
+              }
+
+              .modules-left > widget:first-child > #workspaces {
+                margin-left: 0px;
+              }
+
+              #power-profiles-daemon,
+              #idle_inhibitor,
+              #backlight,
+              #pulseaudio,
+              #bluetooth,
+              #network,
+              #clock,
+              #custom-swaync,
+              #privacy,
+              #systemd-failed-units,
+              #disk,
+              #memory,
+              #cpu,
+              #battery,
+              #window {
+                border-radius: ${toString design_factor}px;
+                background-color: @crust;
+                padding: 2px 8px;
+                color: @text;
+              }
+
+              #power-profiles-daemon.power-saver {
+                color: @mauve;
+              }
+
+              #power-profiles-daemon.balanced {
+                color: @blue;
+              }
+
+              #power-profiles-daemon.performance {
+                color: @lavender;
+              }
+
+              #idle_inhibitor.deactivated {
+                color: @text;
+              }
+
+              #idle_inhibitor.activated {
+                color: @green;
+              }
+
+              #pulseaudio.muted,
+              #pulseaudio.source-muted {
+                color: @red;
+              }
+
+              #pulseaudio.bluetooth {
+                color: @text;
+              }
+
+              #bluetooth.no-controller,
+              #bluetooth.disabled,
+              #bluetooth.off {
+                color: @red;
+              }
+
+              #bluetooth.on,
+              #bluetooth.discoverable,
+              #bluetooth.pairable {
+                color: @text;
+              }
+
+              #bluetooth.discovering,
+              #bluetooth.connected {
+                color: @green;
+              }
+
+              #network.disabled,
+              #network.disconnected,
+              #network.linked {
+                color: @red;
+              }
+
+              #network.etherenet,
+              #network.wifi {
+                color: @text;
+              }
+
+              #custom-swaync {
+                font-family: ${fontPreferences.name.mono};
+              }
+
+              #privacy-item.audio-in,
+              #privacy-item.screenshare {
+                color: @green;
+              }
+
+              #systemd-failed-units.ok {
+                color: @text;
+              }
+
+              #systemd-failed-units.degraded {
+                color: @red;
+              }
+
+              #battery.plugged,
+              #battery.full {
+                color: @text;
+              }
+
+              #battery.charging {
+                color: @green;
+              }
+
+              #battery.warning {
+                color: @peach;
+              }
+
+              #battery.critical {
+                color: @red;
+              }
+
+              #workspaces,
+              #taskbar,
+              #tray {
+                background-color: transparent;
+              }
+
+              button {
+                margin: 0px 2px;
+                border-radius: ${toString design_factor}px;
+                background-color: @crust;
+                padding: 0px;
+                color: @text;
+              }
+
+              button * {
+                padding: 0px 4px;
+              }
+
+              button.active {
+                background-color: @mantle;
+              }
+
+              #window label {
+                padding: 0px 4px;
+                font-size: ${toString fontPreferences.size}px;
+              }
+
+              #tray > widget {
+                border-radius: ${toString design_factor}px;
+                background-color: @crust;
+                color: @text;
+              }
+
+              #tray image {
+                padding: 0px 8px;
+              }
+
+              #tray > .passive {
+                -gtk-icon-effect: dim;
+              }
+
+              #tray > .active {
+                background-color: @mantle;
+              }
+
+              #tray > .needs-attention {
+                background-color: @green;
+                -gtk-icon-effect: highlight;
+              }
+
+              #tray > widget:hover {
+                background-color: @surface0;
+              }
+            '';
           };
 
           ptyxis = {
