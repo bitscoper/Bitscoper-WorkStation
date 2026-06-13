@@ -20,10 +20,8 @@ let
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
-  ironbarFlake = builtins.getFlake "github:JakeStanger/ironbar/master";
   cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
-  freesmLauncherFlake = builtins.getFlake "github:FreesmTeam/FreesmLauncher";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -137,9 +135,212 @@ in
   imports = [
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
+
     ./hardware-configuration.nix
     ./secrets.nix
   ];
+
+  nix = {
+    enable = true;
+    channel.enable = true;
+
+    settings = {
+      experimental-features = [
+        "flakes"
+        "nix-command"
+        "pipe-operators"
+      ];
+
+      sandbox = true;
+      auto-optimise-store = true;
+
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
+
+      substituters = [
+        "https://hyprland.cachix.org/"
+        "https://jakestanger.cachix.org/"
+      ];
+
+      require-sigs = true;
+      trusted-substituters = config.nix.settings.substituters;
+      trusted-public-keys = [
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        "jakestanger.cachix.org-1:VWJE7AWNe5/KOEvCQRxoE8UsI2Xs2nHULJ7TEjYm7mM="
+      ];
+
+      cores = 0; # 0 = All
+      max-jobs = 1;
+    };
+
+    gc = {
+      automatic = false; # Enabled nh clean Instead
+      dates = "weekly";
+      persistent = true;
+    };
+  };
+
+  nixpkgs = {
+    config = {
+      allowUnfree = true;
+
+      permittedInsecurePackages = [
+        "opendkim-2.11.0-Beta2"
+        "ventoy-gtk3-1.1.12"
+      ];
+
+      android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
+    };
+
+    overlays = [
+      (final: previous: {
+        catppuccin-grub =
+          (previous.catppuccin-grub.override {
+            flavor = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                cp ${wallpaper} $out/background.png
+
+                rm -f $out/logo.png
+                sed -i '/# Logo image/,+5d' $out/theme.txt
+                # Because the background already has the NixOS logo.
+
+                # Moving the boot menu to the center of the left half of the screen
+                sed -i 's/left = 50%-240/left = 5%/' $out/theme.txt
+                sed -i 's/top = 60%/top = 35%/' $out/theme.txt
+                sed -i 's/width = 480/width = 40%/' $out/theme.txt
+
+                # Preserving the relative position of the countdown
+                sed -i 's/top = 82%/top = 57%/' $out/theme.txt
+                sed -i 's/left = 35%/left = 5%/' $out/theme.txt
+                sed -i 's/width = 30%/width = 40%/' $out/theme.txt
+              ''; # installPhase Runs postInstall
+            });
+      })
+
+      (final: previous: {
+        catppuccin-plymouth =
+          (previous.catppuccin-plymouth.override {
+            variant = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
+
+                mkdir -p $THEME_DIRECTORY
+                cp ${wallpaper} $THEME_DIRECTORY/background.png
+              ''; # installPhase Runs postInstall
+            });
+      })
+
+      (final: previous: {
+        cromite = cromiteFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      }) # Addition
+
+      (final: previous: {
+        hyprland = (
+          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
+            debug = false;
+            enableXWayland = true;
+            withSystemd = true;
+            wrapRuntimeDeps = true;
+          }
+        );
+      })
+
+      (final: previous: {
+        openldap = previous.openldap.overrideAttrs {
+          doCheck = !previous.stdenv.hostPlatform.isi686;
+        };
+      }) # Fixes Build Failure of Lutris
+
+      (final: previous: {
+        psono = final.appimageTools.wrapType2 {
+          pname = "psono";
+          version = "latest";
+
+          src = final.fetchurl {
+            url = "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage";
+            hash = "sha256-YJnEG4OgdX4gTniG8XYPaJs4le0VelPlz47pXdx+0r0=";
+          };
+
+          extraPkgs =
+            pkgs: with pkgs; [
+              libepoxy
+              libsoup_3
+              webkitgtk_4_1
+            ];
+        };
+      }) # Addition # TODO: .desktop
+
+      (final: previous: {
+        seabird = stableNixPackages.seabird;
+      }) # Fixes Building Forever
+
+      (final: previous: {
+        vte = stableNixPackages.vte;
+      }) # Fixes Build Failure
+
+      (final: previous: {
+        xdg-desktop-portal-hyprland =
+          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
+            {
+              debug = false;
+            };
+      })
+    ];
+  };
+
+  appstream.enable = true;
+
+  system = {
+    copySystemConfiguration = true;
+
+    switch.enable = true;
+    tools = {
+      nixos-build-vms.enable = true;
+      nixos-enter.enable = true;
+      nixos-generate-config.enable = true;
+      nixos-install.enable = true;
+      nixos-option.enable = true;
+      nixos-rebuild.enable = true;
+      nixos-version.enable = true;
+    };
+
+    activationScripts = {
+      copyOnlyOfficeFonts =
+        let
+          fonts = config.fonts.packages;
+        in
+        ''
+          FONTDIR="/var/lib/onlyoffice-fonts/"
+          mkdir -p "$FONTDIR"
+
+          ${lib.concatMapStrings (package: ''
+            if [ -d "${package}/share/fonts" ]; then
+              find "${package}/share/fonts" -type f \( \
+                -name "*.bdf" -o \
+                -name "*.otf" -o \
+                -name "*.pcf" -o \
+                -name "*.pfa" -o \
+                -name "*.pfb" -o \
+                -name "*.ttc" -o \
+                -name "*.ttf" \
+              \) -exec cp -f {} "$FONTDIR" \;
+            fi
+          '') fonts}
+
+          chmod -R 777 "$FONTDIR"
+        '';
+    };
+
+    # userActivationScripts = { };
+
+    stateVersion = "26.11";
+  };
 
   boot = {
     isContainer = false;
@@ -328,537 +529,6 @@ in
     };
   };
 
-  zramSwap = {
-    enable = true;
-    algorithm = config.boot.tmp.zramSettings.compression-algorithm;
-  };
-
-  time = {
-    timeZone = "Asia/Dhaka";
-    hardwareClockInLocalTime = false;
-  };
-
-  system = {
-    copySystemConfiguration = true;
-
-    switch.enable = true;
-    tools = {
-      nixos-build-vms.enable = true;
-      nixos-enter.enable = true;
-      nixos-generate-config.enable = true;
-      nixos-install.enable = true;
-      nixos-option.enable = true;
-      nixos-rebuild.enable = true;
-      nixos-version.enable = true;
-    };
-
-    activationScripts = {
-      copyOnlyOfficeFonts =
-        let
-          fonts = config.fonts.packages;
-        in
-        ''
-          FONTDIR="/var/lib/onlyoffice-fonts/"
-          mkdir -p "$FONTDIR"
-
-          ${lib.concatMapStrings (package: ''
-            if [ -d "${package}/share/fonts" ]; then
-              find "${package}/share/fonts" -type f \( \
-                -name "*.bdf" -o \
-                -name "*.otf" -o \
-                -name "*.pcf" -o \
-                -name "*.pfa" -o \
-                -name "*.pfb" -o \
-                -name "*.ttc" -o \
-                -name "*.ttf" \
-              \) -exec cp -f {} "$FONTDIR" \;
-            fi
-          '') fonts}
-
-          chmod -R 777 "$FONTDIR"
-        '';
-    };
-
-    # userActivationScripts = { };
-
-    stateVersion = "26.11";
-  };
-
-  nix = {
-    enable = true;
-    channel.enable = true;
-
-    settings = {
-      experimental-features = [
-        "flakes"
-        "nix-command"
-        "pipe-operators"
-      ];
-
-      sandbox = true;
-      auto-optimise-store = true;
-
-      trusted-users = [
-        "root"
-        "@wheel"
-      ];
-
-      substituters = [
-        "https://hyprland.cachix.org/"
-        "https://jakestanger.cachix.org/"
-      ];
-
-      require-sigs = true;
-      trusted-substituters = config.nix.settings.substituters;
-      trusted-public-keys = [
-        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-        "jakestanger.cachix.org-1:VWJE7AWNe5/KOEvCQRxoE8UsI2Xs2nHULJ7TEjYm7mM="
-      ];
-
-      cores = 0; # 0 = All
-      max-jobs = 1;
-    };
-
-    gc = {
-      automatic = false; # Enabled nh clean Instead
-      dates = "weekly";
-      persistent = true;
-    };
-  };
-
-  nixpkgs = {
-    config = {
-      allowUnfree = true;
-
-      permittedInsecurePackages = [
-        "opendkim-2.11.0-Beta2"
-        "ventoy-gtk3-1.1.12"
-      ];
-
-      android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
-    };
-
-    overlays = [
-      (final: previous: {
-        catppuccin-grub =
-          (previous.catppuccin-grub.override {
-            flavor = config.catppuccin.flavor;
-          }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
-                cp ${wallpaper} $out/background.png
-
-                rm -f $out/logo.png
-                sed -i '/# Logo image/,+5d' $out/theme.txt
-                # Because the background already has the NixOS logo.
-
-                # Moving the boot menu to the center of the left half of the screen
-                sed -i 's/left = 50%-240/left = 5%/' $out/theme.txt
-                sed -i 's/top = 60%/top = 35%/' $out/theme.txt
-                sed -i 's/width = 480/width = 40%/' $out/theme.txt
-
-                # Preserving the relative position of the countdown
-                sed -i 's/top = 82%/top = 57%/' $out/theme.txt
-                sed -i 's/left = 35%/left = 5%/' $out/theme.txt
-                sed -i 's/width = 30%/width = 40%/' $out/theme.txt
-              ''; # installPhase Runs postInstall
-            });
-      })
-
-      (final: previous: {
-        catppuccin-plymouth =
-          (previous.catppuccin-plymouth.override {
-            variant = config.catppuccin.flavor;
-          }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
-                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
-
-                mkdir -p $THEME_DIRECTORY
-                cp ${wallpaper} $THEME_DIRECTORY/background.png
-              ''; # installPhase Runs postInstall
-            });
-      })
-
-      (final: previous: {
-        cromite = cromiteFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      }) # Addition
-
-      (final: previous: {
-        freesm-launcher = freesmLauncherFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      }) # Addition
-
-      (final: previous: {
-        hyprland = (
-          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
-            debug = false;
-            enableXWayland = true;
-            withSystemd = true;
-            wrapRuntimeDeps = true;
-          }
-        );
-      })
-
-      (final: previous: {
-        ironbar = ironbarFlake.packages.${pkgs.stdenv.hostPlatform.system}.ironbar;
-      }) # Addition
-
-      (final: previous: {
-        openldap = previous.openldap.overrideAttrs {
-          doCheck = !previous.stdenv.hostPlatform.isi686;
-        };
-      }) # Fixes Build Failure of Lutris
-
-      (final: previous: {
-        psono = final.appimageTools.wrapType2 {
-          pname = "psono";
-          version = "latest";
-
-          src = final.fetchurl {
-            url = "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage";
-            hash = "sha256-YJnEG4OgdX4gTniG8XYPaJs4le0VelPlz47pXdx+0r0=";
-          };
-
-          extraPkgs =
-            pkgs: with pkgs; [
-              libepoxy
-              libsoup_3
-              webkitgtk_4_1
-            ];
-        };
-      }) # Addition # TODO: .desktop
-
-      (final: previous: {
-        seabird = stableNixPackages.seabird;
-      }) # Fixes Building Forever
-
-      (final: previous: {
-        vte = stableNixPackages.vte;
-      }) # Fixes Build Failure
-
-      (final: previous: {
-        xdg-desktop-portal-hyprland =
-          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
-            {
-              debug = false;
-            };
-      })
-    ];
-  };
-
-  appstream.enable = true;
-
-  i18n = {
-    defaultLocale = "en_US.UTF-8";
-    extraLocales = "all";
-
-    extraLocaleSettings = {
-      LC_ADDRESS = config.i18n.defaultLocale;
-      LC_COLLATE = config.i18n.defaultLocale;
-      LC_CTYPE = config.i18n.defaultLocale;
-      LC_IDENTIFICATION = config.i18n.defaultLocale;
-      LC_MEASUREMENT = config.i18n.defaultLocale;
-      LC_MESSAGES = config.i18n.defaultLocale;
-      LC_MONETARY = config.i18n.defaultLocale;
-      LC_NAME = config.i18n.defaultLocale;
-      LC_NUMERIC = config.i18n.defaultLocale;
-      LC_PAPER = config.i18n.defaultLocale;
-      LC_TELEPHONE = config.i18n.defaultLocale;
-      LC_TIME = config.i18n.defaultLocale;
-
-      LC_ALL = config.i18n.defaultLocale;
-    };
-
-    inputMethod = {
-      enable = true;
-
-      type = "fcitx5";
-      fcitx5 = {
-        addons = with pkgs; [
-          fcitx5-openbangla-keyboard
-        ];
-        waylandFrontend = true;
-
-        ignoreUserConfig = false;
-      };
-
-      enableGtk3 = true;
-      enableGtk2 = true;
-    };
-  };
-
-  networking = {
-    enableIPv6 = true;
-
-    domain = "local";
-    hostName = "Bitscoper-WorkStation";
-    fqdn = "${config.networking.hostName}.${config.networking.domain}";
-
-    wireless = {
-      dbusControlled = true;
-      userControlled = true;
-      enableHardening = true;
-    };
-
-    useDHCP = false; # Managed by NetworkManager Instead
-    dhcpcd.enable = false;
-
-    modemmanager = {
-      enable = true;
-      package = (
-        pkgs.modemmanager.override {
-          withIntrospection = true;
-          withPolkit = true;
-          withSystemd = true;
-        }
-      );
-    };
-
-    networkmanager = {
-      enable = true;
-      package = (
-        pkgs.networkmanager.override {
-          withSystemd = true;
-        }
-      );
-      plugins = with pkgs; [
-        networkmanager-l2tp
-        networkmanager-openvpn
-        networkmanager-ssh
-        networkmanager-sstp
-      ];
-
-      ethernet.macAddress = "permanent";
-
-      wifi = {
-        backend = "wpa_supplicant";
-
-        powersave = false;
-
-        scanRandMacAddress = true;
-        macAddress = "permanent";
-      };
-
-      dhcp = "internal";
-      dns = "systemd-resolved";
-
-      logLevel = "WARN";
-    };
-
-    firewall = {
-      enable = true;
-
-      allowPing = true;
-
-      allowedTCPPorts = [
-        config.home-manager.users.normal.services.wayvnc.settings.port
-      ];
-      allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
-
-      trustedInterfaces = [
-        "virbr0"
-      ];
-    };
-
-    nameservers = [
-      "9.9.9.9#dns.quad9.net"
-      "149.112.112.112#dns.quad9.net"
-      "2620:fe::fe#dns.quad9.net"
-      "2620:fe::9#dns.quad9.net"
-    ];
-
-    timeServers = [
-      "0.nixos.pool.ntp.org"
-      "1.nixos.pool.ntp.org"
-      "2.nixos.pool.ntp.org"
-      "3.nixos.pool.ntp.org"
-    ];
-  };
-
-  security = {
-    allowSimultaneousMultithreading = true;
-    forcePageTableIsolation = true;
-
-    tpm2.enable = true;
-
-    lockKernelModules = false;
-
-    rtkit.enable = true;
-
-    sudo = {
-      enable = true;
-      package = (
-        pkgs.sudo.override {
-          withInsults = false; # Includes Profanity
-        }
-      );
-
-      execWheelOnly = true;
-      wheelNeedsPassword = true;
-    };
-
-    polkit = {
-      enable = true;
-      package = (
-        pkgs.polkit.override {
-          useSystemd = true;
-        }
-      );
-
-      adminIdentities = [
-        "unix-group:wheel"
-      ];
-
-      debug = false;
-    };
-
-    soteria = {
-      enable = true;
-      package = pkgs.soteria;
-    };
-
-    pam = {
-      mount = {
-        enable = true;
-
-        createMountPoints = true;
-        removeCreatedMountPoints = true;
-
-        logoutHup = true;
-        logoutTerm = false;
-        logoutKill = false;
-
-        logoutWait = 0;
-      };
-
-      services = {
-        login = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        cockpit = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sshd = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        hyprlock = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sudo = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        polkit-1 = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-      };
-    };
-
-    wrappers = {
-      spice-client-glib-usb-acl-helper.source = "${
-        (pkgs.spice-gtk.override {
-          withPolkit = true;
-        })
-      }/bin/spice-client-glib-usb-acl-helper";
-    };
-
-    audit = {
-      enable = false;
-    };
-
-    auditd = {
-      enable = false;
-    };
-  };
-
   hardware = {
     enableAllFirmware = config.nixpkgs.config.allowUnfree;
     enableRedistributableFirmware = true;
@@ -1009,6 +679,350 @@ in
     };
   };
 
+  systemd = {
+    package = (
+      pkgs.systemd.override {
+        withAcl = true;
+        withCryptsetup = true;
+        withDocumentation = true;
+        withLogind = true;
+        withOpenSSL = true;
+        withPam = true;
+        withPolkit = true;
+      }
+    );
+
+    tmpfiles.rules = [
+      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
+      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop" # From config.nixpkgs.overlays
+
+      "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
+
+      "d /var/lib/swtpm-localca 0750 tss root -"
+    ];
+  };
+
+  zramSwap = {
+    enable = true;
+    algorithm = config.boot.tmp.zramSettings.compression-algorithm;
+  };
+
+  security = {
+    allowSimultaneousMultithreading = true;
+    forcePageTableIsolation = true;
+
+    tpm2.enable = true;
+
+    lockKernelModules = false;
+
+    rtkit.enable = true;
+
+    sudo = {
+      enable = true;
+      package = (
+        pkgs.sudo.override {
+          withInsults = false; # Includes Profanity
+        }
+      );
+
+      execWheelOnly = true;
+      wheelNeedsPassword = true;
+    };
+
+    polkit = {
+      enable = true;
+      package = (
+        pkgs.polkit.override {
+          useSystemd = true;
+        }
+      );
+
+      adminIdentities = [
+        "unix-group:wheel"
+      ];
+
+      debug = false;
+    };
+
+    soteria = {
+      enable = true;
+      package = pkgs.soteria;
+    };
+
+    pam = {
+      mount = {
+        enable = true;
+
+        createMountPoints = true;
+        removeCreatedMountPoints = true;
+
+        logoutHup = true;
+        logoutTerm = false;
+        logoutKill = false;
+
+        logoutWait = 0;
+      };
+
+      services = {
+        login = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        hyprlock = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        sudo = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        polkit-1 = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        sshd = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        cockpit = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+      };
+    };
+
+    wrappers = {
+      spice-client-glib-usb-acl-helper.source = "${
+        (pkgs.spice-gtk.override {
+          withPolkit = true;
+        })
+      }/bin/spice-client-glib-usb-acl-helper";
+    };
+
+    audit = {
+      enable = false;
+    };
+
+    auditd = {
+      enable = false;
+    };
+  };
+
+  networking = {
+    enableIPv6 = true;
+
+    domain = "local";
+    hostName = "Bitscoper-WorkStation";
+    fqdn = "${config.networking.hostName}.${config.networking.domain}";
+
+    wireless = {
+      dbusControlled = true;
+      userControlled = true;
+      enableHardening = true;
+    };
+
+    useDHCP = false; # Managed by NetworkManager Instead
+    dhcpcd.enable = false;
+
+    modemmanager = {
+      enable = true;
+      package = (
+        pkgs.modemmanager.override {
+          withIntrospection = true;
+          withPolkit = true;
+          withSystemd = true;
+        }
+      );
+    };
+
+    networkmanager = {
+      enable = true;
+      package = (
+        pkgs.networkmanager.override {
+          withSystemd = true;
+        }
+      );
+      plugins = with pkgs; [
+        networkmanager-l2tp
+        networkmanager-openvpn
+        networkmanager-ssh
+        networkmanager-sstp
+      ];
+
+      ethernet.macAddress = "permanent";
+
+      wifi = {
+        backend = "wpa_supplicant";
+
+        powersave = false;
+
+        scanRandMacAddress = true;
+        macAddress = "permanent";
+      };
+
+      dhcp = "internal";
+      dns = "systemd-resolved";
+
+      logLevel = "WARN";
+    };
+
+    firewall = {
+      enable = true;
+
+      allowPing = true;
+
+      allowedTCPPorts = [
+        config.home-manager.users.normal.services.wayvnc.settings.port
+      ];
+      allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
+
+      trustedInterfaces = [
+        "virbr0"
+      ];
+    };
+
+    nameservers = [
+      "9.9.9.9#dns.quad9.net"
+      "149.112.112.112#dns.quad9.net"
+      "2620:fe::fe#dns.quad9.net"
+      "2620:fe::9#dns.quad9.net"
+    ];
+
+    timeServers = [
+      "0.nixos.pool.ntp.org"
+      "1.nixos.pool.ntp.org"
+      "2.nixos.pool.ntp.org"
+      "3.nixos.pool.ntp.org"
+    ];
+  };
+
+  i18n = {
+    defaultLocale = "en_US.UTF-8";
+    extraLocales = "all";
+
+    extraLocaleSettings = {
+      LC_ADDRESS = config.i18n.defaultLocale;
+      LC_COLLATE = config.i18n.defaultLocale;
+      LC_CTYPE = config.i18n.defaultLocale;
+      LC_IDENTIFICATION = config.i18n.defaultLocale;
+      LC_MEASUREMENT = config.i18n.defaultLocale;
+      LC_MESSAGES = config.i18n.defaultLocale;
+      LC_MONETARY = config.i18n.defaultLocale;
+      LC_NAME = config.i18n.defaultLocale;
+      LC_NUMERIC = config.i18n.defaultLocale;
+      LC_PAPER = config.i18n.defaultLocale;
+      LC_TELEPHONE = config.i18n.defaultLocale;
+      LC_TIME = config.i18n.defaultLocale;
+
+      LC_ALL = config.i18n.defaultLocale;
+    };
+
+    inputMethod = {
+      enable = true;
+
+      type = "fcitx5";
+      fcitx5 = {
+        addons = with pkgs; [
+          fcitx5-openbangla-keyboard
+        ];
+        waylandFrontend = true;
+
+        ignoreUserConfig = false;
+      };
+
+      enableGtk3 = true;
+      enableGtk2 = true;
+    };
+  };
+
+  time = {
+    timeZone = "Asia/Dhaka";
+    hardwareClockInLocalTime = false;
+  };
+
   virtualisation = {
     libvirtd = {
       enable = true;
@@ -1119,29 +1133,6 @@ in
         }
       );
     };
-  };
-
-  systemd = {
-    package = (
-      pkgs.systemd.override {
-        withAcl = true;
-        withCryptsetup = true;
-        withDocumentation = true;
-        withLogind = true;
-        withOpenSSL = true;
-        withPam = true;
-        withPolkit = true;
-      }
-    );
-
-    tmpfiles.rules = [
-      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
-      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop" # From config.nixpkgs.overlays
-
-      "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
-
-      "d /var/lib/swtpm-localca 0750 tss root -"
-    ];
   };
 
   services = {
@@ -2656,7 +2647,6 @@ in
         freac
         freecad
         freerouting
-        freesm-launcher # From config.nixpkgs.overlays
         fritzing
         fstl
         fwupd-efi
@@ -2750,7 +2740,6 @@ in
         iotop-c
         iplookup-gtk
         jfsutils
-        jmc2obj
         jmol
         jstest-gtk
         jxrlib
@@ -2814,7 +2803,6 @@ in
         macchanger
         mailcap
         mapscii
-        mcaselector
         md-tui
         mdns-scanner
         meld
@@ -3053,7 +3041,6 @@ in
         wildcard
         windowtolayer
         wl-clipboard
-        worldpainter
         wpprobe
         wvkbd # wvkbd-mobintl
         xar
@@ -4188,6 +4175,69 @@ in
     enable = true;
   };
 
+  catppuccin = {
+    enable = true;
+
+    enableReleaseCheck = true;
+    cache.enable = true;
+
+    autoEnable = true;
+    flavor = "mocha";
+    accent = "lavender";
+
+    grub.enable = false; # Done Manually Instead
+
+    tty = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+    };
+
+    plymouth.enable = false; # Done Manually Instead
+
+    sddm = {
+      enable = true;
+      assertQt6Sddm = true;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      background = wallpaper;
+
+      font = fontPreferences.name.sans_serif;
+      fontSize = toString fontPreferences.size;
+
+      loginBackground = true;
+      userIcon = true;
+
+      clockEnabled = true;
+    };
+
+    cursors = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+    };
+
+    fish = {
+      enable = true;
+
+      flavor = config.catppuccin.flavor;
+    };
+
+    gtk.icon.enable = false;
+
+    fcitx5 = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      enableRounded = true;
+    };
+  }; # From catppuccinThemeFlake
+
   documentation = {
     enable = true;
 
@@ -4294,69 +4344,6 @@ in
     };
   };
 
-  catppuccin = {
-    enable = true;
-
-    enableReleaseCheck = true;
-    cache.enable = true;
-
-    autoEnable = true;
-    flavor = "mocha";
-    accent = "lavender";
-
-    grub.enable = false; # Done Manually Instead
-
-    tty = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-    };
-
-    plymouth.enable = false; # Done Manually Instead
-
-    sddm = {
-      enable = true;
-      assertQt6Sddm = true;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      background = wallpaper;
-
-      font = fontPreferences.name.sans_serif;
-      fontSize = toString fontPreferences.size;
-
-      loginBackground = true;
-      userIcon = true;
-
-      clockEnabled = true;
-    };
-
-    cursors = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-    };
-
-    gtk.icon.enable = false;
-
-    fish = {
-      enable = true;
-
-      flavor = config.catppuccin.flavor;
-    };
-
-    fcitx5 = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      enableRounded = true;
-    };
-  }; # From catppuccinThemeFlake
-
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
@@ -4364,7 +4351,6 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
-      ironbarFlake.homeManagerModules.default
       catppuccinThemeFlake.homeModules.catppuccin
 
       {
@@ -6323,109 +6309,6 @@ in
             enableBashIntegration = config.programs.television.enableBashIntegration;
             enableFishIntegration = config.programs.television.enableFishIntegration;
           };
-
-          ironbar = {
-            enable = true;
-            package = pkgs.ironbar;
-
-            # features = [ ];
-
-            systemd = false; # TODO: Enable
-
-            config = {
-              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
-              double_click_time = "gtk";
-
-              layer = "overlay";
-              position = "top";
-              anchor_to_edges = true;
-              exclusive_zone = false;
-
-              margin = {
-                top = 0;
-                right = 0;
-                bottom = 0;
-                left = 0;
-              };
-
-              height = builtins.floor (design_factor * 2.50); # 40
-              popup_gap = builtins.floor (design_factor / 4); # 4
-
-              start_hidden = true;
-              autohide = 500; # 500 ms
-              popup_autohide = false;
-
-              start = [
-                {
-                  type = "workspaces";
-
-                  all_monitors = false;
-                  sort = "index";
-
-                  icon_size = builtins.floor (design_factor * 2); # 32
-                }
-
-                {
-                  type = "focused";
-
-                  show_icon = true;
-                  show_title = false;
-
-                  icon_size = builtins.floor (design_factor * 2); # 32
-                }
-                {
-                  type = "tray";
-
-                  prefer_theme_icons = true;
-
-                  direction = "horizontal";
-                  iron_size = builtins.floor (design_factor * 2); # 32
-
-                  on_click_left = "default";
-                  on_click_right = "menu";
-                  on_click_middle = "secondary";
-                  on_click_left_double = "none";
-                  on_click_right_double = "none";
-                  on_click_middle_double = "none";
-                }
-              ];
-
-              center = [
-                {
-                  type = "clock";
-
-                  orientation = "horizontal";
-                  justify = "center";
-
-                  format = "%a, %d %b, %H:%M %p"; # Wed, 07 Jan, 13:07 PM
-                  format_popup = "%d %B %Y"; # 07 January 2026
-                  show_week_numbers = true;
-                }
-              ];
-
-              end = [
-                {
-                  type = "sys_info";
-
-                  format = [
-                    "{cpu_percent}% "
-                    "{memory_percent}% "
-                  ];
-
-                  interval = {
-                    cpu = 1; # 1 Second
-                  };
-                }
-
-                {
-                  type = "battery";
-                  show_if = "ls /sys/class/power_supply/ | grep --quiet '^BAT'";
-                }
-              ];
-            };
-
-            # style = { };
-          }; # From ironbarFlake
 
           mcp = {
             enable = true;
