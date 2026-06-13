@@ -1136,11 +1136,20 @@ in
   };
 
   services = {
-    timesyncd = {
-      enable = false; # FIXME: Disabled due to Misbehavior
+    dbus = {
+      enable = true;
+      dbusPackage = (
+        pkgs.dbus.override {
+          enableSystemd = true;
+        }
+      );
 
-      servers = config.networking.timeServers;
-      fallbackServers = config.networking.timeServers;
+      implementation = "broker";
+
+      packages = [
+        config.services.gnome.gcr-ssh-agent.package
+        pkgs.libvirt-dbus
+      ];
     };
 
     resolved = {
@@ -1159,6 +1168,13 @@ in
           ];
         };
       };
+    };
+
+    timesyncd = {
+      enable = false; # FIXME: Disabled due to Misbehavior
+
+      servers = config.networking.timeServers;
+      fallbackServers = config.networking.timeServers;
     };
 
     fwupd = {
@@ -1245,23 +1261,6 @@ in
       ];
     };
 
-    udisks2 = {
-      enable = true;
-      package = pkgs.udisks;
-
-      mountOnMedia = false;
-    };
-
-    gvfs = {
-      enable = true;
-      package = (
-        pkgs.gvfs.override {
-          gnomeSupport = false;
-          udevSupport = true;
-        }
-      );
-    };
-
     smartd = {
       enable = true;
 
@@ -1275,37 +1274,26 @@ in
       };
     };
 
+    udisks2 = {
+      enable = true;
+      package = pkgs.udisks;
+
+      mountOnMedia = false;
+    };
+
     zram-generator = {
       enable = true;
       package = pkgs.zram-generator;
     };
 
-    dbus = {
+    gvfs = {
       enable = true;
-      dbusPackage = (
-        pkgs.dbus.override {
-          enableSystemd = true;
+      package = (
+        pkgs.gvfs.override {
+          gnomeSupport = false;
+          udevSupport = true;
         }
       );
-
-      implementation = "broker";
-
-      packages = [
-        config.services.gnome.gcr-ssh-agent.package
-        pkgs.libvirt-dbus
-      ];
-    };
-
-    accounts-daemon.enable = true;
-
-    fprintd = {
-      enable = true;
-      package = if config.services.fprintd.tod.enable then pkgs.fprintd-tod else pkgs.fprintd;
-
-      # tod = {
-      #   enable = true;
-      #   driver = ;
-      # };
     };
 
     displayManager = {
@@ -1337,17 +1325,16 @@ in
       logToJournal = true;
     };
 
-    gnome = {
-      gnome-keyring.enable = true;
+    accounts-daemon.enable = true;
 
-      gcr-ssh-agent = {
-        enable = true;
-        package = (
-          pkgs.gcr_4.override {
-            systemdSupport = true;
-          }
-        );
-      };
+    fprintd = {
+      enable = true;
+      package = if config.services.fprintd.tod.enable then pkgs.fprintd-tod else pkgs.fprintd;
+
+      # tod = {
+      #   enable = true;
+      #   driver = ;
+      # };
     };
 
     pipewire = {
@@ -1506,6 +1493,19 @@ in
       debugLevel = 0; # 0 = No Debugging
     };
 
+    gnome = {
+      gnome-keyring.enable = true;
+
+      gcr-ssh-agent = {
+        enable = true;
+        package = (
+          pkgs.gcr_4.override {
+            systemdSupport = true;
+          }
+        );
+      };
+    };
+
     phpfpm = {
       phpPackage =
         (pkgs.php85.override {
@@ -1599,10 +1599,6 @@ in
         session.cache_limiter = nocache
         xdebug.mode=debug
       '';
-    };
-
-    kubernetes = {
-      package = pkgs.kubernetes;
     };
 
     avahi = {
@@ -1914,6 +1910,10 @@ in
       openFirewall = true;
     };
 
+    kubernetes = {
+      package = pkgs.kubernetes;
+    };
+
     tailscale = {
       enable = true;
       package = pkgs.tailscale;
@@ -1929,13 +1929,6 @@ in
       package = pkgs.cloudflared;
     };
 
-    logrotate = {
-      enable = true;
-
-      allowNetworking = true;
-      checkConfig = true;
-    };
-
     flatpak = {
       enable = true;
       package = (
@@ -1947,9 +1940,43 @@ in
         }
       );
     };
+
+    logrotate = {
+      enable = true;
+
+      allowNetworking = true;
+      checkConfig = true;
+    };
   };
 
   programs = {
+    uwsm = {
+      enable = true;
+      package = (
+        pkgs.uwsm.override {
+          fumonSupport = true;
+          uuctlSupport = true;
+          uwsmAppSupport = true;
+        }
+      );
+    };
+
+    hyprland = {
+      enable = true;
+      package = pkgs.hyprland; # From config.nixpkgs.overlays
+      portalPackage = pkgs.xdg-desktop-portal-hyprland; # From config.nixpkgs.overlays
+
+      withUWSM = true;
+      xwayland.enable = true;
+    };
+
+    xwayland.enable = true;
+
+    gamemode = {
+      enable = true;
+      enableRenice = true;
+    };
+
     bash = {
       vteIntegration = true;
 
@@ -2031,8 +2058,6 @@ in
       };
     };
 
-    command-not-found.enable = true;
-
     nix-ld = {
       enable = true;
       package = pkgs.nix-ld;
@@ -2044,6 +2069,25 @@ in
           llvmPackages.stdenv.cc.cc.lib
           stdenv.cc.cc.lib
         ]);
+    };
+
+    nix-index = {
+      package = pkgs.nix-index;
+
+      enableBashIntegration = true;
+      enableFishIntegration = true;
+    };
+
+    nh = {
+      enable = true;
+      package = pkgs.nh;
+
+      clean = {
+        enable = true;
+
+        dates = "weekly";
+        extraArgs = "--optimise";
+      };
     };
 
     appimage = {
@@ -2062,16 +2106,7 @@ in
       binfmt = true;
     };
 
-    java = {
-      enable = true;
-      package = (
-        pkgs.jdk.override {
-          enableGtk = true;
-        }
-      );
-
-      binfmt = true;
-    };
+    command-not-found.enable = true;
 
     direnv = {
       enable = true;
@@ -2090,24 +2125,56 @@ in
       silent = false;
     };
 
-    wireshark = {
+    java = {
       enable = true;
       package = (
-        pkgs.wireshark.override {
-          libpcap = (
-            pkgs.libpcap.override {
-              withBluez = true;
-              withRdma = true;
-              withRemote = true;
-            }
-          );
-          withExtras = true;
-          withQt = true;
+        pkgs.jdk.override {
+          enableGtk = true;
         }
       );
 
-      dumpcap.enable = true;
-      usbmon.enable = true;
+      binfmt = true;
+    };
+
+    usbtop.enable = true;
+
+    television = {
+      enable = true;
+      package = pkgs.television;
+
+      enableBashIntegration = true;
+      enableFishIntegration = true;
+    };
+
+    nano = {
+      enable = true;
+      package = (
+        pkgs.nano.override {
+          enableNls = true;
+        }
+      );
+
+      syntaxHighlight = true;
+
+      nanorc = ''
+        set linenumbers
+        set indicator
+        set softwrap
+        set autoindent
+      '';
+    };
+
+    bat = {
+      enable = true;
+      package = pkgs.bat;
+      extraPackages = with pkgs.bat-extras; [
+        batgrep
+        batdiff
+        batman
+        batpipe
+        batwatch
+        prettybat
+      ];
     };
 
     gnupg = {
@@ -2138,13 +2205,6 @@ in
       };
 
       dirmngr.enable = true;
-    };
-
-    ssh = {
-      package = config.services.openssh.package;
-
-      startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
-      agentTimeout = null;
     };
 
     git = {
@@ -2180,107 +2240,6 @@ in
           email = "bitscoper@tutanota.com";
         };
       };
-    };
-
-    evince = {
-      enable = true;
-      package = (
-        pkgs.evince.override {
-          supportMultimedia = true;
-          withLibsecret = true;
-        }
-      );
-    };
-
-    nm-applet = {
-      enable = false;
-    };
-
-    nix-index = {
-      package = pkgs.nix-index;
-
-      enableBashIntegration = true;
-      enableFishIntegration = true;
-    };
-
-    nh = {
-      enable = true;
-      package = pkgs.nh;
-
-      clean = {
-        enable = true;
-
-        dates = "weekly";
-        extraArgs = "--optimise";
-      };
-    };
-
-    usbtop.enable = true;
-
-    nano = {
-      enable = true;
-      package = (
-        pkgs.nano.override {
-          enableNls = true;
-        }
-      );
-
-      syntaxHighlight = true;
-
-      nanorc = ''
-        set linenumbers
-        set indicator
-        set softwrap
-        set autoindent
-      '';
-    };
-
-    bat = {
-      enable = true;
-      package = pkgs.bat;
-      extraPackages = with pkgs.bat-extras; [
-        batgrep
-        batdiff
-        batman
-        batpipe
-        batwatch
-        prettybat
-      ];
-    };
-
-    uwsm = {
-      enable = true;
-      package = (
-        pkgs.uwsm.override {
-          fumonSupport = true;
-          uuctlSupport = true;
-          uwsmAppSupport = true;
-        }
-      );
-    };
-
-    xwayland.enable = true;
-
-    hyprland = {
-      enable = true;
-      package = pkgs.hyprland; # From config.nixpkgs.overlays
-      portalPackage = pkgs.xdg-desktop-portal-hyprland; # From config.nixpkgs.overlays
-
-      withUWSM = true;
-      xwayland.enable = true;
-    };
-
-    television = {
-      enable = true;
-      package = pkgs.television;
-
-      enableBashIntegration = true;
-      enableFishIntegration = true;
-    };
-
-    gamemode = {
-      enable = true;
-      enableRenice = true;
     };
 
     dconf = {
@@ -2340,6 +2299,41 @@ in
       ];
     };
 
+    waybar = {
+      enable = true;
+      package = (
+        pkgs.waybar.override {
+          cavaSupport = true;
+          enableManpages = true;
+          evdevSupport = true;
+          experimentalPatches = true;
+          gpsSupport = true;
+          inputSupport = true;
+          jackSupport = true;
+          mpdSupport = false;
+          mprisSupport = true;
+          niriSupport = false;
+          nlSupport = true;
+          pipewireSupport = true;
+          pulseSupport = true;
+          rfkillSupport = true;
+          sndioSupport = true;
+          systemdSupport = true;
+          traySupport = true;
+          udevSupport = true;
+          upowerSupport = true;
+          wireplumberSupport = true;
+          withMediaPlayer = true;
+
+          runTests = false;
+        }
+      );
+    };
+
+    nm-applet = {
+      enable = false;
+    };
+
     seahorse.enable = true;
 
     system-config-printer.enable = true;
@@ -2353,9 +2347,40 @@ in
       );
     };
 
-    wayvnc = {
+    evince = {
       enable = true;
-      package = pkgs.wayvnc;
+      package = (
+        pkgs.evince.override {
+          supportMultimedia = true;
+          withLibsecret = true;
+        }
+      );
+    };
+
+    ghidra = {
+      enable = true;
+      package = pkgs.ghidra;
+      gdb = true;
+    };
+
+    wireshark = {
+      enable = true;
+      package = (
+        pkgs.wireshark.override {
+          libpcap = (
+            pkgs.libpcap.override {
+              withBluez = true;
+              withRdma = true;
+              withRemote = true;
+            }
+          );
+          withExtras = true;
+          withQt = true;
+        }
+      );
+
+      dumpcap.enable = true;
+      usbmon.enable = true;
     };
 
     obs-studio = {
@@ -2394,10 +2419,9 @@ in
       ];
     };
 
-    ghidra = {
+    wayvnc = {
       enable = true;
-      package = pkgs.ghidra;
-      gdb = true;
+      package = pkgs.wayvnc;
     };
 
     localsend = {
@@ -2405,6 +2429,13 @@ in
       package = pkgs.localsend;
 
       openFirewall = true;
+    };
+
+    ssh = {
+      package = config.services.openssh.package;
+
+      startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
+      agentTimeout = null;
     };
   };
 
@@ -5458,45 +5489,6 @@ in
         };
 
         services = {
-          poweralertd.enable = true;
-
-          udiskie = {
-            enable = true;
-            package = pkgs.udiskie;
-
-            automount = true;
-            tray = "always";
-            notify = true;
-
-            settings = {
-              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -d"; # TODO: Check
-              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
-
-              menu = "nested";
-
-              password_cache = 5; # 5 Minutes
-            };
-          };
-
-          syshud = {
-            enable = true;
-            package = pkgs.syshud;
-
-            settings = {
-              listeners = "keyboard,backlight,audio_in,audio_out";
-              position = "bottom";
-              orientation = "h";
-              show-percentage = true;
-              transition-time = 250;
-              timeout = 2; # 2 Seconds
-            };
-          };
-
-          swaync = {
-            enable = true;
-            package = pkgs.swaynotificationcenter;
-          };
-
           hypridle = {
             enable = true;
             package = pkgs.hypridle;
@@ -5521,16 +5513,43 @@ in
             };
           };
 
-          wayvnc = {
-            enable = config.programs.wayvnc.enable;
-            package = config.programs.wayvnc.package;
+          swaync = {
+            enable = true;
+            package = pkgs.swaynotificationcenter;
+          };
+
+          udiskie = {
+            enable = true;
+            package = pkgs.udiskie;
+
+            automount = true;
+            tray = "always";
+            notify = true;
 
             settings = {
-              address = "127.0.0.1";
-              port = 5901;
-            };
+              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -d"; # TODO: Check
+              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
 
-            autoStart = true;
+              menu = "nested";
+
+              password_cache = 5; # 5 Minutes
+            };
+          };
+
+          poweralertd.enable = true;
+
+          syshud = {
+            enable = true;
+            package = pkgs.syshud;
+
+            settings = {
+              listeners = "keyboard,backlight,audio_in,audio_out";
+              position = "bottom";
+              orientation = "h";
+              show-percentage = true;
+              transition-time = 250;
+              timeout = 2; # 2 Seconds
+            };
           };
 
           hyprpaper = {
@@ -5550,22 +5569,224 @@ in
               };
             };
           };
+
+          wayvnc = {
+            enable = config.programs.wayvnc.enable;
+            package = config.programs.wayvnc.package;
+
+            settings = {
+              address = "127.0.0.1";
+              port = 5901;
+            };
+
+            autoStart = true;
+          };
         };
 
         programs = {
-          # gradle = {
-          #   enable = true;
-          #   package = pkgs.gradle;
-          # }; # flutter adds the compatible version
-
-          matplotlib = {
+          hyprlock = {
             enable = true;
+            package = pkgs.hyprlock;
 
-            config = {
-              axes = {
-                grid = true;
+            sourceFirst = true;
+
+            settings = {
+              general = {
+                immediate_render = true;
+                fractional_scaling = 2; # 2 = Automatic
+
+                text_trim = false;
+                hide_cursor = false;
+
+                ignore_empty_input = true;
               };
+
+              auth = {
+                pam = {
+                  enabled = true;
+                  module = "hyprlock";
+                };
+
+                fingerprint = {
+                  enabled = true;
+                };
+              };
+
+              background = [
+                {
+                  monitor = ""; # "" = All
+                  path = wallpaper;
+                }
+              ];
+            }; # Addition
+          };
+
+          waybar = {
+            enable = true;
+            package = config.programs.waybar.package;
+
+            systemd = {
+              enable = true;
+
+              enableInspect = false;
+              enableDebug = false;
             };
+
+            # settings = { };
+
+            # style = '''';
+          };
+
+          ptyxis = {
+            enable = true;
+            package = pkgs.ptyxis;
+          };
+
+          bash = {
+            enable = true;
+            package = pkgs.bashInteractive;
+
+            enableVteIntegration = config.programs.bash.vteIntegration;
+            enableCompletion = config.programs.bash.completion.enable;
+
+            # sessionVariables = { };
+
+            shellAliases = config.programs.bash.shellAliases;
+
+            # profileExtra = '''';
+
+            # initExtra = '''';
+
+            # logoutExtra = '''';
+          };
+
+          fish = {
+            enable = config.programs.fish.enable;
+            package = config.programs.fish.package;
+
+            plugins = with pkgs.fishPlugins; [
+              {
+                name = "autopair";
+                src = autopair.src;
+              }
+              {
+                name = "bang-bang";
+                src = bang-bang.src;
+              }
+              {
+                name = "colored-man-pages";
+                src = colored-man-pages.src;
+              }
+              {
+                name = "done";
+                src = done.src;
+              }
+              {
+                name = "fish-bd";
+                src = fish-bd.src;
+              }
+              {
+                name = "fish-you-should-use";
+                src = fish-you-should-use.src;
+              }
+              {
+                name = "foreign-env";
+                src = foreign-env.src;
+              }
+              {
+                name = "humantime-fish";
+                src = humantime-fish.src;
+              }
+              {
+                name = "puffer";
+                src = puffer.src;
+              }
+              {
+                name = "spark";
+                src = spark.src;
+              }
+            ];
+
+            generateCompletions = config.programs.fish.generateCompletions;
+
+            shellAbbrs = config.programs.fish.shellAbbrs;
+            shellAliases = config.programs.fish.shellAliases;
+            preferAbbrs = false;
+
+            loginShellInit = config.programs.fish.loginShellInit;
+            shellInit = config.programs.fish.shellInit;
+            interactiveShellInit = config.programs.fish.interactiveShellInit;
+
+            # shellInitLast = '''';
+          };
+
+          nix-your-shell = {
+            enable = true;
+            package = pkgs.nix-your-shell;
+
+            enableFishIntegration = true;
+
+            nix-output-monitor = {
+              enable = true;
+              package = pkgs.nix-output-monitor;
+            };
+          };
+
+          starship = {
+            enable = config.programs.starship.enable;
+            package = config.programs.starship.package;
+
+            # extraPackages = with pkgs; [ ];
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+
+            enableInteractive = config.programs.starship.interactiveOnly;
+
+            presets = config.programs.starship.presets;
+            settings = config.programs.starship.settings;
+          };
+
+          nix-index = {
+            enable = config.programs.nix-index.enable;
+            package = config.programs.nix-index.package;
+
+            enableBashIntegration = config.programs.nix-index.enableBashIntegration;
+            enableFishIntegration = config.programs.nix-index.enableFishIntegration;
+          };
+
+          command-not-found.enable = config.programs.command-not-found.enable;
+
+          tirith = {
+            enable = true;
+            package = pkgs.tirith;
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+          };
+
+          dircolors = {
+            enable = true;
+            package = (
+              pkgs.coreutils-full.override {
+                aclSupport = true;
+                withOpenssl = true;
+              }
+            );
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+          };
+
+          vivid = {
+            enable = true;
+            package = pkgs.vivid;
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+
+            colorMode = "24-bit";
+            activeTheme = "catppuccin-${config.catppuccin.flavor}";
           };
 
           direnv = {
@@ -5583,44 +5804,67 @@ in
             silent = config.programs.direnv.silent;
           };
 
-          ptyxis = {
+          # gradle = {
+          #   enable = true;
+          #   package = pkgs.gradle;
+          # }; # flutter adds the compatible version
+
+          matplotlib = {
             enable = true;
-            package = pkgs.ptyxis;
+
+            config = {
+              axes = {
+                grid = true;
+              };
+            };
           };
 
-          dircolors = {
+          # texlive = { };
+
+          jq = {
             enable = true;
             package = (
-              pkgs.coreutils-full.override {
-                aclSupport = true;
-                withOpenssl = true;
+              pkgs.jq.override {
+                onigurumaSupport = true;
               }
             );
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
           };
 
-          bat = {
-            enable = config.programs.bat.enable;
-            package = config.programs.bat.package;
-            extraPackages = config.programs.bat.extraPackages;
-          };
-
-          vivid = {
+          fastfetch = {
             enable = true;
-            package = pkgs.vivid;
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-
-            colorMode = "24-bit";
-            activeTheme = "catppuccin-${config.catppuccin.flavor}";
+            package = (
+              pkgs.fastfetch.override {
+                audioSupport = true;
+                brightnessSupport = true;
+                dbusSupport = true;
+                enlightenmentSupport = false;
+                flashfetchSupport = false;
+                gnomeSupport = false;
+                imageSupport = true;
+                openclSupport = true;
+                openglSupport = true;
+                rpmSupport = false;
+                sqliteSupport = true;
+                terminalSupport = true;
+                vulkanSupport = true;
+                waylandSupport = true;
+                x11Support = false;
+                xfceSupport = false;
+                zfsSupport = true;
+              }
+            );
           };
 
-          onlyoffice = {
+          television = {
+            enable = config.programs.television.enable;
+            package = config.programs.television.package;
+
+            enableBashIntegration = config.programs.television.enableBashIntegration;
+            enableFishIntegration = config.programs.television.enableFishIntegration;
+          };
+
+          mcp = {
             enable = true;
-            package = pkgs.onlyoffice-desktopeditors;
           };
 
           zed-editor = {
@@ -6302,179 +6546,10 @@ in
             defaultEditor = true;
           };
 
-          television = {
-            enable = config.programs.television.enable;
-            package = config.programs.television.package;
-
-            enableBashIntegration = config.programs.television.enableBashIntegration;
-            enableFishIntegration = config.programs.television.enableFishIntegration;
-          };
-
-          mcp = {
-            enable = true;
-          };
-
-          bash = {
-            enable = true;
-            package = pkgs.bashInteractive;
-
-            enableVteIntegration = config.programs.bash.vteIntegration;
-            enableCompletion = config.programs.bash.completion.enable;
-
-            # sessionVariables = { };
-
-            shellAliases = config.programs.bash.shellAliases;
-
-            # profileExtra = '''';
-
-            # initExtra = '''';
-
-            # logoutExtra = '''';
-          };
-
-          fish = {
-            enable = config.programs.fish.enable;
-            package = config.programs.fish.package;
-
-            plugins = with pkgs.fishPlugins; [
-              {
-                name = "autopair";
-                src = autopair.src;
-              }
-              {
-                name = "bang-bang";
-                src = bang-bang.src;
-              }
-              {
-                name = "colored-man-pages";
-                src = colored-man-pages.src;
-              }
-              {
-                name = "done";
-                src = done.src;
-              }
-              {
-                name = "fish-bd";
-                src = fish-bd.src;
-              }
-              {
-                name = "fish-you-should-use";
-                src = fish-you-should-use.src;
-              }
-              {
-                name = "foreign-env";
-                src = foreign-env.src;
-              }
-              {
-                name = "humantime-fish";
-                src = humantime-fish.src;
-              }
-              {
-                name = "puffer";
-                src = puffer.src;
-              }
-              {
-                name = "spark";
-                src = spark.src;
-              }
-            ];
-
-            generateCompletions = config.programs.fish.generateCompletions;
-
-            shellAbbrs = config.programs.fish.shellAbbrs;
-            shellAliases = config.programs.fish.shellAliases;
-            preferAbbrs = false;
-
-            loginShellInit = config.programs.fish.loginShellInit;
-            shellInit = config.programs.fish.shellInit;
-            interactiveShellInit = config.programs.fish.interactiveShellInit;
-
-            # shellInitLast = '''';
-          };
-
-          tirith = {
-            enable = true;
-            package = pkgs.tirith;
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-          };
-
-          nix-your-shell = {
-            enable = true;
-            package = pkgs.nix-your-shell;
-
-            enableFishIntegration = true;
-
-            nix-output-monitor = {
-              enable = true;
-              package = pkgs.nix-output-monitor;
-            };
-          };
-
-          starship = {
-            enable = config.programs.starship.enable;
-            package = config.programs.starship.package;
-
-            # extraPackages = with pkgs; [ ];
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-
-            enableInteractive = config.programs.starship.interactiveOnly;
-
-            presets = config.programs.starship.presets;
-            settings = config.programs.starship.settings;
-          };
-
-          # texlive = { };
-
-          ssh = {
-            enable = true;
-            package = config.services.openssh.package;
-
-            enableDefaultConfig = false;
-          };
-
-          jq = {
-            enable = true;
-            package = (
-              pkgs.jq.override {
-                onigurumaSupport = true;
-              }
-            );
-          };
-
-          command-not-found.enable = config.programs.command-not-found.enable;
-
-          fastfetch = {
-            enable = true;
-            package = (
-              pkgs.fastfetch.override {
-                audioSupport = true;
-                brightnessSupport = true;
-                dbusSupport = true;
-                enlightenmentSupport = false;
-                flashfetchSupport = false;
-                gnomeSupport = false;
-                imageSupport = true;
-                openclSupport = true;
-                openglSupport = true;
-                rpmSupport = false;
-                sqliteSupport = true;
-                terminalSupport = true;
-                vulkanSupport = true;
-                waylandSupport = true;
-                x11Support = false;
-                xfceSupport = false;
-                zfsSupport = true;
-              }
-            );
-          };
-
-          mangohud = {
-            enable = true;
-            package = pkgs.mangohud;
+          bat = {
+            enable = config.programs.bat.enable;
+            package = config.programs.bat.package;
+            extraPackages = config.programs.bat.extraPackages;
           };
 
           kubecolor = {
@@ -6489,9 +6564,14 @@ in
             };
           };
 
-          info = {
+          keychain = {
             enable = true;
-            package = pkgs.texinfoInteractive;
+            package = pkgs.keychain;
+
+            enableBashIntegration = true;
+            enableFishIntegration = true;
+
+            enableXsessionIntegration = false;
           };
 
           git = {
@@ -6543,63 +6623,9 @@ in
             package = pkgs.gh-dash;
           };
 
-          yt-dlp = {
+          onlyoffice = {
             enable = true;
-            package = (
-              pkgs.yt-dlp.override {
-                atomicparsleySupport = true;
-                ffmpegSupport = true;
-                rtmpSupport = true;
-                withAlias = true;
-              }
-            );
-
-            settings = {
-              no-embed-thumbnail = true;
-            };
-          };
-
-          hyprlock = {
-            enable = true;
-            package = pkgs.hyprlock;
-
-            sourceFirst = true;
-
-            settings = {
-              general = {
-                immediate_render = true;
-                fractional_scaling = 2; # 2 = Automatic
-
-                text_trim = false;
-                hide_cursor = false;
-
-                ignore_empty_input = true;
-              };
-
-              auth = {
-                pam = {
-                  enabled = true;
-                  module = "hyprlock";
-                };
-
-                fingerprint = {
-                  enabled = true;
-                };
-              };
-
-              background = [
-                {
-                  monitor = ""; # "" = All
-                  path = wallpaper;
-                }
-              ];
-            }; # Addition
-          };
-
-          obs-studio = {
-            enable = config.programs.obs-studio.enable;
-            package = config.programs.obs-studio.package;
-            plugins = config.programs.obs-studio.plugins;
+            package = pkgs.onlyoffice-desktopeditors;
           };
 
           lutris = {
@@ -6629,22 +6655,38 @@ in
             ];
           };
 
-          keychain = {
+          mangohud = {
             enable = true;
-            package = pkgs.keychain;
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-
-            enableXsessionIntegration = false;
+            package = pkgs.mangohud;
           };
 
-          nix-index = {
-            enable = config.programs.nix-index.enable;
-            package = config.programs.nix-index.package;
+          yt-dlp = {
+            enable = true;
+            package = (
+              pkgs.yt-dlp.override {
+                atomicparsleySupport = true;
+                ffmpegSupport = true;
+                rtmpSupport = true;
+                withAlias = true;
+              }
+            );
 
-            enableBashIntegration = config.programs.nix-index.enableBashIntegration;
-            enableFishIntegration = config.programs.nix-index.enableFishIntegration;
+            settings = {
+              no-embed-thumbnail = true;
+            };
+          };
+
+          obs-studio = {
+            enable = config.programs.obs-studio.enable;
+            package = config.programs.obs-studio.package;
+            plugins = config.programs.obs-studio.plugins;
+          };
+
+          ssh = {
+            enable = true;
+            package = config.services.openssh.package;
+
+            enableDefaultConfig = false;
           };
 
           man = {
@@ -6653,6 +6695,11 @@ in
             man-db.enable = config.documentation.man.man-db.enable;
 
             generateCaches = config.documentation.man.cache.enable;
+          };
+
+          info = {
+            enable = true;
+            package = pkgs.texinfoInteractive;
           };
         };
 
@@ -6666,6 +6713,29 @@ in
           flavor = config.catppuccin.flavor;
           accent = config.catppuccin.accent;
 
+          hyprtoolkit = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          hyprland = {
+            enable = false; # TODO: Later
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          hyprlock = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            useDefaultConfig = true;
+          };
+
           cursors = {
             enable = config.catppuccin.enable;
 
@@ -6673,31 +6743,32 @@ in
             accent = config.catppuccin.accent;
           };
 
-          bat = {
+          gtk.icon.enable = false;
+
+          qt5ct = {
             enable = config.catppuccin.enable;
+            assertPlatformTheme = true;
 
             flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
           };
 
-          delta = {
+          kvantum = {
             enable = config.catppuccin.enable;
+            assertStyle = true;
+            apply = true;
 
             flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
           };
 
-          zed = {
-            enable = true;
+          waybar = {
+            enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
 
-            icons = {
-              enable = true;
-
-              flavor = config.catppuccin.flavor;
-            };
-
-            italics = false;
+            mode = "prependImport";
           };
 
           swaync = {
@@ -6707,6 +6778,12 @@ in
 
             font = fontPreferences.name.sans_serif;
             fontSize = toString fontPreferences.size;
+          };
+
+          fish = {
+            enable = config.catppuccin.fish.enable;
+
+            flavor = config.catppuccin.flavor;
           };
 
           starship = {
@@ -6725,8 +6802,8 @@ in
             enableRounded = true;
           };
 
-          fish = {
-            enable = config.catppuccin.fish.enable;
+          vivid = {
+            enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
           };
@@ -6738,7 +6815,28 @@ in
             accent = config.catppuccin.accent;
           };
 
-          vivid = {
+          zed = {
+            enable = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            icons = {
+              enable = true;
+
+              flavor = config.catppuccin.flavor;
+            };
+
+            italics = false;
+          };
+
+          bat = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          delta = {
             enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
@@ -6746,40 +6844,6 @@ in
 
           gh-dash = {
             enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          gtk.icon.enable = false;
-
-          hyprland = {
-            enable = false; # TODO: Later
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          hyprlock = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            useDefaultConfig = true;
-          };
-
-          hyprtoolkit = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          kvantum = {
-            enable = config.catppuccin.enable;
-            assertStyle = true;
-            apply = true;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
@@ -6796,14 +6860,6 @@ in
 
             flavor = config.catppuccin.flavor;
           }; # Settings > Appearance > Theme, Style
-
-          qt5ct = {
-            enable = config.catppuccin.enable;
-            assertPlatformTheme = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
         }; # From catppuccinThemeFlake
 
         manual = {
