@@ -256,6 +256,17 @@ in
       }) # Fixes Build Failure of Lutris
 
       (final: previous: {
+        pipewire = previous.pipewire.override {
+          bluezSupport = true;
+          enableSystemd = true;
+          raopSupport = true;
+          rocSupport = true;
+          vulkanSupport = true;
+          zeroconfSupport = true;
+        };
+      })
+
+      (final: previous: {
         psono = final.appimageTools.wrapType2 {
           pname = "psono";
           version = "latest";
@@ -272,7 +283,21 @@ in
               webkitgtk_4_1
             ];
         };
-      }) # Addition # TODO: .desktop
+      }) # Addition # FIXME: .desktop
+
+      (final: previous: {
+        raindropio = final.appimageTools.wrapType2 {
+          pname = "raindropio";
+          version = "latest";
+
+          src = final.fetchurl {
+            url = "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-arm64.AppImage";
+            hash = "sha256-ixg+SN8bWXtBnK3dPGGrTwS2ujvB/HkqakXjQ4wuav8=";
+          };
+
+          # extraPkgs = pkgs: with pkgs; [ ];
+        };
+      }) # Addition # FIXME: .desktop # FIXME: Exec Format Error
 
       (final: previous: {
         seabird = stableNixPackages.seabird;
@@ -1341,16 +1366,7 @@ in
 
     pipewire = {
       enable = true;
-      package = (
-        pkgs.pipewire.override {
-          bluezSupport = true;
-          enableSystemd = true;
-          raopSupport = true;
-          rocSupport = true;
-          vulkanSupport = true;
-          zeroconfSupport = true;
-        }
-      );
+      package = pkgs.pipewire; # From config.nixpkgs.overlays
 
       extraLv2Packages = with pkgs; [
         lsp-plugins
@@ -2170,8 +2186,9 @@ in
       enable = true;
       package = pkgs.bat;
       extraPackages = with pkgs.bat-extras; [
-        batgrep
+        # core # FIXME: Build Failure
         batdiff
+        batgrep
         batman
         batpipe
         batwatch
@@ -2349,6 +2366,138 @@ in
       );
     };
 
+    firefox = {
+      enable = true;
+      package = pkgs.firefox-devedition;
+
+      languagePacks = [
+        "en-US"
+      ];
+
+      policies = {
+        SkipTermsOfUse = true;
+
+        DisableTelemetry = true;
+        DisableFirefoxStudies = true;
+        DisableFirefoxAccounts = true;
+        DisablePocket = true;
+
+        AppAutoUpdate = false;
+        BackgroundAppUpdate = false;
+        NoDefaultBookmarks = true;
+
+        HardwareAcceleration = true;
+        PostQuantumKeyAgreementEnabled = true;
+        DisablePrivateBrowsing = false;
+        CaptivePortal = true;
+
+        DisableDeveloperTools = false;
+        AllowFileSelectionDialogs = true;
+        DisableBuiltinPDFViewer = false;
+        VisualSearchEnabled = true;
+        SearchSuggestEnabled = true;
+        TranslateEnabled = true;
+        PrintingEnabled = true;
+
+        HttpsOnlyMode = "force_enabled";
+        OfferToSaveLogins = false;
+        AutofillAddressEnabled = false;
+        AutofillCreditCardEnabled = false;
+        PromptForDownloadLocation = false;
+        StartDownloadsInTempDirectory = false;
+
+        ExtensionSettings =
+          let
+            linkFormat = linkPart: "https://addons.mozilla.org/firefox/downloads/latest/${linkPart}/latest.xpi";
+          in
+          {
+            "@testpilot-containers" = {
+              install_url = linkFormat "multi-account-containers";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "FirefoxColor@mozilla.com" = {
+              install_url = linkFormat "firefox-color";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "uBlock0@raymondhill.net" = {
+              install_url = linkFormat "ublock-origin";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "jid1-BoFifL9Vbdl2zQ@jetpack" = {
+              install_url = linkFormat "decentraleyes";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "sponsorBlocker@ajay.app" = {
+              install_url = linkFormat "sponsorblock";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{dcb8caa2-63fa-41aa-a508-a45c5990ebdd}" = {
+              install_url = linkFormat "zjm-whatfont";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{2e5ff8c8-32fe-46d0-9fc8-6b8986621f3c}" = {
+              install_url = linkFormat "search_by_image";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{531906d3-e22f-4a6c-a102-8057b88a1a63}" = {
+              install_url = linkFormat "single-file";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{c5d69a8f-2ed0-46a7-afa4-b3a00dc58088}" = {
+              install_url = linkFormat "gopeed-extension";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "languagetool-webextension@languagetool.org" = {
+              install_url = linkFormat "languagetool";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{3dce78ca-2a07-4017-9111-998d4f826625}" = {
+              install_url = linkFormat "psono-pw-password-manager";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "jid0-adyhmvsP91nUO8pRv0Mn2VKeB84@jetpack" = {
+              install_url = linkFormat "raindropio";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "vpn@proton.ch" = {
+              install_url = linkFormat "proton-vpn-firefox-extension";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "{8446b178-c865-4f5c-8ccc-1d7887811ae3}" = {
+              install_url = linkFormat "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-git";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            }; # Hardcoded ID for Catppuccin Mocha Lavender
+          };
+      };
+    };
+
     evince = {
       enable = true;
       package = (
@@ -2502,8 +2651,11 @@ in
     systemPackages =
       with pkgs;
       [
+        # binwalk # FIXME: Build Failure
         # dart # flutter adds the compatible version
+        # parallel-full # FIXME: Build Failure
         # reiser4progs # Marked as Broken
+        # uefi-firmware-parser # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
         aalib
         aapt
@@ -2547,7 +2699,6 @@ in
         bcg729
         binary
         binutils
-        binwalk
         blanket
         bleachbit
         bluez-alsa
@@ -2593,7 +2744,6 @@ in
         cozy
         cramfsprogs
         crlfuzz
-        cromite # From config.nixpkgs.overlays
         cron
         cryptsetup
         cscope
@@ -2662,6 +2812,7 @@ in
         file-roller
         fileinfo
         findutils
+        firefox_decrypt
         flake-checker
         flare-floss
         flatpak-builder
@@ -2898,7 +3049,7 @@ in
         paleta
         pana
         paper-clip
-        parallel-full
+        parallel # Instead of parallel-full
         parted
         pbzx
         pcb2gcode
@@ -2944,6 +3095,7 @@ in
         quick-lookup
         radare2
         raider
+        raindropio # From config.nixpkgs.overlays
         resources
         rp-pppoe
         rpi-imager
@@ -3021,7 +3173,6 @@ in
         turnon
         tutanota-desktop
         udftools
-        uefi-firmware-parser
         ugit
         undollar
         unhide
@@ -3399,10 +3550,10 @@ in
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
+        # ghidraninja-ghidra-scripts # FIXME: Build Failure
         findcrypt
         ghidra-delinker-extension
         ghidra-golanganalyzerextension
-        ghidraninja-ghidra-scripts
         gnudisassembler
         lightkeeper
         machinelearning
@@ -3581,6 +3732,8 @@ in
           ]
         )
       }:$LD_LIBRARY_PATH";
+
+      GI_TYPELIB_PATH = lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
     }
     // lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
@@ -3592,6 +3745,7 @@ in
       ADW_DISABLE_PORTAL = 1;
 
       NIXOS_OZONE_WL = 1;
+      MOZ_ENABLE_WAYLAND = 1;
 
       CHROME_EXECUTABLE = "cromite";
 
@@ -3650,7 +3804,7 @@ in
           config.programs.hyprland.portalPackage
         ];
 
-      xdgOpenUsePortal = false; # TODO: Check
+      xdgOpenUsePortal = false;
 
       config = {
         common = {
@@ -4192,8 +4346,8 @@ in
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
-        "x-scheme-handler/http" = "cromite.desktop";
-        "x-scheme-handler/https" = "cromite.desktop";
+        "x-scheme-handler/http" = "firefox-devedition.desktop";
+        "x-scheme-handler/https" = "firefox-devedition.desktop";
 
         "x-scheme-handler/mailto" = "tutanota-desktop.desktop";
       };
@@ -4803,13 +4957,13 @@ in
               {
                 _args = [
                   "SUPER + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --new-window\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite --incognito\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
                 ];
               }
               {
@@ -4955,67 +5109,84 @@ in
 
             config = {
               binds = {
-                disable_keybind_grabbing = true;
-                pass_mouse_when_bound = false;
+                allow_workspace_cycles = false;
+                workspace_back_and_forth = false;
+                hide_special_on_workspace_change = false;
 
                 window_direction_monitor_fallback = true;
+                ignore_group_lock = false;
+                movefocus_cycles_groupfirst = true;
+                movefocus_cycles_fullscreen = false;
+                allow_pin_fullscreen = true;
+
+                disable_keybind_grabbing = true;
+                pass_mouse_when_bound = false;
               };
 
               cursor = {
-                no_hardware_cursors = false;
+                invisible = false;
+                hide_on_key_press = false;
+                hide_on_tablet = false;
+                hide_on_touch = true;
 
+                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
+                enable_hyprcursor = true;
                 sync_gsettings_theme = true;
 
-                persistent_warps = true;
-
                 no_warps = false;
+                persistent_warps = true;
+                warp_back_after_non_mouse_input = true;
 
-                hide_on_key_press = false;
-                hide_on_touch = true;
+                zoom_rigid = true;
+                zoom_detached_camera = false;
+                zoom_disable_aa = false;
               };
 
               decoration = {
-                dim_special = 0.25;
+                shadow = {
+                  enabled = true;
 
+                  sharp = false;
+                };
+
+                border_part_of_window = true;
                 rounding = builtins.floor (design_factor / 2); # 8
+                rounding_power = 4.0; # 4.0 = Squircle
 
                 active_opacity = 1.0;
                 fullscreen_opacity = 1.0;
                 inactive_opacity = 1.0;
 
+                dim_special = 0.25;
+                dim_modal = true;
                 dim_inactive = false;
                 dim_strength = 0.0;
 
-                blur.enabled = false;
-                shadow.enabled = false;
+                blur = {
+                  enabled = true;
+                  new_optimizations = true;
+
+                  special = true;
+                  popups = true;
+                  input_methods = true;
+
+                  ignore_opacity = false;
+                  xray = true;
+                };
+
+                glow = {
+                  enabled = false;
+                };
+
+                motion_blur = {
+                  enabled = false;
+                };
               };
 
               animations = {
                 enabled = true;
 
-                bezier = [
-                  "linear, 0, 0, 1, 1" # https://www.cssportal.com/css-cubic-bezier-generator/#0,0,1,1
-                ];
-
-                animation = [
-                  "global, 1, 1.0, linear"
-                  "border, 1, 1.0, linear"
-                  "windows, 1, 1.0, linear"
-                  "windowsIn, 1, 1.0, linear"
-                  "windowsOut, 1, 1.0, linear"
-                  "fadeIn, 1, 1.0, linear"
-                  "fadeOut, 1, 1.0, linear"
-                  "fade, 1, 1.0, linear"
-                  "layers, 1, 1.0, linear"
-                  "layersIn, 1, 1.0, linear"
-                  "layersOut, 1, 1.0, linear"
-                  "fadeLayersIn, 1, 1.0, linear"
-                  "fadeLayersOut, 1, 1.0, linear"
-                  "workspaces, 1, 1.0, linear"
-                  "workspacesIn, 1, 1.0, linear"
-                  "workspacesOut, 1, 1.0, linear"
-                ];
-                # Name, On/Off, Speed, Bezier
+                workspace_wraparound = false;
               };
 
               dwindle = {
@@ -5028,69 +5199,102 @@ in
               };
 
               general = {
-                allow_tearing = false;
+                allow_tearing = true;
 
                 gaps_workspaces = 0;
 
                 layout = "dwindle";
 
-                gaps_in = 4;
+                gaps_in = builtins.floor (design_factor / 4); # 4
                 gaps_out = {
-                  top = 4;
-                  right = 4;
-                  bottom = 4;
-                  left = 4;
+                  top = builtins.floor (design_factor / 4); # 4
+                  right = builtins.floor (design_factor / 4); # 4
+                  bottom = builtins.floor (design_factor / 4); # 4
+                  left = builtins.floor (design_factor / 4); # 4
                 };
 
-                border_size = 1;
+                float_gaps = builtins.floor (design_factor / 4); # 4
 
-                no_focus_fallback = false;
+                border_size = 1;
+                "col.inactive_border" = lib.mkLuaInline "colors.surface1";
+                "col.active_border" = lib.mkLuaInline "colors.surface2";
+                "col.nogroup_border" = lib.mkLuaInline "colors.surface1";
+                "col.nogroup_border_active" = lib.mkLuaInline "colors.surface2";
 
                 resize_on_border = true;
                 hover_icon_on_border = true;
 
+                no_focus_fallback = false;
+
                 snap = {
                   enabled = true;
+
+                  respect_gaps = true;
+                  monitor_gap = builtins.floor (design_factor / 4); # 4
+                  window_gap = builtins.floor (design_factor / 4); # 4
+
                   border_overlap = false;
                 };
+
+                modal_parent_blocking = true;
+
+                locale = "en_US";
               };
 
               misc = {
+                disable_watchdog_warning = false;
+                disable_xdg_env_checks = false;
                 disable_autoreload = false;
+                disable_scale_notification = false;
 
                 allow_session_lock_restore = true;
+                session_lock_xray = false;
 
                 key_press_enables_dpms = true;
                 mouse_move_enables_dpms = true;
-
-                vrr = 1;
-
+                vrr = 1; # 1 = On
                 mouse_move_focuses_monitor = true;
 
-                disable_hyprland_logo = true;
-                force_default_wallpaper = 1;
                 disable_splash_rendering = true;
-
-                font_family = fontPreferences.name.sans_serif;
+                disable_hyprland_logo = true;
 
                 close_special_on_empty = true;
 
-                animate_mouse_windowdragging = false;
-                animate_manual_resizes = false;
+                enable_swallow = true;
+
+                name_vk_after_proc = true;
+                enable_anr_dialog = true;
 
                 exit_window_retains_fullscreen = false;
 
+                focus_on_activate = true;
                 layers_hog_keyboard_focus = true;
 
-                focus_on_activate = false;
+                always_follow_on_dnd = true;
+
+                animate_mouse_windowdragging = true;
+                animate_manual_resizes = true;
 
                 middle_click_paste = true;
+
+                font_family = fontPreferences.name.sans_serif;
               };
 
               xwayland = {
                 enabled = true;
-                force_zero_scaling = true;
+                create_abstract_socket = true;
+
+                force_zero_scaling = true; # Sacle = 1
                 use_nearest_neighbor = true;
+              };
+
+              render = {
+                cm_enabled = true;
+                cm_auto_hdr = 1; # 1 = Auto-switch to "cm, hdr" in fullscreen when needed.
+                send_content_type = true;
+                new_render_scheduling = true;
+                xp_mode = false;
+                commit_timing_enabled = true;
               };
 
               # layerrule = [ ];
@@ -5098,24 +5302,36 @@ in
               # windowrulev2 = [ ];
 
               input = {
+                numlock_by_default = false;
                 kb_layout = "us";
 
-                numlock_by_default = false;
-
-                follow_mouse = 1;
-                focus_on_close = 1;
-
-                left_handed = false;
+                force_no_accel = false;
+                scroll_button_lock = true;
                 natural_scroll = false;
+                left_handed = false;
+
+                special_fallthrough = false;
+
+                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
+                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
+                mouse_refocus = true;
 
                 touchpad = {
-                  natural_scroll = true;
+                  disable_while_typing = true;
+
+                  flip_x = false;
+                  flip_y = false;
+
+                  middle_button_emulation = false;
+                  clickfinger_behavior = false;
 
                   tap_to_click = true;
-                  tap_and_drag = true;
-                  drag_lock = true;
 
-                  disable_while_typing = true;
+                  tap_and_drag = true;
+                  drag_3fg = 1; # 1 = 3 Fingers # 2 = 4 Fingers
+                  drag_lock = 2; # 2 = Enabled Sticky
+
+                  natural_scroll = true;
                 };
 
                 touchdevice = {
@@ -5125,24 +5341,66 @@ in
                 tablet = {
                   left_handed = false;
                 };
+
+                tablettool = {
+                  eraser_button_mode = 0; # 0 = Default Hardware Behavior
+                };
+
+                virtualkeyboard = {
+                  release_pressed_on_close = true;
+                };
+              };
+
+              group = {
+                auto_group = false;
+
+                merge_groups_on_drag = true;
+                merge_groups_on_groupbar = true;
+
+                group_on_movetoworkspace = false;
+                merge_floated_into_tiled_on_groupbar = false;
+                insert_after_current = true;
+                focus_removed_window = true;
+
+                groupbar = {
+                  enabled = true;
+                  stacked = false;
+
+                  render_titles = true;
+                  scrolling = true;
+                  middle_click_close = false;
+
+                  keep_upper_gap = true;
+                  gradients = true;
+                  blur = true;
+                  round_only_edges = false;
+                  gradient_round_only_edges = false;
+                };
               };
 
               gestures = {
-                # Touchpad
-                workspace_swipe_invert = true;
-
-                # Touchscreen
-                workspace_swipe_touch = false;
-                workspace_swipe_touch_invert = false;
-
                 workspace_swipe_create_new = true;
                 workspace_swipe_forever = true;
+
+                # Touchpad
+                workspace_swipe_invert = false;
+
+                # Touchscreen
+                workspace_swipe_touch = true;
+                workspace_swipe_touch_invert = false;
               };
 
               ecosystem = {
+                enforce_permissions = false;
+
                 no_update_news = false;
+                no_donation_nag = false;
               };
-            };
+
+              quirks = {
+                prefer_hdr = 1; # 1 = Always
+              };
+            }; # TODO: Sort
 
           };
         };
@@ -5607,7 +5865,7 @@ in
                 layer = "top";
                 passthrough = false;
                 fixed-center = true;
-                spacing = 4;
+                spacing = builtins.floor (design_factor / 4); # 4
 
                 modules-left = [
                   "group/backlight-and-ppd-and-idle-inhibitor"
@@ -5837,8 +6095,6 @@ in
                 };
 
                 battery = {
-                  bat = "BAT0";
-                  adapter = "AC0";
                   design-capacity = false;
                   weighted-average = true;
                   interval = 1;
@@ -5938,7 +6194,7 @@ in
                       tooltip-icon-size = fontPreferences.size;
                     }
                   ];
-                };
+                }; # FIXME: Do Not Work
 
                 "group/swaync-and-systemd" = {
                   modules = [
@@ -5995,7 +6251,7 @@ in
                   show-passive-items = true;
                   reverse-direction = false;
                   icon-size = fontPreferences.size;
-                  spacing = 4;
+                  spacing = builtins.floor (design_factor / 4); # 4
                 };
 
                 "group/workspaces-and-taskbar" = {
@@ -6057,25 +6313,40 @@ in
                 margin-left: 0px;
               }
 
+              #backlight,
               #power-profiles-daemon,
               #idle_inhibitor,
-              #backlight,
               #pulseaudio,
               #bluetooth,
+              #battery,
+              #cpu,
+              #memory,
+              #disk,
               #network,
               #clock,
+              #systemd-failed-units,
               #custom-swaync,
               #privacy,
-              #systemd-failed-units,
-              #disk,
-              #memory,
-              #cpu,
-              #battery,
               #window {
                 border-radius: ${toString design_factor}px;
                 background-color: @crust;
-                padding: 2px 8px;
+                padding: ${toString (builtins.floor (design_factor / 8))}px ${
+                  toString (builtins.floor (design_factor / 2))
+                }px;
                 color: @text;
+              }
+
+              #power-profiles-daemon,
+              #idle_inhibitor,
+              #bluetooth,
+              #cpu,
+              #memory,
+              #disk {
+                margin-left: ${toString (builtins.floor (design_factor / 4))}px;
+              }
+
+              #systemd-failed-units {
+                margin-right: ${toString (builtins.floor (design_factor / 4))}px;
               }
 
               #power-profiles-daemon.power-saver {
@@ -6124,34 +6395,6 @@ in
                 color: @green;
               }
 
-              #network.disabled,
-              #network.disconnected,
-              #network.linked {
-                color: @red;
-              }
-
-              #network.etherenet,
-              #network.wifi {
-                color: @text;
-              }
-
-              #custom-swaync {
-                font-family: ${fontPreferences.name.mono};
-              }
-
-              #privacy-item.audio-in,
-              #privacy-item.screenshare {
-                color: @green;
-              }
-
-              #systemd-failed-units.ok {
-                color: @text;
-              }
-
-              #systemd-failed-units.degraded {
-                color: @red;
-              }
-
               #battery.plugged,
               #battery.full {
                 color: @text;
@@ -6169,6 +6412,34 @@ in
                 color: @red;
               }
 
+              #network.disabled,
+              #network.disconnected,
+              #network.linked {
+                color: @red;
+              }
+
+              #network.etherenet,
+              #network.wifi {
+                color: @text;
+              }
+
+              #systemd-failed-units.ok {
+                color: @text;
+              }
+
+              #systemd-failed-units.degraded {
+                color: @red;
+              }
+
+              #custom-swaync {
+                font-family: ${fontPreferences.name.mono};
+              }
+
+              #privacy-item.audio-in,
+              #privacy-item.screenshare {
+                color: @green;
+              }
+
               #workspaces,
               #taskbar,
               #tray {
@@ -6176,7 +6447,7 @@ in
               }
 
               button {
-                margin: 0px 2px;
+                margin: 0px ${toString (builtins.floor (design_factor / 8))}px;
                 border-radius: ${toString design_factor}px;
                 background-color: @crust;
                 padding: 0px;
@@ -6184,15 +6455,19 @@ in
               }
 
               button * {
-                padding: 0px 4px;
+                padding: 0px ${toString (builtins.floor (design_factor / 4))}px;
               }
 
               button.active {
                 background-color: @mantle;
               }
 
+              button:hover {
+                background-color: @surface0;
+              }
+
               #window label {
-                padding: 0px 4px;
+                padding: 0px ${toString (builtins.floor (design_factor / 4))}px;
                 font-size: ${toString fontPreferences.size}px;
               }
 
@@ -6203,7 +6478,7 @@ in
               }
 
               #tray image {
-                padding: 0px 8px;
+                padding: 0px ${toString (builtins.floor (design_factor / 2))}px;
               }
 
               #tray > .passive {
@@ -7140,6 +7415,24 @@ in
             extraPackages = config.programs.bat.extraPackages;
           };
 
+          chromium = {
+            enable = true;
+            package = pkgs.cromite; # From config.nixpkgs.overlays
+
+            dictionaries = with pkgs.hunspellDictsChromium; [
+              en_US
+            ];
+          };
+
+          firefox = {
+            enable = config.programs.firefox.enable;
+            package = config.programs.firefox.package;
+
+            languagePacks = config.programs.firefox.languagePacks;
+
+            policies = config.programs.firefox.policies;
+          };
+
           kubecolor = {
             enable = true;
             package = pkgs.kubecolor;
@@ -7309,7 +7602,7 @@ in
           };
 
           hyprland = {
-            enable = false; # TODO: Later
+            enable = true;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
@@ -7423,6 +7716,14 @@ in
 
             flavor = config.catppuccin.flavor;
           };
+
+          firefox = {
+            enable = config.catppuccin.enable;
+            force = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          }; # FIXME: Does Not Work
 
           delta = {
             enable = config.catppuccin.enable;
