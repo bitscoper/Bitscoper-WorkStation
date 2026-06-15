@@ -552,12 +552,23 @@ in
     };
   };
 
+  powerManagement = {
+    enable = true;
+
+    cpuFreqGovernor = "performance"; # Makes Power Profiles Daemon Ignored
+    scsiLinkPolicy = "max_performance";
+
+    # powerUpCommands = '''';
+    # bootCommands = '''';
+    # resumeCommands = '''';
+    # powerDownCommands = '''';
+  };
+
   hardware = {
     enableAllFirmware = config.nixpkgs.config.allowUnfree;
     enableRedistributableFirmware = true;
     firmware = with pkgs; [
       alsa-firmware
-      libreelec-dvb-firmware
       linux-firmware
       sof-firmware
     ];
@@ -2399,7 +2410,7 @@ in
         TranslateEnabled = true;
         PrintingEnabled = true;
 
-        HttpsOnlyMode = "force_enabled";
+        HttpsOnlyMode = "enabled";
         OfferToSaveLogins = false;
         AutofillAddressEnabled = false;
         AutofillCreditCardEnabled = false;
@@ -2494,6 +2505,13 @@ in
               installation_mode = "normal_installed";
               updates_disabled = false;
             }; # Hardcoded ID for Catppuccin Mocha Lavender
+          }
+          // {
+            "queryamoid@kaply.com" = {
+              install_url = "https://github.com/mkaply/queryamoid/releases/download/v0.2/query_amo_addon_id-0.2-fx.xpi";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
           };
       };
     };
@@ -2712,6 +2730,7 @@ in
         butt
         bytecode-viewer
         calligraphy
+        carburetor
         cartero
         cavasik
         cbonsai
@@ -5108,38 +5127,47 @@ in
             ]; # TODO: Sort
 
             config = {
-              binds = {
-                allow_workspace_cycles = false;
-                workspace_back_and_forth = false;
-                hide_special_on_workspace_change = false;
+              general = {
+                allow_tearing = true;
 
-                window_direction_monitor_fallback = true;
-                ignore_group_lock = false;
-                movefocus_cycles_groupfirst = true;
-                movefocus_cycles_fullscreen = false;
-                allow_pin_fullscreen = true;
+                gaps_workspaces = 0;
 
-                disable_keybind_grabbing = true;
-                pass_mouse_when_bound = false;
-              };
+                layout = "dwindle";
 
-              cursor = {
-                invisible = false;
-                hide_on_key_press = false;
-                hide_on_tablet = false;
-                hide_on_touch = true;
+                gaps_in = builtins.floor (design_factor / 4); # 4
+                gaps_out = {
+                  top = builtins.floor (design_factor / 4); # 4
+                  right = builtins.floor (design_factor / 4); # 4
+                  bottom = builtins.floor (design_factor / 4); # 4
+                  left = builtins.floor (design_factor / 4); # 4
+                };
 
-                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
-                enable_hyprcursor = true;
-                sync_gsettings_theme = true;
+                float_gaps = builtins.floor (design_factor / 4); # 4
 
-                no_warps = false;
-                persistent_warps = true;
-                warp_back_after_non_mouse_input = true;
+                border_size = 1;
+                "col.inactive_border" = lib.mkLuaInline "colors.surface1";
+                "col.active_border" = lib.mkLuaInline "colors.surface2";
+                "col.nogroup_border" = lib.mkLuaInline "colors.surface1";
+                "col.nogroup_border_active" = lib.mkLuaInline "colors.surface2";
 
-                zoom_rigid = true;
-                zoom_detached_camera = false;
-                zoom_disable_aa = false;
+                resize_on_border = true;
+                hover_icon_on_border = true;
+
+                no_focus_fallback = false;
+
+                snap = {
+                  enabled = true;
+
+                  respect_gaps = true;
+                  monitor_gap = builtins.floor (design_factor / 4); # 4
+                  window_gap = builtins.floor (design_factor / 4); # 4
+
+                  border_overlap = false;
+                };
+
+                modal_parent_blocking = true;
+
+                locale = "en_US";
               };
 
               decoration = {
@@ -5188,118 +5216,6 @@ in
 
                 workspace_wraparound = false;
               };
-
-              dwindle = {
-                use_active_for_splits = true;
-                force_split = 0; # Follows Mouse
-                smart_split = false;
-                preserve_split = true;
-
-                smart_resizing = true;
-              };
-
-              general = {
-                allow_tearing = true;
-
-                gaps_workspaces = 0;
-
-                layout = "dwindle";
-
-                gaps_in = builtins.floor (design_factor / 4); # 4
-                gaps_out = {
-                  top = builtins.floor (design_factor / 4); # 4
-                  right = builtins.floor (design_factor / 4); # 4
-                  bottom = builtins.floor (design_factor / 4); # 4
-                  left = builtins.floor (design_factor / 4); # 4
-                };
-
-                float_gaps = builtins.floor (design_factor / 4); # 4
-
-                border_size = 1;
-                "col.inactive_border" = lib.mkLuaInline "colors.surface1";
-                "col.active_border" = lib.mkLuaInline "colors.surface2";
-                "col.nogroup_border" = lib.mkLuaInline "colors.surface1";
-                "col.nogroup_border_active" = lib.mkLuaInline "colors.surface2";
-
-                resize_on_border = true;
-                hover_icon_on_border = true;
-
-                no_focus_fallback = false;
-
-                snap = {
-                  enabled = true;
-
-                  respect_gaps = true;
-                  monitor_gap = builtins.floor (design_factor / 4); # 4
-                  window_gap = builtins.floor (design_factor / 4); # 4
-
-                  border_overlap = false;
-                };
-
-                modal_parent_blocking = true;
-
-                locale = "en_US";
-              };
-
-              misc = {
-                disable_watchdog_warning = false;
-                disable_xdg_env_checks = false;
-                disable_autoreload = false;
-                disable_scale_notification = false;
-
-                allow_session_lock_restore = true;
-                session_lock_xray = false;
-
-                key_press_enables_dpms = true;
-                mouse_move_enables_dpms = true;
-                vrr = 1; # 1 = On
-                mouse_move_focuses_monitor = true;
-
-                disable_splash_rendering = true;
-                disable_hyprland_logo = true;
-
-                close_special_on_empty = true;
-
-                enable_swallow = true;
-
-                name_vk_after_proc = true;
-                enable_anr_dialog = true;
-
-                exit_window_retains_fullscreen = false;
-
-                focus_on_activate = true;
-                layers_hog_keyboard_focus = true;
-
-                always_follow_on_dnd = true;
-
-                animate_mouse_windowdragging = true;
-                animate_manual_resizes = true;
-
-                middle_click_paste = true;
-
-                font_family = fontPreferences.name.sans_serif;
-              };
-
-              xwayland = {
-                enabled = true;
-                create_abstract_socket = true;
-
-                force_zero_scaling = true; # Sacle = 1
-                use_nearest_neighbor = true;
-              };
-
-              render = {
-                cm_enabled = true;
-                cm_auto_hdr = 1; # 1 = Auto-switch to "cm, hdr" in fullscreen when needed.
-                send_content_type = true;
-                new_render_scheduling = true;
-                xp_mode = false;
-                commit_timing_enabled = true;
-              };
-
-              # layerrule = [ ];
-
-              # windowrulev2 = [ ];
 
               input = {
                 numlock_by_default = false;
@@ -5351,6 +5267,18 @@ in
                 };
               };
 
+              gestures = {
+                workspace_swipe_create_new = true;
+                workspace_swipe_forever = true;
+
+                # Touchpad
+                workspace_swipe_invert = false;
+
+                # Touchscreen
+                workspace_swipe_touch = true;
+                workspace_swipe_touch_invert = false;
+              };
+
               group = {
                 auto_group = false;
 
@@ -5378,16 +5306,94 @@ in
                 };
               };
 
-              gestures = {
-                workspace_swipe_create_new = true;
-                workspace_swipe_forever = true;
+              misc = {
+                disable_watchdog_warning = false;
+                disable_xdg_env_checks = false;
+                disable_autoreload = false;
+                disable_scale_notification = false;
 
-                # Touchpad
-                workspace_swipe_invert = false;
+                allow_session_lock_restore = true;
+                session_lock_xray = false;
 
-                # Touchscreen
-                workspace_swipe_touch = true;
-                workspace_swipe_touch_invert = false;
+                key_press_enables_dpms = true;
+                mouse_move_enables_dpms = true;
+                vrr = 1; # 1 = On
+                mouse_move_focuses_monitor = true;
+
+                disable_splash_rendering = true;
+                disable_hyprland_logo = true;
+
+                close_special_on_empty = true;
+
+                enable_swallow = true;
+
+                name_vk_after_proc = true;
+                enable_anr_dialog = true;
+
+                exit_window_retains_fullscreen = false;
+
+                focus_on_activate = true;
+                layers_hog_keyboard_focus = true;
+
+                always_follow_on_dnd = true;
+
+                animate_mouse_windowdragging = true;
+                animate_manual_resizes = true;
+
+                middle_click_paste = true;
+
+                font_family = fontPreferences.name.sans_serif;
+              };
+
+              binds = {
+                allow_workspace_cycles = false;
+                workspace_back_and_forth = false;
+                hide_special_on_workspace_change = false;
+
+                window_direction_monitor_fallback = true;
+                ignore_group_lock = false;
+                movefocus_cycles_groupfirst = true;
+                movefocus_cycles_fullscreen = false;
+                allow_pin_fullscreen = true;
+
+                disable_keybind_grabbing = true;
+                pass_mouse_when_bound = false;
+              };
+
+              xwayland = {
+                enabled = true;
+                create_abstract_socket = true;
+
+                force_zero_scaling = true; # Sacle = 1
+                use_nearest_neighbor = true;
+              };
+
+              render = {
+                cm_enabled = true;
+                cm_auto_hdr = 1; # 1 = Auto-switch to "cm, hdr" in fullscreen when needed.
+                send_content_type = true;
+                new_render_scheduling = true;
+                xp_mode = false;
+                commit_timing_enabled = true;
+              };
+
+              cursor = {
+                invisible = false;
+                hide_on_key_press = false;
+                hide_on_tablet = false;
+                hide_on_touch = true;
+
+                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
+                enable_hyprcursor = true;
+                sync_gsettings_theme = true;
+
+                no_warps = false;
+                persistent_warps = true;
+                warp_back_after_non_mouse_input = true;
+
+                zoom_rigid = true;
+                zoom_detached_camera = false;
+                zoom_disable_aa = false;
               };
 
               ecosystem = {
@@ -5400,7 +5406,22 @@ in
               quirks = {
                 prefer_hdr = 1; # 1 = Always
               };
-            }; # TODO: Sort
+
+              dwindle = {
+                force_split = 0; # 0 = Split Follows Mouse
+                use_active_for_splits = true;
+                smart_split = false;
+                preserve_split = true;
+
+                smart_resizing = true;
+
+                precise_mouse_move = true;
+              };
+
+              # layerrule = [ ];
+
+              # windowrulev2 = [ ];
+            }; # Sorted from "General" to "Quirks" sccording to Wiki/Configuring/Basics/Variables.
 
           };
         };
@@ -5868,53 +5889,30 @@ in
                 spacing = builtins.floor (design_factor / 4); # 4
 
                 modules-left = [
-                  "group/backlight-and-ppd-and-idle-inhibitor"
-                  "group/pulseaudio-and-bluetooth"
-                  "group/hardware-statistics"
+                  "group/backlight-and-idle-inhibitor"
+                  "group/wireplumber-and-bluetooth"
+                  "group/battery-and-power-profiles-daemon"
+                  "group/cpu-and-load-and-temperature"
+                  "memory"
+                  "disk"
                   "network"
-                  "privacy"
                 ];
 
                 modules-center = [
-                  "clock"
+                  "group/clock-and-user"
                 ];
 
                 modules-right = [
-                  "group/swaync-and-systemd"
+                  "systemd-failed-units"
+                  "custom/swaynotificationcenter"
                   "tray"
-                  "group/workspaces-and-taskbar"
+                  "gamemode"
+                  "group/taskbar-and-workspaces"
                 ];
 
-                clock = {
-                  timezone = config.time.timeZone;
-                  locale = "en_US";
-                  interval = 1;
-
-                  format = "{:%I:%M %p}";
-                  format-alt = "{:%A, %B %d, %Y}";
-
-                  tooltip = true;
-                  tooltip-format = "<tt><small>{calendar}</small></tt>";
-
-                  calendar = {
-                    mode = "year";
-                    mode-mon-col = 3;
-                    weeks-pos = "right";
-
-                    format = {
-                      months = "<b>{}</b>";
-                      days = "{}";
-                      weekdays = "<b>{}</b>";
-                      weeks = "<i>{:%U}</i>";
-                      today = "<u>{}</u>";
-                    };
-                  };
-                };
-
-                "group/backlight-and-ppd-and-idle-inhibitor" = {
+                "group/backlight-and-idle-inhibitor" = {
                   modules = [
                     "backlight"
-                    "power-profiles-daemon"
                     "idle_inhibitor"
                   ];
                   drawer = {
@@ -5926,7 +5924,7 @@ in
                 };
 
                 backlight = {
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   format = "{percent}% {icon}";
                   format-icons = [
@@ -5939,7 +5937,7 @@ in
                     ""
                     ""
                     ""
-                  ];
+                  ]; # Only 9 icons are available.
 
                   tooltip = true;
                   tooltip-format = "{percent}% {icon}";
@@ -5951,18 +5949,6 @@ in
                   scroll-step = 1.0;
 
                   on-click = "uwsm-app -- nwg-displays & uwsm-app -- com.sidevesh.Luminance";
-                };
-
-                power-profiles-daemon = {
-                  format = "{icon}";
-                  format-icons = {
-                    performance = "";
-                    balanced = "";
-                    power-saver = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Driver: {driver}\nProfile: {profile}";
                 };
 
                 idle_inhibitor = {
@@ -5979,9 +5965,9 @@ in
                   tooltip-format-deactivated = "{status}";
                 };
 
-                "group/pulseaudio-and-bluetooth" = {
+                "group/wireplumber-and-bluetooth" = {
                   modules = [
-                    "pulseaudio"
+                    "wireplumber"
                     "bluetooth"
                   ];
                   drawer = {
@@ -5992,12 +5978,12 @@ in
                   orientation = "inherit";
                 };
 
-                pulseaudio = {
+                wireplumber = {
+                  only-physical = false;
+                  max-volume = 150.0; # According to Maximum Volume in pwvucontrol under Over-Amplification
+
                   format = "{volume}% {icon} {format_source}";
                   format-muted = "{icon} {format_source}";
-
-                  format-bluetooth = "{volume}% {icon} 󰂱 {format_source}";
-                  format-bluetooth-muted = "{icon} 󰂱 {format_source}";
 
                   format-source = " {volume}% ";
                   format-source-muted = "";
@@ -6007,48 +5993,22 @@ in
                       ""
                       ""
                       ""
-                    ];
+                    ]; # Only 3 icons are available.
                     default-muted = "";
-
-                    speaker = "󰓃";
-                    speaker-muted = "󰓄";
-
-                    headphone = "󰋋";
-                    headphone-muted = "󰟎";
-
-                    headset = "󰋎";
-                    headset-muted = "󰋐";
-
-                    hands-free = "󰏳";
-                    hands-free-muted = "󰗿";
-
-                    phone = "";
-                    phone-muted = "";
-
-                    portable = "";
-                    portable-muted = "";
-
-                    hdmi = "󰽟";
-                    hdmi-muted = "󰽠";
-
-                    hifi = "󰴸";
-                    hifi-muted = "󰓄";
-
-                    car = "󰄋";
-                    car-muted = "󰸜";
                   };
 
                   tooltip = true;
-                  tooltip-format = "{desc}";
+                  tooltip-format = "Node Nickname: {node_name}\nSource Description: {source_desc}";
 
                   scroll-step = 1.0;
                   reverse-scrolling = false;
                   reverse-mouse-scrolling = false;
-                  max-volume = 100;
                   on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
                   on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
 
                   on-click = "uwsm-app -- pwvucontrol & uwsm-app -- helvum";
+                  on-click-middle = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+                  on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
                 };
 
                 bluetooth = {
@@ -6079,12 +6039,10 @@ in
                   on-click = "uwsm-app -- overskride";
                 };
 
-                "group/hardware-statistics" = {
+                "group/battery-and-power-profiles-daemon" = {
                   modules = [
                     "battery"
-                    "cpu"
-                    "memory"
-                    "disk"
+                    "power-profiles-daemon"
                   ];
                   drawer = {
                     click-to-reveal = false;
@@ -6097,7 +6055,7 @@ in
                 battery = {
                   design-capacity = false;
                   weighted-average = true;
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   full-at = 100;
                   states = {
@@ -6117,7 +6075,7 @@ in
                     ""
                     ""
                     ""
-                  ];
+                  ]; # Only 5 icons are available.
 
                   tooltip = true;
                   tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
@@ -6125,8 +6083,34 @@ in
                   on-click = "uwsm-app -- resources";
                 };
 
+                power-profiles-daemon = {
+                  format = "{icon}";
+                  format-icons = {
+                    performance = "";
+                    balanced = "";
+                    power-saver = "";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "Driver: {driver}\nProfile: {profile}";
+                };
+
+                "group/cpu-and-load-and-temperature" = {
+                  modules = [
+                    "cpu"
+                    "load"
+                    "temperature"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
                 cpu = {
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   format = "{usage}% ";
 
@@ -6135,8 +6119,37 @@ in
                   on-click = "uwsm-app -- resources";
                 };
 
+                load = {
+                  interval = 1; # 1 Second
+
+                  format = "{} "; # {} = {load1}
+
+                  tooltip = true;
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                temperature = {
+                  interval = 1; # 1 Second
+
+                  format = "{temperatureC}°C {icon}";
+                  format-critical = "{temperatureC}°C {icon}";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ]; # Only 5 icons are available.
+
+                  tooltip = true;
+                  tooltip-format = "{temperatureF}°F\n{temperatureK}K";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
                 memory = {
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   format = "{percentage}% ";
 
@@ -6149,7 +6162,7 @@ in
                 disk = {
                   path = "/";
                   unit = "GB";
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   format = "{percentage_used}% 󰋊";
 
@@ -6160,7 +6173,7 @@ in
                 };
 
                 network = {
-                  interval = 1;
+                  interval = 1; # 1 Second
 
                   format = "{bandwidthUpBytes} {bandwidthDownBytes}";
                   format-disconnected = "Disconnected 󱘖";
@@ -6177,63 +6190,54 @@ in
                   on-click = "uwsm-app -- nmgui & uwsm-app -- nm-connection-editor";
                 };
 
-                privacy = {
-                  icon-size = fontPreferences.size;
-                  icon-spacing = builtins.floor (design_factor * 0.50); # 8
-                  transition-duration = 200;
-
+                "group/clock-and-user" = {
                   modules = [
-                    {
-                      type = "screenshare";
-                      tooltip = true;
-                      tooltip-icon-size = fontPreferences.size;
-                    }
-                    {
-                      type = "audio-in";
-                      tooltip = true;
-                      tooltip-icon-size = fontPreferences.size;
-                    }
-                  ];
-                }; # FIXME: Do Not Work
-
-                "group/swaync-and-systemd" = {
-                  modules = [
-                    "custom/swaync"
-                    "systemd-failed-units"
+                    "clock"
+                    "user"
                   ];
                   drawer = {
                     click-to-reveal = false;
-                    transition-left-to-right = false;
+                    transition-left-to-right = true;
                     transition-duration = 500;
                   };
                   orientation = "inherit";
                 };
 
-                "custom/swaync" = {
-                  format = "{} {icon}";
-                  format-icons = {
-                    notification = "<span foreground=\"@yellow\"><sup></sup></span>";
-                    none = "";
+                clock = {
+                  timezone = config.time.timeZone;
+                  locale = "en_US";
+                  interval = 1;
 
-                    inhibited-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
-                    inhibited-none = "";
+                  format = "{:%I:%M %p}";
+                  format-alt = "{:%A, %B %d, %Y}";
 
-                    dnd-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
-                    dnd-none = "";
+                  tooltip = true;
+                  tooltip-format = "<tt><small>{calendar}</small></tt>";
 
-                    dnd-inhibited-notification = "<span foreground=\"@yellow\"><sup></sup></span>";
-                    dnd-inhibited-none = "";
+                  calendar = {
+                    mode = "year";
+                    mode-mon-col = 3;
+                    weeks-pos = "right";
+
+                    format = {
+                      months = "<b>{}</b>";
+                      days = "{}";
+                      weekdays = "<b>{}</b>";
+                      weeks = "<i>{:%U}</i>";
+                      today = "<u>{}</u>";
+                    };
                   };
+                };
 
-                  tooltip = false;
+                user = {
+                  interval = 1; # 1 Second
 
-                  return-type = "json";
-                  exec-if = "which swaync-client";
-                  exec = "swaync-client -swb";
-                  on-click = "swaync-client -t -sw";
-                  on-click-right = "swaync-client -d -sw";
-                  escape = true;
-                }; # FIXME
+                  format = "{work_d}:{work_H}:{work_M}:{work_S} ";
+
+                  icon = false;
+
+                  open-on-click = false;
+                };
 
                 systemd-failed-units = {
                   system = true;
@@ -6247,6 +6251,34 @@ in
                   on-click = "uwsm-app -- xdg-terminal-exec systemctl-tui";
                 };
 
+                "custom/swaynotificationcenter" = {
+                  exec-if = "which swaync-client";
+                  exec = "swaync-client --subscribe-waybar";
+                  return-type = "json";
+                  escape = true;
+
+                  format = "{} {icon}";
+                  format-icons = {
+                    notification = "<sup></sup>";
+                    none = "";
+
+                    inhibited-notification = "<sup></sup>";
+                    inhibited-none = "";
+
+                    dnd-notification = "<sup></sup>";
+                    dnd-none = "";
+
+                    dnd-inhibited-notification = "<sup></sup>";
+                    dnd-inhibited-none = "";
+                  };
+
+                  tooltip = true;
+
+                  on-click = "swaync-client --toggle-panel --skip-wait";
+                  on-click-middle = "swaync-client --close-all --skip-wait";
+                  on-click-right = "swaync-client --toggle-dnd --skip-wait";
+                };
+
                 tray = {
                   show-passive-items = true;
                   reverse-direction = false;
@@ -6254,7 +6286,19 @@ in
                   spacing = builtins.floor (design_factor / 4); # 4
                 };
 
-                "group/workspaces-and-taskbar" = {
+                gamemode = {
+                  hide-not-running = true;
+
+                  use-icon = false;
+                  glyph = "󰊗";
+                  format = "{glyph} {count}";
+                  format-alt = "Games: {count}";
+
+                  tooltip = true;
+                  tooltip-format = "Games Running: {count}";
+                };
+
+                "group/taskbar-and-workspaces" = {
                   modules = [
                     "hyprland/workspaces"
                     "wlr/taskbar"
@@ -6265,17 +6309,6 @@ in
                     transition-duration = 500;
                   };
                   orientation = "inherit";
-                };
-
-                "hyprland/workspaces" = {
-                  all-outputs = false;
-                  show-special = true;
-                  special-visible-only = false;
-                  active-only = false;
-                  format = "{name}";
-                  move-to-monitor = false;
-
-                  on-click = "activate"; # FIXME: Does Not Work
                 };
 
                 "wlr/taskbar" = {
@@ -6290,6 +6323,17 @@ in
                   tooltip-format = "Title: {title}\nName: {name}\nID: {app_id}\nState: {state}";
 
                   on-click = "activate";
+                };
+
+                "hyprland/workspaces" = {
+                  all-outputs = false;
+                  show-special = true;
+                  special-visible-only = false;
+                  active-only = false;
+                  format = "{name}";
+                  move-to-monitor = false;
+
+                  on-click = "activate"; # FIXME: Does Not Work
                 };
               };
             };
@@ -6314,19 +6358,22 @@ in
               }
 
               #backlight,
-              #power-profiles-daemon,
               #idle_inhibitor,
-              #pulseaudio,
+              #wireplumber,
               #bluetooth,
               #battery,
+              #power-profiles-daemon,
               #cpu,
+              #load,
+              #temperature,
               #memory,
               #disk,
               #network,
               #clock,
+              #user,
               #systemd-failed-units,
-              #custom-swaync,
-              #privacy,
+              #custom-swaynotificationcenter,
+              #gamemode,
               #window {
                 border-radius: ${toString design_factor}px;
                 background-color: @crust;
@@ -6336,29 +6383,13 @@ in
                 color: @text;
               }
 
-              #power-profiles-daemon,
               #idle_inhibitor,
               #bluetooth,
-              #cpu,
-              #memory,
-              #disk {
+              #power-profiles-daemon,
+              #load,
+              #temperature,
+              #user {
                 margin-left: ${toString (builtins.floor (design_factor / 4))}px;
-              }
-
-              #systemd-failed-units {
-                margin-right: ${toString (builtins.floor (design_factor / 4))}px;
-              }
-
-              #power-profiles-daemon.power-saver {
-                color: @mauve;
-              }
-
-              #power-profiles-daemon.balanced {
-                color: @blue;
-              }
-
-              #power-profiles-daemon.performance {
-                color: @lavender;
               }
 
               #idle_inhibitor.deactivated {
@@ -6369,13 +6400,10 @@ in
                 color: @green;
               }
 
-              #pulseaudio.muted,
-              #pulseaudio.source-muted {
+              #wireplumber.muted,
+              #wireplumber.sink-muted,
+              #wireplumber.source-muted {
                 color: @red;
-              }
-
-              #pulseaudio.bluetooth {
-                color: @text;
               }
 
               #bluetooth.no-controller,
@@ -6404,12 +6432,26 @@ in
                 color: @green;
               }
 
-              #battery.warning {
+              #battery.warning,
+              #temperature.warning {
                 color: @peach;
               }
 
-              #battery.critical {
+              #battery.critical,
+              #temperature.critical {
                 color: @red;
+              }
+
+              #power-profiles-daemon.power-saver {
+                color: @mauve;
+              }
+
+              #power-profiles-daemon.balanced {
+                color: @blue;
+              }
+
+              #power-profiles-daemon.performance {
+                color: @lavender;
               }
 
               #network.disabled,
@@ -6431,12 +6473,11 @@ in
                 color: @red;
               }
 
-              #custom-swaync {
+              #custom-swaynotificationcenter {
                 font-family: ${fontPreferences.name.mono};
               }
 
-              #privacy-item.audio-in,
-              #privacy-item.screenshare {
+              #gamemode.running {
                 color: @green;
               }
 
@@ -6878,6 +6919,7 @@ in
                 cursor_position_button = true;
                 line_endings_button = true;
               };
+              line_indicator_format = "long";
 
               project_panel = {
                 button = true;
@@ -7065,6 +7107,10 @@ in
                 show_other_hints = true;
               };
 
+              drag_and_drop_selection = {
+                enabled = true;
+              };
+
               edit_predictions = {
                 mode = "subtle";
 
@@ -7087,10 +7133,25 @@ in
                 # ];
               };
 
+              journal = {
+                hour_format = "hour12";
+              };
+
+              image_viewer = {
+                unit = "binary";
+              };
+
+              session = {
+                restore_unsaved_buffers = true;
+              };
+
               use_system_prompts = true;
               use_system_path_prompts = true;
+              close_on_file_delete = false;
+              confirm_quit = true;
 
               vim_mode = false;
+              helix_mode = false;
               hide_mouse = "never";
 
               show_call_status_icon = true;
@@ -7113,18 +7174,30 @@ in
               lsp_document_colors = "inlay";
               colorize_brackets = true;
               current_line_highlight = "all";
-              inline_code_actions = true;
+              selection_highlight = true;
+              rounded_selection = true;
 
+              inline_code_actions = true;
+              hover_popover_enabled = true;
+              hover_popover_sticky = true;
+              code_lens = "on";
+
+              disable_ai = false;
               show_completions_on_input = true;
               show_completion_documentation = true;
               completion_menu_scrollbar = "auto";
               auto_signature_help = true;
               show_signature_help_after_edits = true;
 
-              format_on_save = "on";
+              use_auto_surround = true;
+              extend_comment_on_newline = false;
+              auto_indent = "syntax_aware";
+              auto_indent_on_paste = true;
               hard_tabs = false;
               tab_size = 2;
 
+              line_ending = "detect";
+              format_on_save = "on";
               redact_private_values = true;
 
               file_types = {
