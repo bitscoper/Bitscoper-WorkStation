@@ -19,7 +19,6 @@ let
       };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  hyprlandFlake = builtins.getFlake "github:hyprwm/Hyprland/main?submodules=1";
   cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
@@ -159,22 +158,18 @@ in
         "@wheel"
       ];
 
-      substituters = [
-        "https://hyprland.cachix.org/"
-      ];
+      # substituters = [ ];
 
       require-sigs = true;
       trusted-substituters = config.nix.settings.substituters;
-      trusted-public-keys = [
-        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-      ];
+      # trusted-public-keys = [ ];
 
       cores = 0; # 0 = All
       max-jobs = 1;
     };
 
     gc = {
-      automatic = false; # Enabled nh clean Instead
+      automatic = !config.programs.nh.enable;
       dates = "weekly";
       persistent = true;
     };
@@ -186,6 +181,8 @@ in
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
+      ]
+      ++ lib.optionals config.nixpkgs.config.allowUnfree [
         "ventoy-gtk3-1.1.12"
       ];
 
@@ -239,34 +236,6 @@ in
       }) # Addition
 
       (final: previous: {
-        hyprland = (
-          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.hyprland.override {
-            debug = false;
-            enableXWayland = true;
-            withSystemd = true;
-            wrapRuntimeDeps = true;
-          }
-        );
-      })
-
-      (final: previous: {
-        openldap = previous.openldap.overrideAttrs {
-          doCheck = !previous.stdenv.hostPlatform.isi686;
-        };
-      }) # Fixes Build Failure of Lutris
-
-      (final: previous: {
-        pipewire = previous.pipewire.override {
-          bluezSupport = true;
-          enableSystemd = true;
-          raopSupport = true;
-          rocSupport = true;
-          vulkanSupport = true;
-          zeroconfSupport = true;
-        };
-      })
-
-      (final: previous: {
         psono = final.appimageTools.wrapType2 {
           pname = "psono";
           version = "latest";
@@ -298,22 +267,6 @@ in
           # extraPkgs = pkgs: with pkgs; [ ];
         };
       }) # Addition # FIXME: .desktop # FIXME: Exec Format Error
-
-      (final: previous: {
-        seabird = stableNixPackages.seabird;
-      }) # Fixes Building Forever
-
-      (final: previous: {
-        vte = stableNixPackages.vte;
-      }) # Fixes Build Failure
-
-      (final: previous: {
-        xdg-desktop-portal-hyprland =
-          hyprlandFlake.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland.override
-            {
-              debug = false;
-            };
-      })
     ];
   };
 
@@ -623,7 +576,7 @@ in
         }
       );
 
-      hsphfpd.enable = false; # Conflicts with WirePlumber
+      hsphfpd.enable = !config.services.pipewire.wireplumber.enable;
 
       powerOnBoot = true;
 
@@ -728,7 +681,7 @@ in
 
     tmpfiles.rules = [
       "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
-      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop" # From config.nixpkgs.overlays
+      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
 
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
@@ -774,8 +727,6 @@ in
       adminIdentities = [
         "unix-group:wheel"
       ];
-
-      debug = false;
     };
 
     soteria = {
@@ -816,7 +767,43 @@ in
           showMotd = true;
         };
 
+        sddm = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
         hyprlock = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        su = {
           unixAuth = true;
           fprintAuth = true;
 
@@ -938,7 +925,7 @@ in
       enableHardening = true;
     };
 
-    useDHCP = false; # Managed by NetworkManager Instead
+    useDHCP = if config.networking.networkmanager.dhcp == "internal" then false else true;
     dhcpcd.enable = false;
 
     modemmanager = {
@@ -989,6 +976,7 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
+        8554 # RTSP of audio-sharing
         config.home-manager.users.normal.services.wayvnc.settings.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
@@ -1040,6 +1028,7 @@ in
       type = "fcitx5";
       fcitx5 = {
         addons = with pkgs; [
+          fcitx5-gtk
           fcitx5-openbangla-keyboard
         ];
         waylandFrontend = true;
@@ -1180,10 +1169,16 @@ in
 
       implementation = "broker";
 
-      packages = [
-        config.services.gnome.gcr-ssh-agent.package
-        pkgs.libvirt-dbus
-      ];
+      packages =
+        with pkgs;
+        [
+          gnome2.GConf
+          libvirt-dbus
+        ]
+        ++ [
+          config.services.gnome.gcr-ssh-agent.package
+
+        ];
     };
 
     resolved = {
@@ -1377,7 +1372,16 @@ in
 
     pipewire = {
       enable = true;
-      package = pkgs.pipewire; # From config.nixpkgs.overlays
+      package = (
+        pkgs.pipewire.override {
+          bluezSupport = true;
+          enableSystemd = true;
+          raopSupport = true;
+          rocSupport = true;
+          vulkanSupport = true;
+          zeroconfSupport = true;
+        }
+      );
 
       extraLv2Packages = with pkgs; [
         lsp-plugins
@@ -1992,8 +1996,15 @@ in
 
     hyprland = {
       enable = true;
-      package = pkgs.hyprland; # From config.nixpkgs.overlays
-      portalPackage = pkgs.xdg-desktop-portal-hyprland; # From config.nixpkgs.overlays
+      package = (
+        pkgs.hyprland.override {
+          debug = false;
+          enableXWayland = true;
+          withSystemd = true;
+          wrapRuntimeDeps = true;
+        }
+      );
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
 
       withUWSM = true;
       xwayland.enable = true;
@@ -2225,10 +2236,10 @@ in
 
         enableBrowserSocket = true;
         enableExtraSocket = true;
-        enableSSHSupport = false;
+        enableSSHSupport = true;
 
         pinentryPackage = (
-          pkgs.pinentry-gtk2.override {
+          pkgs.pinentry-gnome3.override {
             withLibsecret = true;
           }
         );
@@ -2330,7 +2341,7 @@ in
     };
 
     waybar = {
-      enable = false; # Started by Home Manager Instead
+      enable = !config.home-manager.users.normal.programs.waybar.enable;
       package = (
         pkgs.waybar.override {
           cavaSupport = true;
@@ -2603,7 +2614,7 @@ in
     ssh = {
       package = config.services.openssh.package;
 
-      startAgent = false; # `services.gnome.gcr-ssh-agent.enable' and `programs.ssh.startAgent' cannot both be enabled at the same time.
+      startAgent = !config.services.gnome.gcr-ssh-agent.enable;
       agentTimeout = null;
     };
   };
@@ -2707,6 +2718,7 @@ in
         asnmap
         atac
         audacity
+        audio-sharing
         aurea
         autopsy
         avbroot
@@ -2742,12 +2754,11 @@ in
         certbot-full
         certdump
         cicero-tui
+        cine
         clang-analyzer
         clang-tools
         clang_22
         clapgrep
-        clapper
-        clapper-enhancers
         clinfo
         cloc
         cmake
@@ -2785,6 +2796,7 @@ in
         ddrescueview
         debase
         delineate
+        deluge-gtk
         dialect
         diffoci
         dig
@@ -2813,6 +2825,7 @@ in
         evtest
         evtest-qt
         exfatprogs
+        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -2843,12 +2856,12 @@ in
         font-manager
         fontfor
         fontforge-gtk
+        footage
         fork-cleaner
         freac
         freecad
         freerouting
         fritzing
-        fstl
         fwupd-efi
         gama-tui
         gamepad-mirror
@@ -2870,6 +2883,7 @@ in
         gnome-firmware
         gnome-frog
         gnome-graphs
+        gnome-mahjongg
         gnome-multi-writer
         gnome-nettool
         gnome-podcasts
@@ -3065,6 +3079,7 @@ in
         orbvis
         otree
         overskride
+        packet
         paleta
         pana
         paper-clip
@@ -3098,7 +3113,7 @@ in
         protocol
         proton-vpn
         protonplus
-        protonup-qt
+        protontricks
         ps
         psmisc
         psono # From config.nixpkgs.overlays
@@ -3134,6 +3149,7 @@ in
         sdrangel
         seabird
         seer # seergdb
+        selectdefaultapplication
         semver-tool
         share-preview
         shellclear
@@ -3241,6 +3257,7 @@ in
         wike
         wildcard
         windowtolayer
+        winetricks
         wl-clipboard
         wpprobe
         wvkbd # wvkbd-mobintl
@@ -3292,6 +3309,13 @@ in
           openUsdSupport = true;
           spaceNavSupport = true;
           waylandSupport = true;
+        })
+
+        (bottles.override {
+          removeWarningPopup = true;
+
+          # extraLibraries = with pkgs; [ ];
+          # extraPkgs = with pkgs; [ ];
         })
 
         (
@@ -3465,12 +3489,6 @@ in
           withSqlite = true;
         })
 
-        (qbittorrent.override {
-          guiSupport = true;
-          trackerSearch = true;
-          webuiSupport = true;
-        })
-
         (sdrpp.override {
           airspy_source = true;
           airspyhf_source = true;
@@ -3519,12 +3537,6 @@ in
           webUISupport = false; # FIXME: Build Failure
         })
 
-        (ventoy-full-gtk.override {
-          withExt4 = true;
-          withNtfs = true;
-          withXfs = true;
-        })
-
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -3545,6 +3557,13 @@ in
         anydesk
         rar
         unrar
+        zoom-us
+
+        (ventoy-full-gtk.override {
+          withExt4 = true;
+          withNtfs = true;
+          withXfs = true;
+        })
       ]
 
       ++ config.boot.extraModulePackages
@@ -3553,8 +3572,6 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
       ++ config.home-manager.users.normal.programs.gh.extensions
-      ++ config.home-manager.users.normal.programs.lutris.extraPackages
-      ++ config.home-manager.users.normal.programs.lutris.winePackages
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
@@ -3632,7 +3649,6 @@ in
       ++ (with kdePackages; [
         kcachegrind
         kjournald # kjournaldbrowser
-        kmahjongg
       ])
 
       ++ (with linphonePackages; [
@@ -3742,6 +3758,11 @@ in
       };
     };
 
+    pathsToLink = [
+      "/share/applications"
+      "/share/xdg-desktop-portal"
+    ];
+
     variables = {
       LD_LIBRARY_PATH = lib.mkForce "${
         pkgs.lib.makeLibraryPath (
@@ -3813,64 +3834,14 @@ in
 
     portal = {
       enable = true;
-      extraPortals =
-        with pkgs;
-        [
-          xdg-desktop-portal-gtk
-          xdg-desktop-portal-luminous
-        ]
-        ++ [
-          config.programs.hyprland.portalPackage
-        ];
+      extraPortals = [
+        config.home-manager.users.normal.services.gnome-keyring.package
+        pkgs.xdg-desktop-portal-gtk
+      ]; # config.programs.hyprland.portalPackage adds xdg-desktop-portal-hyprland to it.
 
-      xdgOpenUsePortal = false;
+      xdgOpenUsePortal = true;
 
-      config = {
-        common = {
-          default = [
-            "gtk"
-          ];
-
-          "org.freedesktop.impl.portal.Secret" = [
-            "gnome-keyring"
-          ];
-        };
-
-        hyprland = {
-          default = [
-            "luminous"
-            "hyprland"
-            "gtk"
-          ];
-
-          "org.freedesktop.impl.portal.FileChooser" = [
-            "gtk"
-          ];
-          "org.freedesktop.impl.portal.OpenURI" = [
-            "gtk"
-          ];
-
-          "org.freedesktop.impl.portal.ScreenShot" = [
-            "luminous"
-          ];
-          "org.freedesktop.impl.portal.ScreenCast" = [
-            "luminous"
-          ];
-          "org.freedesktop.impl.portal.InputCapture" = [
-            "luminous"
-          ];
-          "org.freedesktop.impl.portal.RemoteDesktop" = [
-            "luminous"
-          ];
-          "org.freedesktop.impl.portal.Settings" = [
-            "luminous"
-          ];
-
-          "org.freedesktop.impl.portal.GlobalShortcuts" = [
-            "hyprland"
-          ];
-        };
-      }; # FIXME: Does Not Work
+      # config = { };
     };
 
     mime = {
@@ -4229,102 +4200,102 @@ in
         "audio/vorbis-config" = "com.jeffser.Nocturne.desktop";
         "audio/vorbis" = "com.jeffser.Nocturne.desktop";
 
-        "video/1d-interleaved-parityfec" = "com.github.rafostar.Clapper.desktop";
-        "video/3gpp-tt" = "com.github.rafostar.Clapper.desktop";
-        "video/3gpp" = "com.github.rafostar.Clapper.desktop";
-        "video/3gpp2" = "com.github.rafostar.Clapper.desktop";
-        "video/AV1" = "com.github.rafostar.Clapper.desktop";
-        "video/BMPEG" = "com.github.rafostar.Clapper.desktop";
-        "video/BT656" = "com.github.rafostar.Clapper.desktop";
-        "video/CelB" = "com.github.rafostar.Clapper.desktop";
-        "video/DV" = "com.github.rafostar.Clapper.desktop";
-        "video/encaprtp" = "com.github.rafostar.Clapper.desktop";
-        "video/evc" = "com.github.rafostar.Clapper.desktop";
-        "video/FFV1" = "com.github.rafostar.Clapper.desktop";
-        "video/flexfec" = "com.github.rafostar.Clapper.desktop";
-        "video/H261" = "com.github.rafostar.Clapper.desktop";
-        "video/H263-1998" = "com.github.rafostar.Clapper.desktop";
-        "video/H263-2000" = "com.github.rafostar.Clapper.desktop";
-        "video/H263" = "com.github.rafostar.Clapper.desktop";
-        "video/H264-RCDO" = "com.github.rafostar.Clapper.desktop";
-        "video/H264-SVC" = "com.github.rafostar.Clapper.desktop";
-        "video/H264" = "com.github.rafostar.Clapper.desktop";
-        "video/H265" = "com.github.rafostar.Clapper.desktop";
-        "video/H266" = "com.github.rafostar.Clapper.desktop";
-        "video/iso.segment" = "com.github.rafostar.Clapper.desktop";
-        "video/JPEG" = "com.github.rafostar.Clapper.desktop";
-        "video/jpeg2000-scl" = "com.github.rafostar.Clapper.desktop";
-        "video/jpeg2000" = "com.github.rafostar.Clapper.desktop";
-        "video/jxsv" = "com.github.rafostar.Clapper.desktop";
-        "video/lottie+json" = "com.github.rafostar.Clapper.desktop";
-        "video/matroska-3d" = "com.github.rafostar.Clapper.desktop";
-        "video/matroska" = "com.github.rafostar.Clapper.desktop";
-        "video/mj2" = "com.github.rafostar.Clapper.desktop";
-        "video/MP1S" = "com.github.rafostar.Clapper.desktop";
-        "video/MP2P" = "com.github.rafostar.Clapper.desktop";
-        "video/MP2T" = "com.github.rafostar.Clapper.desktop";
-        "video/mp4" = "com.github.rafostar.Clapper.desktop";
-        "video/MP4V-ES" = "com.github.rafostar.Clapper.desktop";
-        "video/mpeg" = "com.github.rafostar.Clapper.desktop";
-        "video/mpeg4-generic" = "com.github.rafostar.Clapper.desktop";
-        "video/MPV" = "com.github.rafostar.Clapper.desktop";
-        "video/nv" = "com.github.rafostar.Clapper.desktop";
-        "video/ogg" = "com.github.rafostar.Clapper.desktop";
-        "video/parityfec" = "com.github.rafostar.Clapper.desktop";
-        "video/pointer" = "com.github.rafostar.Clapper.desktop";
-        "video/quicktime" = "com.github.rafostar.Clapper.desktop";
-        "video/raptorfec" = "com.github.rafostar.Clapper.desktop";
-        "video/raw" = "com.github.rafostar.Clapper.desktop";
-        "video/rtp-enc-aescm128" = "com.github.rafostar.Clapper.desktop";
-        "video/rtploopback" = "com.github.rafostar.Clapper.desktop";
-        "video/rtx" = "com.github.rafostar.Clapper.desktop";
-        "video/scip" = "com.github.rafostar.Clapper.desktop";
-        "video/smpte291" = "com.github.rafostar.Clapper.desktop";
-        "video/SMPTE292M" = "com.github.rafostar.Clapper.desktop";
-        "video/ulpfec" = "com.github.rafostar.Clapper.desktop";
-        "video/vc1" = "com.github.rafostar.Clapper.desktop";
-        "video/vc2" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.blockfact.factv" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.CCTV" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.hd" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.mobile" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.mp4" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.pd" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.sd" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dece.video" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.directv.mpeg-tts" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.directv.mpeg" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dlna.mpeg-tts" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.dvb.file" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.fvt" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.hns.video" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.ttsavc" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.motorola.video" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.motorola.videop" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.mpegurl" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.ms-playready.media.pyv" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.nokia.mp4vr" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.nokia.videovoip" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.objectvideo" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.planar" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.radgamettools.bink" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.radgamettools.smacker" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.sealed.mpeg1" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.sealed.mpeg4" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.sealed.swf" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.uvvu.mp4" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.vivo" = "com.github.rafostar.Clapper.desktop";
-        "video/vnd.youtube.yt" = "com.github.rafostar.Clapper.desktop";
-        "video/VP8" = "com.github.rafostar.Clapper.desktop";
-        "video/VP9" = "com.github.rafostar.Clapper.desktop";
-        "video/x-matroska" = "com.github.rafostar.Clapper.desktop"; # https://mime.wcode.net/mkv
+        "video/1d-interleaved-parityfec" = "io.github.diegopvlk.Cine.desktop";
+        "video/3gpp-tt" = "io.github.diegopvlk.Cine.desktop";
+        "video/3gpp" = "io.github.diegopvlk.Cine.desktop";
+        "video/3gpp2" = "io.github.diegopvlk.Cine.desktop";
+        "video/AV1" = "io.github.diegopvlk.Cine.desktop";
+        "video/BMPEG" = "io.github.diegopvlk.Cine.desktop";
+        "video/BT656" = "io.github.diegopvlk.Cine.desktop";
+        "video/CelB" = "io.github.diegopvlk.Cine.desktop";
+        "video/DV" = "io.github.diegopvlk.Cine.desktop";
+        "video/encaprtp" = "io.github.diegopvlk.Cine.desktop";
+        "video/evc" = "io.github.diegopvlk.Cine.desktop";
+        "video/FFV1" = "io.github.diegopvlk.Cine.desktop";
+        "video/flexfec" = "io.github.diegopvlk.Cine.desktop";
+        "video/H261" = "io.github.diegopvlk.Cine.desktop";
+        "video/H263-1998" = "io.github.diegopvlk.Cine.desktop";
+        "video/H263-2000" = "io.github.diegopvlk.Cine.desktop";
+        "video/H263" = "io.github.diegopvlk.Cine.desktop";
+        "video/H264-RCDO" = "io.github.diegopvlk.Cine.desktop";
+        "video/H264-SVC" = "io.github.diegopvlk.Cine.desktop";
+        "video/H264" = "io.github.diegopvlk.Cine.desktop";
+        "video/H265" = "io.github.diegopvlk.Cine.desktop";
+        "video/H266" = "io.github.diegopvlk.Cine.desktop";
+        "video/iso.segment" = "io.github.diegopvlk.Cine.desktop";
+        "video/JPEG" = "io.github.diegopvlk.Cine.desktop";
+        "video/jpeg2000-scl" = "io.github.diegopvlk.Cine.desktop";
+        "video/jpeg2000" = "io.github.diegopvlk.Cine.desktop";
+        "video/jxsv" = "io.github.diegopvlk.Cine.desktop";
+        "video/lottie+json" = "io.github.diegopvlk.Cine.desktop";
+        "video/matroska-3d" = "io.github.diegopvlk.Cine.desktop";
+        "video/matroska" = "io.github.diegopvlk.Cine.desktop";
+        "video/mj2" = "io.github.diegopvlk.Cine.desktop";
+        "video/MP1S" = "io.github.diegopvlk.Cine.desktop";
+        "video/MP2P" = "io.github.diegopvlk.Cine.desktop";
+        "video/MP2T" = "io.github.diegopvlk.Cine.desktop";
+        "video/mp4" = "io.github.diegopvlk.Cine.desktop";
+        "video/MP4V-ES" = "io.github.diegopvlk.Cine.desktop";
+        "video/mpeg" = "io.github.diegopvlk.Cine.desktop";
+        "video/mpeg4-generic" = "io.github.diegopvlk.Cine.desktop";
+        "video/MPV" = "io.github.diegopvlk.Cine.desktop";
+        "video/nv" = "io.github.diegopvlk.Cine.desktop";
+        "video/ogg" = "io.github.diegopvlk.Cine.desktop";
+        "video/parityfec" = "io.github.diegopvlk.Cine.desktop";
+        "video/pointer" = "io.github.diegopvlk.Cine.desktop";
+        "video/quicktime" = "io.github.diegopvlk.Cine.desktop";
+        "video/raptorfec" = "io.github.diegopvlk.Cine.desktop";
+        "video/raw" = "io.github.diegopvlk.Cine.desktop";
+        "video/rtp-enc-aescm128" = "io.github.diegopvlk.Cine.desktop";
+        "video/rtploopback" = "io.github.diegopvlk.Cine.desktop";
+        "video/rtx" = "io.github.diegopvlk.Cine.desktop";
+        "video/scip" = "io.github.diegopvlk.Cine.desktop";
+        "video/smpte291" = "io.github.diegopvlk.Cine.desktop";
+        "video/SMPTE292M" = "io.github.diegopvlk.Cine.desktop";
+        "video/ulpfec" = "io.github.diegopvlk.Cine.desktop";
+        "video/vc1" = "io.github.diegopvlk.Cine.desktop";
+        "video/vc2" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.blockfact.factv" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.CCTV" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.hd" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.mobile" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.mp4" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.pd" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.sd" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dece.video" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.directv.mpeg-tts" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.directv.mpeg" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dlna.mpeg-tts" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.dvb.file" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.fvt" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.hns.video" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.1dparityfec-1010" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.1dparityfec-2005" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.2dparityfec-1010" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.2dparityfec-2005" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.ttsavc" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.iptvforum.ttsmpeg2" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.motorola.video" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.motorola.videop" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.mpegurl" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.ms-playready.media.pyv" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.nokia.interleaved-multimedia" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.nokia.mp4vr" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.nokia.videovoip" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.objectvideo" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.planar" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.radgamettools.bink" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.radgamettools.smacker" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.sealed.mpeg1" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.sealed.mpeg4" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.sealed.swf" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.sealedmedia.softseal.mov" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.uvvu.mp4" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.vivo" = "io.github.diegopvlk.Cine.desktop";
+        "video/vnd.youtube.yt" = "io.github.diegopvlk.Cine.desktop";
+        "video/VP8" = "io.github.diegopvlk.Cine.desktop";
+        "video/VP9" = "io.github.diegopvlk.Cine.desktop";
+        "video/x-matroska" = "io.github.diegopvlk.Cine.desktop"; # https://mime.wcode.net/mkv
 
         "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
         "application/msword" = "writer.desktop"; # .doc
@@ -4362,8 +4333,8 @@ in
         "font/woff" = "com.github.FontManager.FontViewer.desktop";
         "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
-        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
-        "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
+        "application/x-bittorrent" = "deluge.desktop";
+        "x-scheme-handler/magnet" = "deluge.desktop";
 
         "x-scheme-handler/http" = "firefox-devedition.desktop";
         "x-scheme-handler/https" = "firefox-devedition.desktop";
@@ -4430,7 +4401,7 @@ in
       flavor = config.catppuccin.flavor;
     };
 
-    gtk.icon.enable = false;
+    gtk.icon.enable = false; # Done Manually Instead
 
     fcitx5 = {
       enable = config.catppuccin.enable;
@@ -4571,6 +4542,8 @@ in
 
           preferXdgDirectories = true;
 
+          # packages = with pkgs; [ ];
+
           pointerCursor = {
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             size = builtins.floor (design_factor * 1.50); # 24
@@ -4652,7 +4625,7 @@ in
                 "hyprland.start"
                 (lib.generators.mkLuaInline ''
                   function()
-                    hl.exec_cmd("pidof soteria || uwsm-app -- soteria") -- Fallback
+                    hl.exec_cmd("dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_ID") -- Fixes the Soteria Service Not Starting
 
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
                   end
@@ -5205,10 +5178,6 @@ in
                 glow = {
                   enabled = false;
                 };
-
-                motion_blur = {
-                  enabled = false;
-                };
               };
 
               animations = {
@@ -5256,10 +5225,6 @@ in
 
                 tablet = {
                   left_handed = false;
-                };
-
-                tablettool = {
-                  eraser_button_mode = 0; # 0 = Default Hardware Behavior
                 };
 
                 virtualkeyboard = {
@@ -5427,6 +5392,16 @@ in
         };
 
         xdg = {
+          portal = {
+            enable = config.xdg.portal.enable;
+            extraPortals = config.xdg.portal.extraPortals;
+
+            xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
+
+            # configPackages = with pkgs; [ ];
+            config = config.xdg.portal.config;
+          };
+
           mime.enable = true;
 
           mimeApps = {
@@ -5529,17 +5504,6 @@ in
               target = "nwg-bar/style.css";
               executable = null;
             };
-
-            "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme" = {
-              enable = true;
-
-              source = builtins.fetchurl {
-                url = "https://github.com/catppuccin/qbittorrent/releases/latest/download/catppuccin-${config.catppuccin.flavor}.qbtheme";
-              };
-
-              target = "qBittorrent/themes/catppuccin-${config.catppuccin.flavor}.qbtheme";
-              executable = null;
-            }; # Looks Weird
           };
 
           dataFile = {
@@ -5756,6 +5720,17 @@ in
                 }
               ];
             };
+          };
+
+          gnome-keyring = {
+            enable = config.services.gnome.gnome-keyring.enable;
+            package = pkgs.gnome-keyring;
+
+            components = [
+              "pkcs11"
+              "secrets"
+              "ssh"
+            ];
           };
 
           swaync = {
@@ -7582,33 +7557,6 @@ in
             package = pkgs.onlyoffice-desktopeditors;
           };
 
-          lutris = {
-            enable = true;
-            package = (
-              pkgs.lutris.override {
-                steamSupport = false;
-              }
-            );
-
-            extraPackages =
-              with pkgs;
-              [
-                gamemode
-                gamescope
-                protontricks
-                winetricks
-              ]
-              ++ [
-                config.home-manager.users.normal.programs.mangohud.package
-              ];
-            winePackages = with pkgs; [
-              wineWow64Packages.waylandFull
-            ];
-            protonPackages = with pkgs; [
-              proton-ge-bin
-            ];
-          };
-
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
@@ -7697,7 +7645,7 @@ in
             accent = config.catppuccin.accent;
           };
 
-          gtk.icon.enable = false;
+          gtk.icon.enable = false; # Done Manually Instead
 
           qt5ct = {
             enable = config.catppuccin.enable;

@@ -47,7 +47,8 @@ My NixOS Configuration
 
 &nbsp;
 
-- **Video Editor and Animator:** Blender
+- **Video Editors:** Blender, Footage
+- **Animator:** Blender
 
 &nbsp;
 
@@ -62,7 +63,7 @@ My NixOS Configuration
 
 - **Image Viewer:** gThumb
 - **Audio Player:** Nocturne
-- **Video Player:** Clapper
+- **Video Player:** Cine
 
 ### 2D Fabrication
 
@@ -79,7 +80,7 @@ My NixOS Configuration
 
 &nbsp;
 
-- **STL Viewer:** fstl
+- **STL Viewer:** Exhibit
 
 &nbsp;
 
