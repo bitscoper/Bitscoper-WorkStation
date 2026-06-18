@@ -47,8 +47,7 @@ My NixOS Configuration
 
 &nbsp;
 
-- **Video Editors:** Blender, Footage
-- **Animator:** Blender
+- **Video Editors:** Footage, Pitivi
 
 &nbsp;
 
@@ -72,10 +71,6 @@ My NixOS Configuration
 ### 3D Fabrication
 
 - **Parametric CAD:** FreeCAD
-- **Organic Modeller:** Blender
-
-&nbsp;
-
 - **Mesh Processor:** MeshLab
 
 &nbsp;

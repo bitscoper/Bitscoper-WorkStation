@@ -1,22 +1,22 @@
 # By Abdullah As-Sadeed
 
 {
-  # modulesPath,
   config,
   lib,
+  modulesPath,
   options,
   pkgs,
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
@@ -112,7 +112,7 @@ let
   };
 
   tlsCertificateFiles =
-    pkgs.runCommand "tlsCertificate"
+    pkgs.runCommand "generate-tls-certificate"
       {
         CN = config.networking.fqdn;
       }
@@ -135,8 +135,7 @@ in
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
-    ./hardware-configuration.nix
-    ./secrets.nix
+    ./hardware-and-user-configuration.nix
   ];
 
   nix = {
@@ -176,13 +175,17 @@ in
   };
 
   nixpkgs = {
+    hostPlatform = {
+      system = "${config.specificHardwareConfiguration.systemArchitecture}-linux";
+    };
+
     config = {
       allowUnfree = true;
 
       permittedInsecurePackages = [
         "opendkim-2.11.0-Beta2"
       ]
-      ++ lib.optionals config.nixpkgs.config.allowUnfree [
+      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
         "ventoy-gtk3-1.1.12"
       ];
 
@@ -232,7 +235,7 @@ in
       })
 
       (final: previous: {
-        cromite = cromiteFlake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        cromite = cromiteFlake.packages.${config.nixpkgs.hostPlatform.system}.default;
       }) # Addition
 
       (final: previous: {
@@ -241,7 +244,12 @@ in
           version = "latest";
 
           src = final.fetchurl {
-            url = "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage";
+            url =
+              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
+                "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage"
+              else
+                throw "No ${config.nixpkgs.hostPlatform.system} AppImage for Psono!";
+
             hash = "sha256-YJnEG4OgdX4gTniG8XYPaJs4le0VelPlz47pXdx+0r0=";
           };
 
@@ -260,13 +268,20 @@ in
           version = "latest";
 
           src = final.fetchurl {
-            url = "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-arm64.AppImage";
-            hash = "sha256-ixg+SN8bWXtBnK3dPGGrTwS2ujvB/HkqakXjQ4wuav8=";
+            url =
+              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
+                "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-x86_64.AppImage"
+              else if config.nixpkgs.hostPlatform.system == "aarch64-linux" then
+                "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-arm64.AppImage"
+              else
+                throw "No ${config.nixpkgs.hostPlatform.system} AppImage for Raindrop.io!";
+
+            hash = "sha256-bR1dLoKderCw5e0oEYWYQX6gfENub/NJilRrXs+bsTo=";
           };
 
           # extraPkgs = pkgs: with pkgs; [ ];
         };
-      }) # Addition # FIXME: .desktop # FIXME: Exec Format Error
+      }) # Addition # FIXME: .desktop
     ];
   };
 
@@ -295,7 +310,7 @@ in
           FONTDIR="/var/lib/onlyoffice-fonts/"
           mkdir -p "$FONTDIR"
 
-          ${lib.concatMapStrings (package: ''
+          ${pkgs.lib.concatMapStrings (package: ''
             if [ -d "${package}/share/fonts" ]; then
               find "${package}/share/fonts" -type f \( \
                 -name "*.bdf" -o \
@@ -342,7 +357,7 @@ in
 
         theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
 
-        splashImage = lib.mkForce wallpaper;
+        splashImage = pkgs.lib.mkForce wallpaper;
         splashMode = "normal";
 
         configurationLimit = 100;
@@ -393,7 +408,6 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [
       apfs
-      cpupower
       mm-tools
       openafs
       tmon
@@ -406,12 +420,11 @@ in
     hardwareScan = true;
 
     kernelModules = [
-      "at24"
-      "ee1004"
-      "i915"
-      "kvm-intel"
-      "spd5118"
-    ];
+      "at24" # SDR/DDR/DDR2/DDR3 SPD and I2C
+      "ee1004" # DDR4 SPD
+      "spd5118" # DDR5 SPD
+    ]
+    ++ config.specificHardwareConfiguration.kernelModules; # From hardware-and-user-configuration.nix
 
     blacklistedKernelModules = [
       "efifb"
@@ -419,37 +432,34 @@ in
     ];
 
     extraModprobeConfig = ''
-      options kvm_intel nested=1
       options kvm report_ignored_msrs=0
-    '';
+    ''
+    + config.specificHardwareConfiguration.extraModprobeConfig; # From hardware-and-user-configuration.nix
 
     kernelParams = [
       "boot.shell_on_fail"
       "initcall_blacklist=simpledrm_platform_driver_init"
-      "intel_iommu=on"
       "iommu=pt"
       "kvm.ignore_msrs=1"
       "mitigations=auto"
-      "splash"
       "rd.systemd.show_status=true"
       "rd.udev.log_level=err"
+      "splash"
       "udev.log_level=err"
       "udev.log_priority=err"
-    ];
+    ]
+    ++ config.specificHardwareConfiguration.kernelParams; # From hardware-and-user-configuration.nix
 
     initrd = {
       enable = true;
 
       kernelModules = config.boot.kernelModules;
       availableKernelModules = [
-        "ahci"
-        "nvme"
-        "rtsx_usb_sdmmc"
-        "sd_mod"
         "usb_storage"
         "usbhid"
         "xhci_pci"
-      ];
+      ]
+      ++ config.specificHardwareConfiguration.availableKernelModules; # From hardware-and-user-configuration.nix
 
       systemd = {
         enable = true;
@@ -529,8 +539,9 @@ in
     firmwareCompression = "zstd";
 
     cpu = {
-      intel = {
+      "${config.specificHardwareConfiguration.cpuVendor}" = {
         updateMicrocode = true;
+        microcodePackage = pkgs."microcode-${config.specificHardwareConfiguration.cpuVendor}";
       };
     };
 
@@ -545,17 +556,8 @@ in
       enable = true;
       enable32Bit = true;
 
-      extraPackages = with pkgs; [
-        # intel-ocl # FIXME: Build Failure
-        intel-compute-runtime
-        intel-gmmlib
-        intel-media-driver
-        libvpl
-        vpl-gpu-rt
-      ];
-      extraPackages32 = with pkgs.pkgsi686Linux; [
-        intel-media-driver
-      ];
+      extraPackages = config.specificHardwareConfiguration.extraGraphicsPackages; # From hardware-and-user-configuration.nix
+      extraPackages32 = config.specificHardwareConfiguration.extraGraphicsPackages32; # From hardware-and-user-configuration.nix
     };
 
     sensor = {
@@ -714,6 +716,23 @@ in
 
       execWheelOnly = true;
       wheelNeedsPassword = true;
+
+      extraRules = [
+        {
+          users = [
+            config.users.users.normal.name
+          ];
+          commands = [
+            {
+              command = "${pkgs.hardinfo2}/bin/hardinfo2";
+              options = [
+                "NOPASSWD"
+                "SETENV"
+              ];
+            }
+          ];
+        }
+      ];
     };
 
     polkit = {
@@ -895,12 +914,15 @@ in
       };
     };
 
+    enableWrappers = true;
     wrappers = {
-      spice-client-glib-usb-acl-helper.source = "${
-        (pkgs.spice-gtk.override {
-          withPolkit = true;
-        })
-      }/bin/spice-client-glib-usb-acl-helper";
+      spice-client-glib-usb-acl-helper = {
+        source = "${
+          (pkgs.spice-gtk.override {
+            withPolkit = true;
+          })
+        }/bin/spice-client-glib-usb-acl-helper";
+      };
     };
 
     audit = {
@@ -1276,7 +1298,7 @@ in
 
       ignoreCpuidCheck = false;
 
-      debug = false;
+      debug = config.environment.enableDebugInfo;
     };
 
     colord.enable = true;
@@ -1998,7 +2020,7 @@ in
       enable = true;
       package = (
         pkgs.hyprland.override {
-          debug = false;
+          debug = config.environment.enableDebugInfo;
           enableXWayland = true;
           withSystemd = true;
           wrapRuntimeDeps = true;
@@ -2290,6 +2312,35 @@ in
           lockAll = true;
 
           settings = {
+            "org/gtk/settings/file-chooser" = {
+              show-hidden = true;
+              sort-directories-first = true;
+            };
+
+            "org/gnome/desktop/interface" = {
+              gtk-enable-primary-paste = true;
+            };
+
+            "org/gnome/desktop/wm/preferences" = {
+              action-double-click-titlebar = "toggle-maximize";
+              button-layout = "appmenu:maximize,close";
+              focus-mode = "mouse";
+            };
+
+            "org/gnome/desktop/privacy" = {
+              remember-recent-files = false;
+            };
+
+            "org/cinnamon/desktop/applications/terminal" = {
+              exec = "xdg-terminal-exec";
+              exec-arg = "-d";
+            }; # For Nemo
+
+            "org/nemo/preferences" = {
+              show-advanced-permissions = true;
+              show-hidden-files = true;
+            };
+
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
@@ -2372,7 +2423,10 @@ in
     };
 
     nm-applet = {
-      enable = false;
+      enable = true;
+      package = pkgs.networkmanagerapplet;
+
+      indicator = true;
     };
 
     seahorse.enable = true;
@@ -2631,7 +2685,7 @@ in
         noto-fonts-color-emoji
         noto-fonts-lgc-plus
       ]
-      ++ lib.optionals config.nixpkgs.config.allowUnfree [
+      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
         corefonts
       ];
 
@@ -2797,6 +2851,7 @@ in
         debase
         delineate
         deluge-gtk
+        desktop-file-utils
         dialect
         diffoci
         dig
@@ -2909,6 +2964,8 @@ in
         gthumb
         gtk-frdp
         gtk-vnc
+        gtk3
+        gtk4
         gtkhash
         gucharmap
         guestfs-tools
@@ -2920,6 +2977,7 @@ in
         hdparm
         helvum
         hfsprogs
+        hicolor-icon-theme
         hieroglyphic
         host
         hstsparser
@@ -2978,6 +3036,8 @@ in
         letterpress
         libaom
         libarchive
+        libcanberra-gtk2
+        libcanberra-gtk3
         libde265
         libfreeaptx
         libhsts
@@ -3041,7 +3101,6 @@ in
         mysqltuner
         nethogs
         netpeek
-        networkmanagerapplet # Provides nm-connection-editor
         newelle
         newsflash
         nilfs-utils
@@ -3054,7 +3113,6 @@ in
         nixmate
         nixpkgs-reviewFull
         nmap
-        nmgui
         noaa-apt
         nocturne
         ntfs3g
@@ -3098,6 +3156,7 @@ in
         picard-tools
         pinta
         pipes
+        pitivi
         pkg-config
         platformio
         play
@@ -3177,6 +3236,8 @@ in
         stellarium
         stenc
         stockpile
+        strace
+        strace-analyzer
         streamlit
         subfinder
         subtitleeditor
@@ -3205,6 +3266,7 @@ in
         trustymail
         tsukae
         ttl
+        tuba
         turnon
         tutanota-desktop
         udftools
@@ -3304,18 +3366,11 @@ in
           zstdSupport = true;
         })
 
-        (blender.override {
-          jackaudioSupport = true;
-          openUsdSupport = true;
-          spaceNavSupport = true;
-          waylandSupport = true;
-        })
-
         (bottles.override {
           removeWarningPopup = true;
 
-          # extraLibraries = with pkgs; [ ];
-          # extraPkgs = with pkgs; [ ];
+          # extraLibraries = [ ];
+          # extraPkgs = [ ];
         })
 
         (
@@ -3438,12 +3493,16 @@ in
           useGtk = true;
         })
 
+        (writeShellScriptBin "hardinfo2" ''
+          exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
+        '')
+
         (kicad.override {
           with3d = true;
           withI18n = true;
           withNgspice = true;
           withScripting = true;
-          # addons = with pkgs.kicadAddons; [
+          # addons = with kicadAddons; [
           #   kikit
           #   kikit-library
           # ]; # FIXME: Build Failure
@@ -3451,7 +3510,7 @@ in
 
         (nemo-with-extensions.override {
           useDefaultExtensions = true;
-          extensions = with pkgs; [
+          extensions = [
             nemo-emblems
             nemo-fileroller
             nemo-preview
@@ -3548,6 +3607,7 @@ in
         config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
+        config.programs.nm-applet.package # Also Provides nm-connection-editor
         config.services.gnome.gcr-ssh-agent.package
         config.services.phpfpm.phpPackage
       ]
@@ -3763,8 +3823,10 @@ in
       "/share/xdg-desktop-portal"
     ];
 
+    # etc = { };
+
     variables = {
-      LD_LIBRARY_PATH = lib.mkForce "${
+      LD_LIBRARY_PATH = pkgs.lib.mkForce "${
         pkgs.lib.makeLibraryPath (
           with pkgs;
           [
@@ -3773,9 +3835,9 @@ in
         )
       }:$LD_LIBRARY_PATH";
 
-      GI_TYPELIB_PATH = lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
+      GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
     }
-    // lib.optionalAttrs config.nixpkgs.config.allowUnfree {
+    // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
       ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
       ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
@@ -4487,6 +4549,7 @@ in
           "floppy"
           "fwupd-refresh"
           "greeter"
+          "hardinfo2"
           "i2c"
           "input"
           "jellyfin"
@@ -4577,7 +4640,7 @@ in
             '';
           };
 
-          enableDebugInfo = false;
+          enableDebugInfo = config.environment.enableDebugInfo;
 
           stateVersion = config.system.stateVersion;
         };
@@ -4623,7 +4686,7 @@ in
             on = {
               _args = [
                 "hyprland.start"
-                (lib.generators.mkLuaInline ''
+                (pkgs.lib.generators.mkLuaInline ''
                   function()
                     hl.exec_cmd("dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_ID") -- Fixes the Soteria Service Not Starting
 
@@ -4637,349 +4700,355 @@ in
               {
                 _args = [
                   "SUPER + L"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + 1"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 2"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 3"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 4"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 5"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 6"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 7"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 8"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 9"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + 0"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + mouse_down"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + mouse_up"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + S"
-                  (lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
+                  (pkgs.lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + left"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + right"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + up"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + down"
-                  (lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 1"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 2"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 3"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 4"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 5"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 6"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 7"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 8"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 9"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + 0"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + S"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 1"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 2"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 3"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 4"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 5"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 6"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 7"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 8"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 9"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + 0"
-                  (lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + F"
-                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + SHIFT + ALT + F"
-                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
                 ];
               }
               {
                 _args = [
                   "F11"
-                  (lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
                 ];
               }
               {
                 _args = [
                   "SUPER + Q"
-                  (lib.generators.mkLuaInline "hl.dsp.window.close()")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.close()")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + Q"
-                  (lib.generators.mkLuaInline "hl.dsp.window.kill()")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
                 ];
               }
               {
                 _args = [
                   "Print"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- ferrishot\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- ferrishot\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nemo\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
                 ];
               }
               {
                 _args = [
                   "SUPER + SPACE"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + T"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + P"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- psono\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- psono\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + B"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- raindropio\")")
                 ];
               }
               {
                 _args = [
                   "XF86Explorer"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --new-window\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --new-window\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + W"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
                 ];
               }
               {
                 _args = [
                   "XF86Mail"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + E"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + A"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
                 ];
               }
               {
                 _args = [
                   "XF86MonBrightnessUp"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
                   {
                     repeating = true;
                     locked = true;
@@ -4989,7 +5058,7 @@ in
               {
                 _args = [
                   "XF86MonBrightnessDown"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
                   {
                     repeating = true;
                     locked = true;
@@ -4999,7 +5068,7 @@ in
               {
                 _args = [
                   "XF86AudioRaiseVolume"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
                   {
                     repeating = true;
                     locked = true;
@@ -5009,7 +5078,7 @@ in
               {
                 _args = [
                   "XF86AudioLowerVolume"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
                   {
                     repeating = true;
                     locked = true;
@@ -5019,7 +5088,7 @@ in
               {
                 _args = [
                   "XF86AudioPlay"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
                   {
                     locked = true;
                   }
@@ -5028,7 +5097,7 @@ in
               {
                 _args = [
                   "XF86AudioPause"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
                   {
                     locked = true;
                   }
@@ -5037,7 +5106,7 @@ in
               {
                 _args = [
                   "XF86AudioStop"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
                   {
                     locked = true;
                   }
@@ -5046,7 +5115,7 @@ in
               {
                 _args = [
                   "XF86AudioPrev"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
                   {
                     locked = true;
                   }
@@ -5055,7 +5124,7 @@ in
               {
                 _args = [
                   "XF86AudioNext"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
                   {
                     locked = true;
                   }
@@ -5064,7 +5133,7 @@ in
               {
                 _args = [
                   "XF86AudioMute"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
                   {
                     locked = true;
                   }
@@ -5073,7 +5142,7 @@ in
               {
                 _args = [
                   "XF86AudioMicMute"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
                   {
                     locked = true;
                   }
@@ -5082,7 +5151,7 @@ in
               {
                 _args = [
                   "SUPER + mouse:272"
-                  (lib.generators.mkLuaInline "hl.dsp.window.drag()")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
                   {
                     mouse = true;
                   }
@@ -5091,7 +5160,7 @@ in
               {
                 _args = [
                   "SUPER + mouse:273"
-                  (lib.generators.mkLuaInline "hl.dsp.window.resize()")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
                   {
                     mouse = true;
                   }
@@ -5118,10 +5187,10 @@ in
                 float_gaps = builtins.floor (design_factor / 4); # 4
 
                 border_size = 1;
-                "col.inactive_border" = lib.mkLuaInline "colors.surface1";
-                "col.active_border" = lib.mkLuaInline "colors.surface2";
-                "col.nogroup_border" = lib.mkLuaInline "colors.surface1";
-                "col.nogroup_border_active" = lib.mkLuaInline "colors.surface2";
+                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
+                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
 
                 resize_on_border = true;
                 hover_icon_on_border = true;
@@ -5392,6 +5461,40 @@ in
         };
 
         xdg = {
+          desktopEntries = {
+            hardinfo2 =
+              let
+                desktopFile = "${pkgs.hardinfo2}/share/applications/hardinfo2.desktop";
+
+                get =
+                  key:
+                  pkgs.runCommand "get-${key}-from-hardinfo2-desktop-file" { } ''
+                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
+                    import configparser
+
+                    parser = configparser.ConfigParser(strict=False)
+
+                    parser.read("${desktopFile}")
+                    value = parser.get("Desktop Entry", "${key}", fallback="")
+                    print(value)
+
+                    EOF
+                  '';
+              in
+              {
+                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
+                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
+
+                name = builtins.readFile (get "Name");
+                icon = "${pkgs.hardinfo2}/share/icons/hicolor/scalable/apps/hardinfo2.svg";
+                comment = builtins.readFile (get "Comment");
+
+                exec = builtins.readFile (get "Exec");
+                terminal = false;
+                startupNotify = true;
+              };
+          };
+
           portal = {
             enable = config.xdg.portal.enable;
             extraPortals = config.xdg.portal.extraPortals;
@@ -5518,9 +5621,9 @@ in
               executable = null;
             };
 
-            "SourceGit/Catppuccin_${lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)}${
-              builtins.substring 1 255 config.catppuccin.flavor
-            }.json" =
+            "SourceGit/Catppuccin_${
+              pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
+            }${builtins.substring 1 255 config.catppuccin.flavor}.json" =
               {
                 enable = true;
 
@@ -5529,7 +5632,7 @@ in
                 };
 
                 target = "SourceGit/Catppuccin_${
-                  lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
+                  pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
                 }${builtins.substring 1 255 config.catppuccin.flavor}.json";
                 executable = null;
               }; # Non-Standard Path
@@ -5738,6 +5841,11 @@ in
             package = pkgs.swaynotificationcenter;
           };
 
+          network-manager-applet = {
+            enable = config.programs.nm-applet.enable;
+            package = config.programs.nm-applet.package;
+          };
+
           udiskie = {
             enable = true;
             package = pkgs.udiskie;
@@ -5849,7 +5957,7 @@ in
               enable = true;
 
               enableInspect = false;
-              enableDebug = false;
+              enableDebug = config.environment.enableDebugInfo;
             };
 
             settings = {
@@ -5868,8 +5976,7 @@ in
                   "group/wireplumber-and-bluetooth"
                   "group/battery-and-power-profiles-daemon"
                   "group/cpu-and-load-and-temperature"
-                  "memory"
-                  "disk"
+                  "group/memory-and-disk"
                   "network"
                 ];
 
@@ -6123,6 +6230,19 @@ in
                   on-click = "uwsm-app -- resources";
                 };
 
+                "group/memory-and-disk" = {
+                  modules = [
+                    "memory"
+                    "disk"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
                 memory = {
                   interval = 1; # 1 Second
 
@@ -6162,7 +6282,7 @@ in
                   tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
                   tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
 
-                  on-click = "uwsm-app -- nmgui & uwsm-app -- nm-connection-editor";
+                  on-click = "uwsm-app -- resources";
                 };
 
                 "group/clock-and-user" = {
@@ -6363,6 +6483,7 @@ in
               #power-profiles-daemon,
               #load,
               #temperature,
+              #disk,
               #user {
                 margin-left: ${toString (builtins.floor (design_factor / 4))}px;
               }
