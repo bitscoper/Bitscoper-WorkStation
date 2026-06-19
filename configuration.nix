@@ -112,7 +112,7 @@ let
   };
 
   tlsCertificateFiles =
-    pkgs.runCommand "generate-tls-certificate"
+    pkgs.runCommand "generate_tls_certificate"
       {
         CN = config.networking.fqdn;
       }
@@ -239,28 +239,10 @@ in
       }) # Addition
 
       (final: previous: {
-        psono = final.appimageTools.wrapType2 {
-          pname = "psono";
-          version = "latest";
-
-          src = final.fetchurl {
-            url =
-              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
-                "https://get.psono.com/psono/psono-app/latest/psono-linux-x64.AppImage"
-              else
-                throw "No ${config.nixpkgs.hostPlatform.system} AppImage for Psono!";
-
-            hash = "sha256-YJnEG4OgdX4gTniG8XYPaJs4le0VelPlz47pXdx+0r0=";
-          };
-
-          extraPkgs =
-            pkgs: with pkgs; [
-              libepoxy
-              libsoup_3
-              webkitgtk_4_1
-            ];
+        hardinfo2 = previous.hardinfo2.override {
+          printingSupport = true;
         };
-      }) # Addition # FIXME: .desktop
+      })
 
       (final: previous: {
         raindropio = final.appimageTools.wrapType2 {
@@ -718,6 +700,21 @@ in
       wheelNeedsPassword = true;
 
       extraRules = [
+        {
+          users = [
+            config.users.users.normal.name
+          ];
+          commands = [
+            {
+              command = "${pkgs.cpu-x}/bin/cpu-x";
+              options = [
+                "NOPASSWD"
+                "SETENV"
+              ];
+            }
+          ];
+        }
+
         {
           users = [
             config.users.users.normal.name
@@ -2547,8 +2544,8 @@ in
               updates_disabled = false;
             };
 
-            "{3dce78ca-2a07-4017-9111-998d4f826625}" = {
-              install_url = linkFormat "psono-pw-password-manager";
+            "78272b6fa58f4a1abaac99321d503a20@proton.me" = {
+              install_url = linkFormat "proton-pass";
               installation_mode = "normal_installed";
               updates_disabled = false;
             };
@@ -3170,12 +3167,19 @@ in
         profile-cleaner
         progress
         protocol
+        proton-authenticator
+        proton-pass
+        proton-pass-cli
         proton-vpn
+        proton-vpn-cli
+        protonmail-bridge
+        protonmail-desktop
+        protonmail-bridge-gui
+        protonmail-export
         protonplus
         protontricks
         ps
         psmisc
-        psono # From config.nixpkgs.overlays
         pwvucontrol
         python3Packages.tkinter
         qalculate-gtk
@@ -3268,7 +3272,6 @@ in
         ttl
         tuba
         turnon
-        tutanota-desktop
         udftools
         ugit
         undollar
@@ -3372,6 +3375,10 @@ in
           # extraLibraries = [ ];
           # extraPkgs = [ ];
         })
+
+        (writeShellScriptBin "cpu-x" ''
+          exec sudo -E ${cpu-x}/bin/cpu-x "$@"
+        '') # With config.security.sudo.extraRules
 
         (
           (ffmpeg-full.override {
@@ -3495,7 +3502,7 @@ in
 
         (writeShellScriptBin "hardinfo2" ''
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
-        '')
+        '') # With config.security.sudo.extraRules
 
         (kicad.override {
           with3d = true;
@@ -4401,7 +4408,7 @@ in
         "x-scheme-handler/http" = "firefox-devedition.desktop";
         "x-scheme-handler/https" = "firefox-devedition.desktop";
 
-        "x-scheme-handler/mailto" = "tutanota-desktop.desktop";
+        "x-scheme-handler/mailto" = "proton-mail.desktop";
       };
     };
   };
@@ -4993,18 +5000,6 @@ in
               }
               {
                 _args = [
-                  "SUPER + P"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- psono\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + B"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- raindropio\")")
-                ];
-              }
-              {
-                _args = [
                   "XF86Explorer"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
                 ];
@@ -5030,7 +5025,7 @@ in
               {
                 _args = [
                   "XF86Mail"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"tutanota-desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"proton-mail\")")
                 ];
               }
               {
@@ -5462,13 +5457,44 @@ in
 
         xdg = {
           desktopEntries = {
+            cpu-x =
+              let
+                desktopFile = "${pkgs.cpu-x}/share/applications/io.github.thetumultuousunicornofdarkness.cpu-x.desktop";
+
+                get =
+                  key:
+                  pkgs.runCommand "get_${key}_from_cpu-x_desktop_file" { } ''
+                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
+                    import configparser
+
+                    parser = configparser.ConfigParser(strict=False)
+
+                    parser.read("${desktopFile}")
+                    value = parser.get("Desktop Entry", "${key}", fallback="")
+                    print(value)
+
+                    EOF
+                  '';
+              in
+              {
+                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
+                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
+
+                name = builtins.readFile (get "Name");
+                icon = builtins.readFile (get "Icon"); # Available in config.home-manager.users.normal.gtk.iconTheme
+                comment = builtins.readFile (get "Comment");
+
+                exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
+                terminal = false; # TODO
+              };
+
             hardinfo2 =
               let
                 desktopFile = "${pkgs.hardinfo2}/share/applications/hardinfo2.desktop";
 
                 get =
                   key:
-                  pkgs.runCommand "get-${key}-from-hardinfo2-desktop-file" { } ''
+                  pkgs.runCommand "get_${key}_from_hardinfo2_desktop_file" { } ''
                     ${pkgs.python3}/bin/python3 - << 'EOF' > $out
                     import configparser
 
@@ -5489,9 +5515,8 @@ in
                 icon = "${pkgs.hardinfo2}/share/icons/hicolor/scalable/apps/hardinfo2.svg";
                 comment = builtins.readFile (get "Comment");
 
-                exec = builtins.readFile (get "Exec");
-                terminal = false;
-                startupNotify = true;
+                exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
+                terminal = false; # TODO
               };
           };
 
