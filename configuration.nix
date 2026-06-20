@@ -2297,7 +2297,7 @@ in
 
         user = {
           name = config.users.users.normal.description;
-          email = "bitscoper@tutanota.com";
+          email = "abdullah_as-sadeed.bd@protonmail.com";
         };
       };
     };
