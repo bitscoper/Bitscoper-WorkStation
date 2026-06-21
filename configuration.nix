@@ -244,11 +244,9 @@ in
         };
       })
 
-      (final: previous: {
-        raindropio = final.appimageTools.wrapType2 {
-          pname = "raindropio";
-          version = "latest";
-
+      (
+        final: previous:
+        let
           src = final.fetchurl {
             url =
               if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
@@ -261,9 +259,27 @@ in
             hash = "sha256-bR1dLoKderCw5e0oEYWYQX6gfENub/NJilRrXs+bsTo=";
           };
 
-          # extraPkgs = pkgs: with pkgs; [ ];
-        };
-      }) # Addition # FIXME: .desktop
+          raindropioExtracted = final.appimageTools.extractType2 {
+            pname = "raindropio";
+            version = "latest";
+            inherit src;
+          };
+
+          raindropio = final.appimageTools.wrapType2 {
+            pname = "raindropio";
+            version = "latest";
+            inherit src;
+          };
+
+          raindropioDesktopFile = "${raindropioExtracted}/raindrop.desktop";
+        in
+        {
+          inherit
+            raindropio
+            raindropioDesktopFile
+            ;
+        }
+      ) # Addition
     ];
   };
 
@@ -5485,7 +5501,13 @@ in
                 comment = builtins.readFile (get "Comment");
 
                 exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
-                terminal = false; # TODO
+                terminal = builtins.fromJSON (
+                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
+                );
+
+                settings = {
+                  Keywords = builtins.readFile (get "Keywords");
+                };
               };
 
             hardinfo2 =
@@ -5516,7 +5538,57 @@ in
                 comment = builtins.readFile (get "Comment");
 
                 exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
-                terminal = false; # TODO
+                terminal = builtins.fromJSON (
+                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
+                );
+                startupNotify = builtins.fromJSON (
+                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "StartupNotify")))
+                );
+
+                settings = {
+                  Keywords = builtins.readFile (get "Keywords");
+                };
+              };
+
+            raindropio =
+              let
+                desktopFile = "${pkgs.raindropioDesktopFile}";
+
+                get =
+                  key:
+                  pkgs.runCommand "get_${key}_from_raindropio_desktop_file" { } ''
+                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
+                    import configparser
+
+                    parser = configparser.ConfigParser(strict=False)
+
+                    parser.read("${desktopFile}")
+                    value = parser.get("Desktop Entry", "${key}", fallback="")
+                    print(value)
+
+                    EOF
+                  '';
+              in
+              {
+                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
+                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
+
+                name = builtins.readFile (get "Name");
+                icon = builtins.readFile (get "Icon"); # Available in config.home-manager.users.normal.gtk.iconTheme
+                comment = builtins.readFile (get "Comment");
+
+                mimeType = pkgs.lib.filter (value: value != "") (
+                  pkgs.lib.splitString ";" (pkgs.lib.strings.trim (builtins.readFile (get "MimeType")))
+                );
+                exec = "raindropio";
+                terminal = builtins.fromJSON (
+                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
+                );
+
+                settings = {
+                  X-AppImage-Version = builtins.readFile (get "X-AppImage-Version");
+                  StartupWMClass = builtins.readFile (get "StartupWMClass");
+                };
               };
           };
 
