@@ -244,6 +244,42 @@ in
         };
       })
 
+      (final: previous: {
+        proton-drive = previous.stdenvNoCC.mkDerivation rec {
+          pname = "proton-drive";
+          version = "0.4.6";
+
+          src = final.fetchurl {
+            url =
+              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
+                "https://proton.me/download/drive/cli/${version}/linux-x64/proton-drive"
+              else if config.nixpkgs.hostPlatform.system == "aarch64-linux" then
+                "https://proton.me/download/drive/cli/${version}/linux-arm64/proton-drive"
+              else
+                throw "No Proton Drive CLI build for ${config.nixpkgs.hostPlatform.system}!"; # https://proton.me/download/drive/cli/index.html
+
+            hash = "sha256-iaVBMaCBHkLqGOxDBz1us0fYD1lO0CJgCbuUEY9M2oY=";
+          };
+
+          dontUnpack = true;
+
+          installPhase = ''
+            install -Dm755 $src $out/bin/proton-drive
+          '';
+
+          meta = with final.lib; {
+            mainProgram = "proton-drive";
+            description = "Proton Drive CLI";
+            license = licenses.mit;
+            platforms = [
+              "aarch64-linux"
+              "x86_64-linux"
+            ];
+            homepage = "https://github.com/ProtonDriveApps/sdk/tree/main/js/cli/";
+          };
+        };
+      })
+
       (
         final: previous:
         let
@@ -2141,7 +2177,9 @@ in
         options.programs.nix-ld.libraries.default
         ++ (with pkgs; [
           glib.out
+          libsecret
           llvmPackages.stdenv.cc.cc.lib
+          sqlite
           stdenv.cc.cc.lib
         ]);
     };
@@ -3184,13 +3222,14 @@ in
         progress
         protocol
         proton-authenticator
+        proton-drive # From config.nixpkgs.overlays
         proton-pass
         proton-pass-cli
         proton-vpn
         proton-vpn-cli
         protonmail-bridge
-        protonmail-desktop
         protonmail-bridge-gui
+        protonmail-desktop
         protonmail-export
         protonplus
         protontricks
@@ -3849,14 +3888,9 @@ in
     # etc = { };
 
     variables = {
-      LD_LIBRARY_PATH = pkgs.lib.mkForce "${
-        pkgs.lib.makeLibraryPath (
-          with pkgs;
-          [
-            sqlite
-          ]
-        )
-      }:$LD_LIBRARY_PATH";
+      # LD_LIBRARY_PATH = pkgs.lib.mkForce (
+      #   pkgs.lib.makeLibraryPath config.programs.nix-ld.libraries + ":$LD_LIBRARY_PATH"
+      # );
 
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
     }
