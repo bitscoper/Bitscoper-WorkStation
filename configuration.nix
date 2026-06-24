@@ -519,7 +519,7 @@ in
     kexec.enable = true;
 
     crashDump = {
-      enable = true;
+      enable = false;
 
       kernelParams = [
         "1" # 1 = runlevel 1 / Single-User Mode
@@ -542,10 +542,6 @@ in
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
       logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
-
-      # extraConfig = ''
-      #   UseFirmwareBackground=true
-      # '';
     };
   };
 
@@ -1131,41 +1127,6 @@ in
       );
 
       qemu = {
-        # package = (
-        #   pkgs.qemu_full.override {
-        #     alsaSupport = true;
-        #     canokeySupport = false; # Marked as Broken
-        #     capstoneSupport = true;
-        #     cephSupport = true;
-        #     enableBlobs = true;
-        #     enableDocs = true;
-        #     enableTools = true;
-        #     glusterfsSupport = true;
-        #     gtkSupport = true;
-        #     guestAgentSupport = true;
-        #     jackSupport = true;
-        #     libiscsiSupport = true;
-        #     ncursesSupport = true;
-        #     numaSupport = true;
-        #     openGLSupport = true;
-        #     pipewireSupport = true;
-        #     pluginsSupport = true;
-        #     pulseSupport = true;
-        #     rutabagaSupport = true;
-        #     sdlSupport = true;
-        #     seccompSupport = true;
-        #     smartcardSupport = true;
-        #     smbdSupport = true;
-        #     spiceSupport = true;
-        #     tpmSupport = true;
-        #     uringSupport = true;
-        #     usbredirSupport = true;
-        #     valgrindSupport = true;
-        #     virglSupport = true;
-        #     vncSupport = true;
-        #     xenSupport = false;
-        #   }
-        # ); # FIXME: Missing Binaries
         package = pkgs.qemu;
 
         vhostUserPackages = with pkgs; [
@@ -1186,7 +1147,6 @@ in
     podman = {
       enable = true;
       package = pkgs.podman;
-      # extraPackages = with pkgs; [ ];
       extraRuntimes = with pkgs; [
         runc
       ];
@@ -2281,7 +2241,6 @@ in
       enable = true;
       package = pkgs.bat;
       extraPackages = with pkgs.bat-extras; [
-        # core # FIXME: Build Failure
         batdiff
         batgrep
         batman
@@ -2382,16 +2341,6 @@ in
               remember-recent-files = false;
             };
 
-            "org/cinnamon/desktop/applications/terminal" = {
-              exec = "xdg-terminal-exec";
-              exec-arg = "-d";
-            }; # For Nemo
-
-            "org/nemo/preferences" = {
-              show-advanced-permissions = true;
-              show-hidden-files = true;
-            };
-
             "org/virt-manager/virt-manager" = {
               xmleditor-enabled = true;
             };
@@ -2478,6 +2427,11 @@ in
       package = pkgs.networkmanagerapplet;
 
       indicator = true;
+    };
+
+    nautilus-open-any-terminal = {
+      enable = true;
+      terminal = "ptyxis";
     };
 
     seahorse.enable = true;
@@ -2785,11 +2739,9 @@ in
     systemPackages =
       with pkgs;
       [
-        # binwalk # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # parallel-full # FIXME: Build Failure
         # reiser4progs # Marked as Broken
-        # uefi-firmware-parser # FIXME: Build Failure
         # xfstests # FIXME: Build Failure
         aalib
         aapt
@@ -2834,6 +2786,7 @@ in
         bcg729
         binary
         binutils
+        binwalk
         blanket
         bleachbit
         bluez-alsa
@@ -2949,6 +2902,8 @@ in
         file
         file-roller
         fileinfo
+        filen-cli
+        filen-desktop
         findutils
         firefox_decrypt
         flake-checker
@@ -2957,7 +2912,6 @@ in
         flatpak-xdg-utils
         flawz
         flutter
-        folder-color-switcher
         foliate
         font-manager
         fontfor
@@ -3012,7 +2966,6 @@ in
         groovy
         gsm
         gsmartcontrol
-        gthumb
         gtk-frdp
         gtk-vnc
         gtk3
@@ -3114,6 +3067,7 @@ in
         lock
         logtop
         lorem
+        loupe
         lsb-release
         lshw
         lsof
@@ -3131,6 +3085,7 @@ in
         mapscii
         md-tui
         mdns-scanner
+        megacmd
         meld
         mermaid-cli
         mesa-demos
@@ -3150,6 +3105,8 @@ in
         mt-st
         mtools
         mysqltuner
+        nautilus
+        nautilus-python
         nethogs
         netpeek
         newelle
@@ -3328,6 +3285,7 @@ in
         tuba
         turnon
         udftools
+        uefi-firmware-parser
         ugit
         undollar
         unhide
@@ -3564,20 +3522,9 @@ in
           withI18n = true;
           withNgspice = true;
           withScripting = true;
-          # addons = with kicadAddons; [
-          #   kikit
-          #   kikit-library
-          # ]; # FIXME: Build Failure
-        })
-
-        (nemo-with-extensions.override {
-          useDefaultExtensions = true;
-          extensions = [
-            nemo-emblems
-            nemo-fileroller
-            nemo-preview
-            nemo-python
-            nemo-seahorse
+          addons = with kicadAddons; [
+            kikit
+            kikit-library
           ];
         })
 
@@ -3677,6 +3624,7 @@ in
       ++ lib.optionals config.nixpkgs.config.allowUnfree [
         androidComposition.androidsdk # Custom Composition
         anydesk
+        megasync # OSS # FIXME: XWayland Problems
         rar
         unrar
         zoom-us
@@ -3708,15 +3656,14 @@ in
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
-        # ghidraninja-ghidra-scripts # FIXME: Build Failure
         findcrypt
         ghidra-delinker-extension
-        ghidra-golanganalyzerextension
+        ghidra-firmware-utils
         gnudisassembler
+        kaiju
         lightkeeper
         machinelearning
         ret-sync
-        sleighdevtools
         wasm
       ])
 
@@ -3970,7 +3917,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "nemo.desktop";
+        "inode/directory" = "nautilus.desktop";
 
         "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
         "text/cache-manifest" = "dev.zed.Zed.desktop";
@@ -4070,91 +4017,91 @@ in
         "text/xml" = "dev.zed.Zed.desktop";
         "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
-        "image/aces" = "org.gnome.gThumb.desktop";
-        "image/apng" = "org.gnome.gThumb.desktop";
-        "image/avci" = "org.gnome.gThumb.desktop";
-        "image/avcs" = "org.gnome.gThumb.desktop";
-        "image/avif" = "org.gnome.gThumb.desktop";
-        "image/bmp" = "org.gnome.gThumb.desktop";
-        "image/cgm" = "org.gnome.gThumb.desktop";
-        "image/dicom-rle" = "org.gnome.gThumb.desktop";
-        "image/dpx" = "org.gnome.gThumb.desktop";
-        "image/emf" = "org.gnome.gThumb.desktop";
-        "image/fits" = "org.gnome.gThumb.desktop";
-        "image/g3fax" = "org.gnome.gThumb.desktop";
-        "image/gif" = "org.gnome.gThumb.desktop";
-        "image/heic-sequence" = "org.gnome.gThumb.desktop";
-        "image/heic" = "org.gnome.gThumb.desktop";
-        "image/heif-sequence" = "org.gnome.gThumb.desktop";
-        "image/heif" = "org.gnome.gThumb.desktop";
-        "image/hej2k" = "org.gnome.gThumb.desktop";
-        "image/hsj2" = "org.gnome.gThumb.desktop";
-        "image/ief" = "org.gnome.gThumb.desktop";
-        "image/j2c" = "org.gnome.gThumb.desktop";
-        "image/jaii" = "org.gnome.gThumb.desktop";
-        "image/jais" = "org.gnome.gThumb.desktop";
-        "image/jls" = "org.gnome.gThumb.desktop";
-        "image/jp2" = "org.gnome.gThumb.desktop";
-        "image/jpeg" = "org.gnome.gThumb.desktop";
-        "image/jph" = "org.gnome.gThumb.desktop";
-        "image/jphc" = "org.gnome.gThumb.desktop";
-        "image/jpm" = "org.gnome.gThumb.desktop";
-        "image/jpx" = "org.gnome.gThumb.desktop";
-        "image/jxl" = "org.gnome.gThumb.desktop";
-        "image/jxr" = "org.gnome.gThumb.desktop";
-        "image/jxrA" = "org.gnome.gThumb.desktop";
-        "image/jxrS" = "org.gnome.gThumb.desktop";
-        "image/jxs" = "org.gnome.gThumb.desktop";
-        "image/jxsc" = "org.gnome.gThumb.desktop";
-        "image/jxsi" = "org.gnome.gThumb.desktop";
-        "image/jxss" = "org.gnome.gThumb.desktop";
-        "image/ktx" = "org.gnome.gThumb.desktop";
-        "image/ktx2" = "org.gnome.gThumb.desktop";
-        "image/naplps" = "org.gnome.gThumb.desktop";
-        "image/png" = "org.gnome.gThumb.desktop";
-        "image/prs.btif" = "org.gnome.gThumb.desktop";
-        "image/prs.pti" = "org.gnome.gThumb.desktop";
-        "image/pwg-raster" = "org.gnome.gThumb.desktop";
-        "image/svg+xml" = "org.gnome.gThumb.desktop";
-        "image/t38" = "org.gnome.gThumb.desktop";
-        "image/tiff-fx" = "org.gnome.gThumb.desktop";
-        "image/tiff" = "org.gnome.gThumb.desktop";
-        "image/vnd.adobe.photoshop" = "org.gnome.gThumb.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.gnome.gThumb.desktop";
-        "image/vnd.blockfact.facti" = "org.gnome.gThumb.desktop";
-        "image/vnd.clip" = "org.gnome.gThumb.desktop";
-        "image/vnd.cns.inf2" = "org.gnome.gThumb.desktop";
-        "image/vnd.dece.graphic" = "org.gnome.gThumb.desktop";
-        "image/vnd.djvu" = "org.gnome.gThumb.desktop";
-        "image/vnd.dvb.subtitle" = "org.gnome.gThumb.desktop";
-        "image/vnd.dwg" = "org.gnome.gThumb.desktop";
-        "image/vnd.dxf" = "org.gnome.gThumb.desktop";
-        "image/vnd.fastbidsheet" = "org.gnome.gThumb.desktop";
-        "image/vnd.fpx" = "org.gnome.gThumb.desktop";
-        "image/vnd.fst" = "org.gnome.gThumb.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.gThumb.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.gThumb.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.gnome.gThumb.desktop";
-        "image/vnd.microsoft.icon" = "org.gnome.gThumb.desktop";
-        "image/vnd.mix" = "org.gnome.gThumb.desktop";
-        "image/vnd.mozilla.apng" = "org.gnome.gThumb.desktop";
-        "image/vnd.ms-modi" = "org.gnome.gThumb.desktop";
-        "image/vnd.net-fpx" = "org.gnome.gThumb.desktop";
-        "image/vnd.pco.b16" = "org.gnome.gThumb.desktop";
-        "image/vnd.radiance" = "org.gnome.gThumb.desktop";
-        "image/vnd.sealed.png" = "org.gnome.gThumb.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.gThumb.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.gThumb.desktop";
-        "image/vnd.svf" = "org.gnome.gThumb.desktop";
-        "image/vnd.tencent.tap" = "org.gnome.gThumb.desktop";
-        "image/vnd.valve.source.texture" = "org.gnome.gThumb.desktop";
-        "image/vnd.wap.wbmp" = "org.gnome.gThumb.desktop";
-        "image/vnd.xiff" = "org.gnome.gThumb.desktop";
-        "image/vnd.zbrush.pcx" = "org.gnome.gThumb.desktop";
-        "image/webp" = "org.gnome.gThumb.desktop";
-        "image/wmf" = "org.gnome.gThumb.desktop";
-        "image/x-emf" = "org.gnome.gThumb.desktop";
-        "image/x-wmf" = "org.gnome.gThumb.desktop";
+        "image/aces" = "org.gnome.Loupe.desktop";
+        "image/apng" = "org.gnome.Loupe.desktop";
+        "image/avci" = "org.gnome.Loupe.desktop";
+        "image/avcs" = "org.gnome.Loupe.desktop";
+        "image/avif" = "org.gnome.Loupe.desktop";
+        "image/bmp" = "org.gnome.Loupe.desktop";
+        "image/cgm" = "org.gnome.Loupe.desktop";
+        "image/dicom-rle" = "org.gnome.Loupe.desktop";
+        "image/dpx" = "org.gnome.Loupe.desktop";
+        "image/emf" = "org.gnome.Loupe.desktop";
+        "image/fits" = "org.gnome.Loupe.desktop";
+        "image/g3fax" = "org.gnome.Loupe.desktop";
+        "image/gif" = "org.gnome.Loupe.desktop";
+        "image/heic-sequence" = "org.gnome.Loupe.desktop";
+        "image/heic" = "org.gnome.Loupe.desktop";
+        "image/heif-sequence" = "org.gnome.Loupe.desktop";
+        "image/heif" = "org.gnome.Loupe.desktop";
+        "image/hej2k" = "org.gnome.Loupe.desktop";
+        "image/hsj2" = "org.gnome.Loupe.desktop";
+        "image/ief" = "org.gnome.Loupe.desktop";
+        "image/j2c" = "org.gnome.Loupe.desktop";
+        "image/jaii" = "org.gnome.Loupe.desktop";
+        "image/jais" = "org.gnome.Loupe.desktop";
+        "image/jls" = "org.gnome.Loupe.desktop";
+        "image/jp2" = "org.gnome.Loupe.desktop";
+        "image/jpeg" = "org.gnome.Loupe.desktop";
+        "image/jph" = "org.gnome.Loupe.desktop";
+        "image/jphc" = "org.gnome.Loupe.desktop";
+        "image/jpm" = "org.gnome.Loupe.desktop";
+        "image/jpx" = "org.gnome.Loupe.desktop";
+        "image/jxl" = "org.gnome.Loupe.desktop";
+        "image/jxr" = "org.gnome.Loupe.desktop";
+        "image/jxrA" = "org.gnome.Loupe.desktop";
+        "image/jxrS" = "org.gnome.Loupe.desktop";
+        "image/jxs" = "org.gnome.Loupe.desktop";
+        "image/jxsc" = "org.gnome.Loupe.desktop";
+        "image/jxsi" = "org.gnome.Loupe.desktop";
+        "image/jxss" = "org.gnome.Loupe.desktop";
+        "image/ktx" = "org.gnome.Loupe.desktop";
+        "image/ktx2" = "org.gnome.Loupe.desktop";
+        "image/naplps" = "org.gnome.Loupe.desktop";
+        "image/png" = "org.gnome.Loupe.desktop";
+        "image/prs.btif" = "org.gnome.Loupe.desktop";
+        "image/prs.pti" = "org.gnome.Loupe.desktop";
+        "image/pwg-raster" = "org.gnome.Loupe.desktop";
+        "image/svg+xml" = "org.gnome.Loupe.desktop";
+        "image/t38" = "org.gnome.Loupe.desktop";
+        "image/tiff-fx" = "org.gnome.Loupe.desktop";
+        "image/tiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
+        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
+        "image/vnd.clip" = "org.gnome.Loupe.desktop";
+        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
+        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
+        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
+        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
+        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
+        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
+        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
+        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.fst" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
+        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
+        "image/vnd.mix" = "org.gnome.Loupe.desktop";
+        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
+        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
+        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
+        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
+        "image/vnd.svf" = "org.gnome.Loupe.desktop";
+        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
+        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
+        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
+        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
+        "image/webp" = "org.gnome.Loupe.desktop";
+        "image/wmf" = "org.gnome.Loupe.desktop";
+        "image/x-emf" = "org.gnome.Loupe.desktop";
+        "image/x-wmf" = "org.gnome.Loupe.desktop";
 
         "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
         "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
@@ -4662,8 +4609,6 @@ in
 
           preferXdgDirectories = true;
 
-          # packages = with pkgs; [ ];
-
           pointerCursor = {
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             size = builtins.floor (design_factor * 1.50); # 24
@@ -4716,10 +4661,6 @@ in
             ];
           };
 
-          # plugins = with pkgs.hyprlandPlugins; [
-          #   xtra-dispatchers # FIXME: Build Failure
-          # ];
-
           xwayland.enable = true;
 
           configType = "lua";
@@ -4756,10 +4697,110 @@ in
             bind = [
               {
                 _args = [
-                  "SUPER + L"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
+                  "XF86MonBrightnessUp"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
                 ];
               }
+              {
+                _args = [
+                  "XF86MonBrightnessDown"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+
+              {
+                _args = [
+                  "XF86AudioRaiseVolume"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioLowerVolume"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMute"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMicMute"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+
+              {
+                _args = [
+                  "XF86AudioPlay"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPause"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioStop"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPrev"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioNext"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+
               {
                 _args = [
                   "SUPER + 1"
@@ -4838,10 +4879,11 @@ in
                   (pkgs.lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
                 ];
               }
+
               {
                 _args = [
-                  "SUPER + left"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
+                  "SUPER + up"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
                 ];
               }
               {
@@ -4852,16 +4894,17 @@ in
               }
               {
                 _args = [
-                  "SUPER + up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + down"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
                 ];
               }
+              {
+                _args = [
+                  "SUPER + left"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
+                ];
+              }
+
               {
                 _args = [
                   "SUPER + SHIFT + 1"
@@ -4990,13 +5033,32 @@ in
               }
               {
                 _args = [
-                  "SUPER + SHIFT + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                  "SUPER + SHIFT + ALT + S"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\", follow=false})")
                 ];
               }
+
               {
                 _args = [
-                  "SUPER + SHIFT + ALT + F"
+                  "SUPER + mouse:272"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              } # Left Button
+              {
+                _args = [
+                  "SUPER + mouse:273"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              } # Right Button
+              {
+                _args = [
+                  "ALT + F11"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
                 ];
               }
@@ -5018,16 +5080,38 @@ in
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
                 ];
               }
+
+              {
+                _args = [
+                  "SUPER + L"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + A"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
+                ];
+              }
               {
                 _args = [
                   "Print"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- ferrishot\")")
                 ];
               }
+
+              {
+                _args = [
+                  "SUPER + SPACE"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
+                ];
+              }
+
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nautilus\")")
                 ];
               }
               {
@@ -5036,12 +5120,7 @@ in
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
                 ];
               }
-              {
-                _args = [
-                  "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
-                ];
-              }
+
               {
                 _args = [
                   "SUPER + T"
@@ -5051,13 +5130,13 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nautilus\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nemo\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nautilus\")")
                 ];
               }
               {
@@ -5084,134 +5163,7 @@ in
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
                 ];
               }
-              {
-                _args = [
-                  "SUPER + A"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
-                ];
-              }
-              {
-                _args = [
-                  "XF86MonBrightnessUp"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86MonBrightnessDown"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioRaiseVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioLowerVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPlay"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPause"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioStop"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPrev"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioNext"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMicMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse:272"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse:273"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              }
-            ]; # TODO: Sort
+            ];
 
             config = {
               general = {
@@ -5496,10 +5448,6 @@ in
 
                 precise_mouse_move = true;
               };
-
-              # layerrule = [ ];
-
-              # windowrulev2 = [ ];
             }; # Sorted from "General" to "Quirks" sccording to Wiki/Configuring/Basics/Variables.
 
           };
@@ -5542,7 +5490,7 @@ in
                 settings = {
                   Keywords = builtins.readFile (get "Keywords");
                 };
-              };
+              }; # Addition
 
             hardinfo2 =
               let
@@ -5582,7 +5530,7 @@ in
                 settings = {
                   Keywords = builtins.readFile (get "Keywords");
                 };
-              };
+              }; # Addition
 
             raindropio =
               let
@@ -5623,7 +5571,7 @@ in
                   X-AppImage-Version = builtins.readFile (get "X-AppImage-Version");
                   StartupWMClass = builtins.readFile (get "StartupWMClass");
                 };
-              };
+              }; # Addition
           };
 
           portal = {
@@ -5632,7 +5580,6 @@ in
 
             xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
 
-            # configPackages = with pkgs; [ ];
             config = config.xdg.portal.config;
           };
 
@@ -6866,8 +6813,6 @@ in
           starship = {
             enable = config.programs.starship.enable;
             package = config.programs.starship.package;
-
-            # extraPackages = with pkgs; [ ];
 
             enableBashIntegration = true;
             enableFishIntegration = true;
