@@ -183,6 +183,7 @@ in
       allowUnfree = true;
 
       permittedInsecurePackages = [
+        "electron-39.8.10" # For bitwarden-desktop
         "opendkim-2.11.0-Beta2"
       ]
       ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
@@ -1956,15 +1957,6 @@ in
       ''; # <loglevel>2</loglevel> = Warn
     };
 
-    jellyfin = {
-      enable = true;
-      package = pkgs.jellyfin;
-
-      transcoding.enableSubtitleExtraction = true;
-
-      openFirewall = true;
-    };
-
     ollama = {
       enable = true;
       package = pkgs.ollama-cpu; # Or pkgs.ollama-vulkan Or pkgs.ollama
@@ -2739,6 +2731,8 @@ in
     systemPackages =
       with pkgs;
       [
+        # bitwarden-desktop # FIXME: Build Failure
+        # bws # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # parallel-full # FIXME: Build Failure
         # reiser4progs # Marked as Broken
@@ -2787,6 +2781,7 @@ in
         binary
         binutils
         binwalk
+        bitwarden-cli
         blanket
         bleachbit
         bluez-alsa
@@ -4556,7 +4551,6 @@ in
           "hardinfo2"
           "i2c"
           "input"
-          "jellyfin"
           "kvm"
           "libvirtd"
           "lp"
@@ -4635,10 +4629,6 @@ in
               mkdir -p $HOME/.local/share/fonts/
               cp -f /var/lib/onlyoffice-fonts/* $HOME/.local/share/fonts/ || true
               ${pkgs.fontconfig}/bin/fc-cache -f $HOME/.local/share/fonts/
-            '';
-
-            permitJellyfin = ''
-              ${pkgs.acl}/bin/setfacl --modify user:jellyfin:--x $HOME
             '';
           };
 
