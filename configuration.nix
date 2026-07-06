@@ -19,7 +19,6 @@ let
   #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -234,10 +233,6 @@ in
               ''; # installPhase Runs postInstall
             });
       })
-
-      (final: previous: {
-        cromite = cromiteFlake.packages.${config.nixpkgs.hostPlatform.system}.default;
-      }) # Addition
 
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
@@ -2784,6 +2779,7 @@ in
         bluez-alsa
         bluez-tools
         brasero
+        brave
         brightnessctl
         btrfs-assistant
         btrfs-heatmap
@@ -3845,7 +3841,7 @@ in
       NIXOS_OZONE_WL = 1;
       MOZ_ENABLE_WAYLAND = 1;
 
-      CHROME_EXECUTABLE = "cromite";
+      CHROME_EXECUTABLE = "brave";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
@@ -7377,6 +7373,7 @@ in
                 ];
 
                 "HTML" = [
+                  "*.svg"
                   "*.xhtml"
                 ];
 
@@ -7655,15 +7652,6 @@ in
             extraPackages = config.programs.bat.extraPackages;
           };
 
-          chromium = {
-            enable = true;
-            package = pkgs.cromite; # From config.nixpkgs.overlays
-
-            dictionaries = with pkgs.hunspellDictsChromium; [
-              en_US
-            ];
-          };
-
           firefox = {
             enable = config.programs.firefox.enable;
             package = config.programs.firefox.package;
@@ -7671,6 +7659,10 @@ in
             languagePacks = config.programs.firefox.languagePacks;
 
             policies = config.programs.firefox.policies;
+          };
+
+          brave = {
+            # nativeMessagingHosts = with pkgs; [ ];
           };
 
           kubecolor = {
