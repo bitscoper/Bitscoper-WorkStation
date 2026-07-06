@@ -2732,11 +2732,8 @@ in
       with pkgs;
       [
         # bitwarden-desktop # FIXME: Build Failure
-        # bws # FIXME: Build Failure
         # dart # flutter adds the compatible version
-        # parallel-full # FIXME: Build Failure
         # reiser4progs # Marked as Broken
-        # xfstests # FIXME: Build Failure
         aalib
         aapt
         acl
@@ -2980,7 +2977,6 @@ in
         hieroglyphic
         host
         hstsparser
-        hugo
         hurl
         hw-probe
         hydra-check
@@ -3144,7 +3140,7 @@ in
         paleta
         pana
         paper-clip
-        parallel # Instead of parallel-full
+        parallel-full
         parted
         pbzx
         pcb2gcode
@@ -3343,6 +3339,7 @@ in
         xeol
         xfsdump
         xfsprogs
+        xfstests
         xhost
         xoscope
         xscreenruler
@@ -3651,6 +3648,7 @@ in
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
+        # wasm # Marked as Broken
         findcrypt
         ghidra-delinker-extension
         ghidra-firmware-utils
@@ -3659,7 +3657,6 @@ in
         lightkeeper
         machinelearning
         ret-sync
-        wasm
       ])
 
       ++ (with gst_all_1; [
@@ -7379,6 +7376,10 @@ in
                   "**/.git/info/exclude"
                 ];
 
+                "HTML" = [
+                  "*.xhtml"
+                ];
+
                 Dockerfile = [
                   "Dockerfile.*"
                 ];
@@ -7394,6 +7395,10 @@ in
                 "Python requirements" = [
                   "**/requirements/*.{in,txt}"
                   "*requirements*.{in,txt}"
+                ];
+
+                "JSON" = [
+                  "*.webmanifest"
                 ];
               };
 
