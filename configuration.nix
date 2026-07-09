@@ -1196,16 +1196,10 @@ in
 
       implementation = "broker";
 
-      packages =
-        with pkgs;
-        [
-          gnome2.GConf
-          libvirt-dbus
-        ]
-        ++ [
-          config.services.gnome.gcr-ssh-agent.package
-
-        ];
+      packages = with pkgs; [
+        gnome2.GConf
+        libvirt-dbus
+      ];
     };
 
     resolved = {
@@ -1397,6 +1391,11 @@ in
       # };
     };
 
+    pcscd = {
+      enable = true;
+      # plugins = with pkgs; [ ];
+    };
+
     pipewire = {
       enable = true;
       package = (
@@ -1556,14 +1555,7 @@ in
     gnome = {
       gnome-keyring.enable = true;
 
-      gcr-ssh-agent = {
-        enable = true;
-        package = (
-          pkgs.gcr_4.override {
-            systemdSupport = true;
-          }
-        );
-      };
+      gcr-ssh-agent.enable = !config.programs.gnupg.agent.enable;
     };
 
     phpfpm = {
@@ -2064,41 +2056,6 @@ in
       # logout = '''';
     };
 
-    fish = {
-      enable = true;
-      package = (
-        pkgs.fish.override {
-          useOperatingSystemEtc = true;
-          usePython = true;
-        }
-      );
-
-      vendor = {
-        config.enable = true;
-        functions.enable = true;
-        completions.enable = true;
-      };
-
-      generateCompletions = true;
-      # extraCompletionPackages = with pkgs; [ ];
-
-      useBabelfish = false; # Errors if Enabled # Disabling Uses foreign-env
-
-      # shellAbbrs = { };
-
-      # shellAliases = { };
-
-      # loginShellInit = '''';
-
-      # shellInit = '''';
-
-      interactiveShellInit = ''
-        set -g fish_greeting
-      '';
-
-      # promptInit = '''';
-    };
-
     starship = {
       enable = true;
       package = pkgs.starship;
@@ -2135,7 +2092,6 @@ in
       package = pkgs.nix-index;
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
     };
 
     nh = {
@@ -2180,7 +2136,6 @@ in
       loadInNixShell = true;
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
 
       silent = false;
     };
@@ -2203,7 +2158,6 @@ in
       package = pkgs.television;
 
       enableBashIntegration = true;
-      enableFishIntegration = true;
     };
 
     nano = {
@@ -2239,9 +2193,10 @@ in
 
     gnupg = {
       package = (
-        pkgs.gnupg1.override {
+        pkgs.gnupg1compat.override {
           gnupg = (
-            pkgs.gnupg.override {
+            pkgs.gnupg24.override {
+              enableMinimal = false;
               guiSupport = true;
               withPcsc = true;
               withTpm2Tss = true;
@@ -2250,11 +2205,14 @@ in
         }
       );
 
+      dirmngr.enable = true;
+
       agent = {
         enable = true;
 
         enableBrowserSocket = true;
         enableExtraSocket = true;
+
         enableSSHSupport = true;
 
         pinentryPackage = (
@@ -2263,8 +2221,6 @@ in
           }
         );
       };
-
-      dirmngr.enable = true;
     };
 
     git = {
@@ -2545,6 +2501,12 @@ in
               updates_disabled = false;
             };
 
+            "{446900e4-71c2-419f-a6a7-df9c091e268b}" = {
+              install_url = linkFormat "bitwarden-password-manager";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
             "jid0-adyhmvsP91nUO8pRv0Mn2VKeB84@jetpack" = {
               install_url = linkFormat "raindropio";
               installation_mode = "normal_installed";
@@ -2660,8 +2622,7 @@ in
     ssh = {
       package = config.services.openssh.package;
 
-      startAgent = !config.services.gnome.gcr-ssh-agent.enable;
-      agentTimeout = null;
+      startAgent = !config.programs.gnupg.agent.enable;
     };
   };
 
@@ -2713,7 +2674,6 @@ in
   environment = {
     shells = [
       config.home-manager.users.normal.programs.bash.package
-      config.programs.fish.package
     ];
 
     enableAllTerminfo = true;
@@ -2945,6 +2905,7 @@ in
         google-lighthouse
         gopeed
         gource
+        gpa
         gpg-tui
         gpredict
         gpu-viewer
@@ -3141,11 +3102,13 @@ in
         pbzx
         pcb2gcode
         pciutils
+        pcsc-tools
         pdfarranger
         pe-bear
         pev
         pg_top
         pgbadger
+        pgpdump
         pgread
         picard
         picard-tools
@@ -3600,12 +3563,10 @@ in
 
         config.hardware.firmware
         config.home-manager.users.normal.programs.dircolors.package # Overriden coreutils-full
-        config.home-manager.users.normal.programs.tirith.package
         config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
         config.programs.nm-applet.package # Also Provides nm-connection-editor
-        config.services.gnome.gcr-ssh-agent.package
         config.services.phpfpm.phpPackage
       ]
 
@@ -3742,7 +3703,6 @@ in
         tree-sitter-dockerfile
         tree-sitter-dot
         tree-sitter-dtd
-        tree-sitter-fish
         tree-sitter-git-config
         tree-sitter-git-rebase
         tree-sitter-gitattributes
@@ -3851,7 +3811,7 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "uwsm-app -- xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec fish'";
+      commands = "uwsm-app -- xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'"; # FIXME
 
       clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
       clean_repair_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
@@ -4449,12 +4409,6 @@ in
       accent = config.catppuccin.accent;
     };
 
-    fish = {
-      enable = true;
-
-      flavor = config.catppuccin.flavor;
-    };
-
     gtk.icon.enable = false; # Done Manually Instead
 
     fcitx5 = {
@@ -4500,7 +4454,7 @@ in
     mutableUsers = true;
     manageLingering = true;
 
-    defaultUserShell = config.programs.fish.package;
+    defaultUserShell = config.home-manager.users.normal.programs.bash.package;
 
     motd = "Welcome to ${config.networking.fqdn}";
 
@@ -4591,12 +4545,13 @@ in
           shell = {
             enableShellIntegration = true;
             enableBashIntegration = true;
-            enableFishIntegration = true;
           };
 
           preferXdgDirectories = true;
 
           pointerCursor = {
+            enable = true;
+
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             size = builtins.floor (design_factor * 1.50); # 24
 
@@ -5893,9 +5848,10 @@ in
             components = [
               "pkcs11"
               "secrets"
-              "ssh"
             ];
           };
+
+          ssh-agent.enable = !config.programs.gnupg.agent.enable;
 
           swaync = {
             enable = true;
@@ -6721,71 +6677,9 @@ in
             # logoutExtra = '''';
           };
 
-          fish = {
-            enable = config.programs.fish.enable;
-            package = config.programs.fish.package;
-
-            plugins = with pkgs.fishPlugins; [
-              {
-                name = "autopair";
-                src = autopair.src;
-              }
-              {
-                name = "bang-bang";
-                src = bang-bang.src;
-              }
-              {
-                name = "colored-man-pages";
-                src = colored-man-pages.src;
-              }
-              {
-                name = "done";
-                src = done.src;
-              }
-              {
-                name = "fish-bd";
-                src = fish-bd.src;
-              }
-              {
-                name = "fish-you-should-use";
-                src = fish-you-should-use.src;
-              }
-              {
-                name = "foreign-env";
-                src = foreign-env.src;
-              }
-              {
-                name = "humantime-fish";
-                src = humantime-fish.src;
-              }
-              {
-                name = "puffer";
-                src = puffer.src;
-              }
-              {
-                name = "spark";
-                src = spark.src;
-              }
-            ];
-
-            generateCompletions = config.programs.fish.generateCompletions;
-
-            shellAbbrs = config.programs.fish.shellAbbrs;
-            shellAliases = config.programs.fish.shellAliases;
-            preferAbbrs = false;
-
-            loginShellInit = config.programs.fish.loginShellInit;
-            shellInit = config.programs.fish.shellInit;
-            interactiveShellInit = config.programs.fish.interactiveShellInit;
-
-            # shellInitLast = '''';
-          };
-
           nix-your-shell = {
             enable = true;
             package = pkgs.nix-your-shell;
-
-            enableFishIntegration = true;
 
             nix-output-monitor = {
               enable = true;
@@ -6798,7 +6692,6 @@ in
             package = config.programs.starship.package;
 
             enableBashIntegration = true;
-            enableFishIntegration = true;
 
             enableInteractive = config.programs.starship.interactiveOnly;
 
@@ -6811,18 +6704,9 @@ in
             package = config.programs.nix-index.package;
 
             enableBashIntegration = config.programs.nix-index.enableBashIntegration;
-            enableFishIntegration = config.programs.nix-index.enableFishIntegration;
           };
 
           command-not-found.enable = config.programs.command-not-found.enable;
-
-          tirith = {
-            enable = true;
-            package = pkgs.tirith;
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-          };
 
           dircolors = {
             enable = true;
@@ -6834,7 +6718,6 @@ in
             );
 
             enableBashIntegration = true;
-            enableFishIntegration = true;
           };
 
           vivid = {
@@ -6842,7 +6725,6 @@ in
             package = pkgs.vivid;
 
             enableBashIntegration = true;
-            enableFishIntegration = true;
 
             colorMode = "24-bit";
             activeTheme = "catppuccin-${config.catppuccin.flavor}";
@@ -6858,7 +6740,6 @@ in
             };
 
             enableBashIntegration = config.programs.direnv.enableBashIntegration;
-            enableFishIntegration = config.programs.direnv.enableFishIntegration;
 
             silent = config.programs.direnv.silent;
           };
@@ -6919,7 +6800,6 @@ in
             package = config.programs.television.package;
 
             enableBashIntegration = config.programs.television.enableBashIntegration;
-            enableFishIntegration = config.programs.television.enableFishIntegration;
           };
 
           mcp = {
@@ -6985,7 +6865,6 @@ in
               "editorconfig"
               "emoji-completions"
               "env"
-              "fish"
               "flutter-snippets"
               "git-firefly"
               "github-actions"
@@ -7677,16 +7556,6 @@ in
             };
           };
 
-          keychain = {
-            enable = true;
-            package = pkgs.keychain;
-
-            enableBashIntegration = true;
-            enableFishIntegration = true;
-
-            enableXsessionIntegration = false;
-          };
-
           git = {
             enable = true;
             package = config.programs.git.package;
@@ -7773,6 +7642,33 @@ in
             package = config.services.openssh.package;
 
             enableDefaultConfig = false;
+          };
+
+          keychain.enable = !config.programs.gnupg.agent.enable;
+
+          gpg = {
+            enable = true;
+            package = config.programs.gnupg.package;
+
+            mutableKeys = true;
+            mutableTrust = true;
+
+            settings = {
+              no-comments = false;
+            };
+
+            scdaemonSettings = {
+              disable-ccid = true;
+            };
+
+            dirmngrSettings = {
+              allow-version-check = true;
+              keyserver = "hkps://keys.openpgp.org";
+            };
+
+            gpgsmSettings = {
+              with-key-data = true;
+            };
           };
 
           man = {
@@ -7864,12 +7760,6 @@ in
 
             font = fontPreferences.name.sans_serif;
             fontSize = toString fontPreferences.size;
-          };
-
-          fish = {
-            enable = config.catppuccin.fish.enable;
-
-            flavor = config.catppuccin.flavor;
           };
 
           starship = {
