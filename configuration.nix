@@ -2304,17 +2304,6 @@ in
       };
 
       prompt.enable = true;
-
-      config = {
-        init.defaultBranch = "main";
-
-        credential.helper = "${config.programs.git.package}/bin/git-credential-libsecret";
-
-        user = {
-          name = config.users.users.normal.description;
-          email = "abdullah_as-sadeed.bd@protonmail.com";
-        };
-      };
     };
 
     dconf = {
@@ -2932,6 +2921,10 @@ in
         gearlever
         genealogos-cli
         gerbolyze
+        gh
+        gh-contribs
+        gh-notify
+        gh-skyline # Generates STL File
         gimp3-with-plugins
         git-big-picture
         git-filter-repo
@@ -2969,8 +2962,6 @@ in
         gsmartcontrol
         gtk-frdp
         gtk-vnc
-        gtk3
-        gtk4
         gtkhash
         gucharmap
         guestfs-tools
@@ -3049,7 +3040,6 @@ in
         libnotify
         libogg
         libopus
-        libqalculate # qalc
         libsecret
         libultrahdr
         libva-utils
@@ -3281,7 +3271,6 @@ in
         trustymail
         tsukae
         ttl
-        tuba
         turnon
         udftools
         uefi-firmware-parser
@@ -3306,7 +3295,6 @@ in
         virt-top
         virt-v2v
         vorbis-tools
-        vulkan-caps-viewer
         vulkan-tools
         vulnix
         wafw00f
@@ -3629,7 +3617,6 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
-      ++ config.home-manager.users.normal.programs.gh.extensions
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
@@ -7543,50 +7530,6 @@ in
             };
           };
 
-          git = {
-            enable = true;
-            package = config.programs.git.package;
-
-            lfs = {
-              enable = true;
-              package = config.programs.git.lfs.package;
-
-              skipSmudge = false;
-            };
-          };
-
-          delta = {
-            enable = true;
-            package = pkgs.delta;
-
-            enableGitIntegration = true;
-          };
-
-          gh = {
-            enable = true;
-            package = pkgs.gh;
-            extensions = with pkgs; [
-              gh-contribs
-              gh-notify
-              gh-skyline # Generates STL File
-            ];
-
-            gitCredentialHelper = {
-              enable = true;
-
-              hosts = [
-                "https://github.com"
-                "https://gist.github.com"
-              ];
-            };
-
-            settings = {
-              git_protocol = "https";
-
-              editor = "zeditor";
-            };
-          };
-
           gh-dash = {
             enable = true;
             package = pkgs.gh-dash;
@@ -7806,12 +7749,6 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           }; # FIXME: Does Not Work
-
-          delta = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
 
           gh-dash = {
             enable = config.catppuccin.enable;
