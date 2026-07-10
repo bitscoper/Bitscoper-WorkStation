@@ -312,6 +312,25 @@ in
             ;
         }
       ) # Addition
+
+      (final: prev: {
+        rtcqs = final.python3.pkgs.buildPythonApplication rec {
+          pname = "rtcqs";
+          version = "0.6.2";
+          format = "pyproject";
+
+          pythonRuntimeDepsCheckHook = "true";
+
+          buildInputs = [
+            final.python3.pkgs.setuptools
+          ];
+
+          src = final.fetchPypi {
+            inherit pname version;
+            hash = "sha256-DfeV9kGhdMf6hZ1iNJ0L3HUn7m8c1gRK5cjtJNUAvJI=";
+          };
+        };
+      }) # Addition
     ];
   };
 
@@ -431,6 +450,8 @@ in
         "net.ipv4.tcp_syncookies" = 1;
         "net.ipv4.tcp_tw_reuse" = 2; # 2 = Loopback Only
         "net.ipv4.tcp_window_scaling" = 1;
+
+        "vm.swappiness" = 10;
       };
     };
 
@@ -438,6 +459,7 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [
       apfs
+      cpupower
       mm-tools
       openafs
       tmon
@@ -954,6 +976,33 @@ in
           showMotd = true;
         };
       };
+
+      loginLimits = [
+        {
+          domain = "@audio";
+          item = "memlock";
+          type = "-";
+          value = "unlimited";
+        }
+        {
+          domain = "@audio";
+          item = "rtprio";
+          type = "-";
+          value = "99";
+        }
+        {
+          domain = "@audio";
+          item = "nofile";
+          type = "soft";
+          value = "99999";
+        }
+        {
+          domain = "@audio";
+          item = "nofile";
+          type = "hard";
+          value = "99999";
+        }
+      ];
     };
 
     enableWrappers = true;
@@ -1187,6 +1236,8 @@ in
   };
 
   services = {
+    das_watchdog.enable = true;
+
     dbus = {
       enable = true;
       dbusPackage = (
@@ -1287,10 +1338,8 @@ in
       };
     };
 
-    power-profiles-daemon = {
-      enable = true;
-      package = pkgs.power-profiles-daemon;
-    };
+    power-profiles-daemon.enable = false;
+    tlp.enable = false;
 
     thermald = {
       enable = true;
@@ -1312,8 +1361,10 @@ in
       ];
 
       extraRules = ''
+        KERNEL=="rtc0", GROUP="audio"
+        KERNEL=="hpet", GROUP="audio"
+        DEVPATH=="/devices/virtual/misc/cpu_dma_latency", OWNER="root", GROUP="audio", MODE="0660"
         SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
-        KERNEL=="cpu_dma_latency", MODE="0660", GROUP="audio"
       ''; # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
     };
 
@@ -1475,6 +1526,10 @@ in
               "sbc"
               "sbc_xq"
             ];
+          };
+
+          "wireplumber.settings" = {
+            "bluetooth.autoswitch-to-headset-profile" = false;
           };
         };
       };
@@ -3153,6 +3208,8 @@ in
         rp-pppoe
         rpi-imager
         rpmextract
+        rt-tests
+        rtcqs # From config.nixpkgs.overlays
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
         runme
@@ -5970,7 +6027,7 @@ in
                 modules-left = [
                   "group/backlight-and-idle-inhibitor"
                   "group/wireplumber-and-bluetooth"
-                  "group/battery-and-power-profiles-daemon"
+                  "battery"
                   "group/cpu-and-load-and-temperature"
                   "group/memory-and-disk"
                   "network"
@@ -6117,19 +6174,6 @@ in
                   on-click = "uwsm-app -- overskride";
                 };
 
-                "group/battery-and-power-profiles-daemon" = {
-                  modules = [
-                    "battery"
-                    "power-profiles-daemon"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
                 battery = {
                   design-capacity = false;
                   weighted-average = true;
@@ -6159,18 +6203,6 @@ in
                   tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
 
                   on-click = "uwsm-app -- resources";
-                };
-
-                power-profiles-daemon = {
-                  format = "{icon}";
-                  format-icons = {
-                    performance = "";
-                    balanced = "";
-                    power-saver = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Driver: {driver}\nProfile: {profile}";
                 };
 
                 "group/cpu-and-load-and-temperature" = {
@@ -6453,7 +6485,6 @@ in
               #wireplumber,
               #bluetooth,
               #battery,
-              #power-profiles-daemon,
               #cpu,
               #load,
               #temperature,
@@ -6476,7 +6507,6 @@ in
 
               #idle_inhibitor,
               #bluetooth,
-              #power-profiles-daemon,
               #load,
               #temperature,
               #disk,
@@ -6532,18 +6562,6 @@ in
               #battery.critical,
               #temperature.critical {
                 color: @red;
-              }
-
-              #power-profiles-daemon.power-saver {
-                color: @mauve;
-              }
-
-              #power-profiles-daemon.balanced {
-                color: @blue;
-              }
-
-              #power-profiles-daemon.performance {
-                color: @lavender;
               }
 
               #network.disabled,
