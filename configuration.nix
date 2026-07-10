@@ -475,6 +475,7 @@ in
       "rd.systemd.show_status=true"
       "rd.udev.log_level=err"
       "splash"
+      "threadirqs"
       "udev.log_level=err"
       "udev.log_priority=err"
     ]
@@ -1312,6 +1313,7 @@ in
 
       extraRules = ''
         SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
+        KERNEL=="cpu_dma_latency", MODE="0660", GROUP="audio"
       ''; # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
     };
 
@@ -1393,7 +1395,11 @@ in
 
     pcscd = {
       enable = true;
-      # plugins = with pkgs; [ ];
+
+      plugins = with pkgs; [
+        ccid
+        ifdnfc
+      ];
     };
 
     pipewire = {
@@ -1409,9 +1415,7 @@ in
         }
       );
 
-      extraLv2Packages = with pkgs; [
-        lsp-plugins
-      ];
+      # extraLv2Packages = with pkgs; [ ];
 
       systemWide = false;
 
@@ -1998,7 +2002,7 @@ in
       package = (
         pkgs.uwsm.override {
           fumonSupport = true;
-          uuctlSupport = true;
+          uuctlSupport = false;
           uwsmAppSupport = true;
         }
       );
@@ -2701,7 +2705,6 @@ in
         aircrack-ng
         alac
         alsa-plugins
-        alsa-tools
         alsa-utils
         alsa-utils-nhlt
         android-backup-extractor
@@ -2709,7 +2712,6 @@ in
         apfsprogs
         apkeep
         apkleaks
-        app-icon-preview
         appimageupdate-qt
         arduino-cli
         ascii
@@ -2721,7 +2723,6 @@ in
         asnmap
         atac
         audacity
-        audio-sharing
         aurea
         autopsy
         avbroot
@@ -2741,7 +2742,6 @@ in
         brasero
         brave
         brightnessctl
-        btrfs-assistant
         btrfs-heatmap
         btrfs-progs
         bustle
@@ -2777,7 +2777,6 @@ in
         constrict
         contrast
         coulomb
-        cozy
         cramfsprogs
         crlfuzz
         cron
@@ -2818,7 +2817,6 @@ in
         dtui
         dvb-apps
         e2fsprogs
-        easyeda2kicad
         ebook2cw
         efibootmgr
         efivar
@@ -2905,7 +2903,6 @@ in
         google-lighthouse
         gopeed
         gource
-        gpa
         gpg-tui
         gpredict
         gpu-viewer
@@ -2932,6 +2929,7 @@ in
         hfsprogs
         hicolor-icon-theme
         hieroglyphic
+        horizon-eda
         host
         hstsparser
         hurl
@@ -2960,7 +2958,6 @@ in
         inkcut
         inkscape-with-extensions
         inotify-tools
-        interactive-html-bom
         interception-tools
         iotop-c
         iplookup-gtk
@@ -2968,9 +2965,7 @@ in
         jmol
         jstest-gtk
         jxrlib
-        karere
         karlender
-        kdePackages.kmahjongg
         kernel-hardening-checker
         kernelshark
         kexec-tools
@@ -2983,7 +2978,6 @@ in
         kubernetes-controller-tools
         kubescape
         kubeshark
-        learn6502
         lenspect
         letterpress
         libaom
@@ -3201,7 +3195,6 @@ in
         steam-run-free
         stellarium
         stenc
-        stockpile
         strace
         strace-analyzer
         streamlit
@@ -3210,7 +3203,6 @@ in
         svt-av1
         switcheroo
         syft
-        symbolic-preview
         symlinks
         systemctl-tui
         szyszka
@@ -3282,7 +3274,6 @@ in
         which
         whois
         whosthere
-        wike
         wildcard
         windowtolayer
         winetricks
@@ -3311,10 +3302,6 @@ in
         zfs
         zip
         zizmor
-
-        (alpaca.override {
-          ollama = config.services.ollama.package;
-        })
 
         (curlFull.override {
           brotliSupport = true;
@@ -3468,17 +3455,6 @@ in
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
         '') # With config.security.sudo.extraRules
 
-        (kicad.override {
-          with3d = true;
-          withI18n = true;
-          withNgspice = true;
-          withScripting = true;
-          addons = with kicadAddons; [
-            kikit
-            kikit-library
-          ];
-        })
-
         (nwg-displays.override {
           hyprlandSupport = true;
         })
@@ -3493,6 +3469,13 @@ in
 
         (parabolic.override {
           yt-dlp = config.home-manager.users.normal.programs.yt-dlp.package;
+        })
+
+        (pcscliteWithPolkit.override {
+          dbusSupport = true;
+          polkitSupport = true;
+          systemdSupport = true;
+          udevSupport = true;
         })
 
         (python315FreeThreading.override {
@@ -3576,7 +3559,6 @@ in
         megasync # OSS # FIXME: XWayland Problems
         rar
         unrar
-        zoom-us
 
         (ventoy-full-gtk.override {
           withExt4 = true;
@@ -4485,7 +4467,6 @@ in
         description = "Abdullah As-Sadeed"; # Full Name
 
         extraGroups = [
-          "adbusers" # Not Listed in builtins.attrNames config.users.groups
           "adm"
           "audio"
           "avahi"
@@ -4494,8 +4475,6 @@ in
           "disk"
           "floppy"
           "fwupd-refresh"
-          "greeter"
-          "hardinfo2"
           "i2c"
           "input"
           "kvm"
@@ -6675,16 +6654,6 @@ in
             # initExtra = '''';
 
             # logoutExtra = '''';
-          };
-
-          nix-your-shell = {
-            enable = true;
-            package = pkgs.nix-your-shell;
-
-            nix-output-monitor = {
-              enable = true;
-              package = pkgs.nix-output-monitor;
-            };
           };
 
           starship = {
