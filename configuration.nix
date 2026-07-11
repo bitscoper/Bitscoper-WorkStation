@@ -9,14 +9,14 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-25.11.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
@@ -220,6 +220,10 @@ in
       })
 
       (final: previous: {
+        catppuccin-gtk = stableNixPackages.catppuccin-gtk;
+      }) # Fixes Build Failure
+
+      (final: previous: {
         catppuccin-plymouth =
           (previous.catppuccin-plymouth.override {
             variant = config.catppuccin.flavor;
@@ -233,6 +237,10 @@ in
               ''; # installPhase Runs postInstall
             });
       })
+
+      (final: previous: {
+        firefox-devedition = stableNixPackages.firefox-devedition;
+      }) # Fixes Build Failure
 
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
@@ -458,6 +466,7 @@ in
     kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
 
     extraModulePackages = with config.boot.kernelPackages; [
+      # zfs_2_4 # FIXME: Build Failure
       apfs
       cpupower
       mm-tools
@@ -466,7 +475,6 @@ in
       turbostat
       usbip
       v4l2loopback
-      zfs_2_4
     ];
 
     hardwareScan = true;
@@ -1164,7 +1172,7 @@ in
       enable = true;
       package = (
         pkgs.libvirt.override {
-          enableCeph = true;
+          enableCeph = false; # FIXME: Build Failure
           enableGlusterfs = true;
           enableIscsi = true;
           enableXen = false;
@@ -2094,7 +2102,7 @@ in
         package = pkgs.bash-completion;
       };
 
-      blesh.enable = true; # FIXME: Enabling Prevents Cursor from Rendering
+      blesh.enable = true;
 
       enableLsColors = true;
 
@@ -2735,8 +2743,14 @@ in
       with pkgs;
       [
         # bitwarden-desktop # FIXME: Build Failure
+        # cyclonedx-python # FIXME: Build Failure
         # dart # flutter adds the compatible version
+        # exhibit # FIXME: Build Failure
+        # freecad # FIXME: Build Failure
         # reiser4progs # Marked as Broken
+        # sbomnix # FIXME: Build Failure
+        # sherlock # FIXME: Build Failure
+        # soundconverter # FIXME: Build Failure
         aalib
         aapt
         acl
@@ -2788,6 +2802,7 @@ in
         brightnessctl
         btrfs-heatmap
         btrfs-progs
+        bump
         bustle
         butt
         bytecode-viewer
@@ -2811,9 +2826,11 @@ in
         clapgrep
         clinfo
         cloc
+        cloneit
         cmake
         cobang
         codec2
+        codeowners
         codevis
         colorgrind
         compose2nix
@@ -2834,7 +2851,6 @@ in
         curtail
         cve-bin-tool
         cyclonedx-cli
-        cyclonedx-python
         d-spy
         daemon
         darktable
@@ -2869,12 +2885,12 @@ in
         elf-dissector
         eloquent
         emblem
+        enumerepo
         esptool
         etherape
         evtest
         evtest-qt
         exfatprogs
-        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -2909,12 +2925,12 @@ in
         footage
         fork-cleaner
         freac
-        freecad
         freerouting
         fritzing
         fwupd-efi
         gama-tui
         gamepad-mirror
+        gawd
         gawk
         gcc
         gdb
@@ -2925,11 +2941,19 @@ in
         gh-contribs
         gh-notify
         gh-skyline # Generates STL File
+        gh2md
+        ghatm
+        ghrepo-stats
         gimp3-with-plugins
+        gist
         git-big-picture
         git-filter-repo
+        git-open
         git-repo
+        github-backup
         github-changelog-generator
+        github-desktop
+        github-distributed-owners
         gitlogue
         glib
         globe-cli
@@ -2951,7 +2975,6 @@ in
         google-lighthouse
         gopeed
         gource
-        gpg-tui
         gpredict
         gpu-viewer
         gradle-completion
@@ -3084,6 +3107,7 @@ in
         mfoc
         millisecond
         minikube
+        mixxx
         modem-manager-gui
         monkeys-audio
         morphosis
@@ -3128,6 +3152,7 @@ in
         openh264
         openjpeg
         openobex
+        openpgp-card-tools
         openssl
         orbvis
         otree
@@ -3208,7 +3233,6 @@ in
         satellite
         sbc
         sbom2dot
-        sbomnix
         schroedinger
         scorecard
         screen
@@ -3217,9 +3241,9 @@ in
         seer # seergdb
         selectdefaultapplication
         semver-tool
+        sequoia-sq
         share-preview
         shellclear
-        sherlock
         shortwave
         simple-scan
         sipvicious
@@ -3231,7 +3255,6 @@ in
         sof-tools
         songrec
         sound-theme-freedesktop
-        soundconverter
         sourcegit
         sox
         spectre-meltdown-checker
@@ -3365,12 +3388,12 @@ in
           zstdSupport = true;
         })
 
-        (bottles.override {
-          removeWarningPopup = true;
+        # (bottles.override {
+        #   removeWarningPopup = true;
 
-          # extraLibraries = [ ];
-          # extraPkgs = [ ];
-        })
+        #   # extraLibraries = [ ];
+        #   # extraPkgs = [ ];
+        # }) # FIXME: Build Failure
 
         (writeShellScriptBin "cpu-x" ''
           exec sudo -E ${cpu-x}/bin/cpu-x "$@"
@@ -3679,10 +3702,6 @@ in
         (gst-plugins-ugly.override {
           enableDocumentation = true;
           enableGplPlugins = true;
-        })
-
-        (gst-vaapi.override {
-          enableDocumentation = true;
         })
 
         (gstreamer.override {
@@ -7530,11 +7549,6 @@ in
             };
           };
 
-          gh-dash = {
-            enable = true;
-            package = pkgs.gh-dash;
-          };
-
           onlyoffice = {
             enable = true;
             package = pkgs.onlyoffice-desktopeditors;
@@ -7593,7 +7607,7 @@ in
 
             dirmngrSettings = {
               allow-version-check = true;
-              keyserver = "hkps://keys.openpgp.org";
+              keyserver = "hkps://keys.openpgp.org/";
             };
 
             gpgsmSettings = {
@@ -7749,13 +7763,6 @@ in
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           }; # FIXME: Does Not Work
-
-          gh-dash = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
 
           mangohud = {
             enable = config.catppuccin.enable;
