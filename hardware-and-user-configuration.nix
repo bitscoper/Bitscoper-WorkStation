@@ -130,25 +130,12 @@
           "dmask=0077"
         ];
       };
-
-      "/mnt/I_SATA_SSD" = {
-        device = "/dev/disk/by-partlabel/I_SATA_SSD";
-        fsType = "xfs";
-        options = [
-          "defaults"
-          "nofail"
-        ];
-      };
     };
 
     swapDevices = [
       {
         device = "/dev/disk/by-uuid/86f9b6f6-5129-42f4-b720-546e14ea511b";
       }
-    ];
-
-    systemd.tmpfiles.rules = [
-      "d /mnt/I_SATA_SSD 0777 root root -"
     ];
 
     specificHardwareConfiguration = {
