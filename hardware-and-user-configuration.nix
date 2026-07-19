@@ -118,25 +118,79 @@
   config = {
     fileSystems = {
       "/" = {
-        device = "/dev/disk/by-uuid/270c24ad-9b83-45d6-a294-ce082f3c4061";
-        fsType = "xfs";
+        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        fsType = "btrfs";
+        options = [
+          "autodefrag"
+          "compress=zstd:1"
+          "discard=async"
+          "noatime"
+          "space_cache=v2"
+          "ssd"
+        ];
       };
 
       "/boot" = {
-        device = "/dev/disk/by-uuid/4236-838A";
+        device = "/dev/disk/by-uuid/9A25-C94D";
         fsType = "vfat";
         options = [
           "fmask=0077"
           "dmask=0077"
         ];
       };
+
+      "/nix" = {
+        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        fsType = "btrfs";
+        options = [
+          "subvol=nix"
+          "compress=zstd:1"
+          "noatime"
+          "discard=async"
+          "ssd"
+          "space_cache=v2"
+          "autodefrag"
+        ];
+      };
+
+      "/home" = {
+        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        fsType = "btrfs";
+        options = [
+          "subvol=home"
+          "compress=zstd:1"
+          "noatime"
+          "discard=async"
+          "ssd"
+          "space_cache=v2"
+          "autodefrag"
+        ];
+      };
     };
 
     swapDevices = [
       {
-        device = "/dev/disk/by-uuid/86f9b6f6-5129-42f4-b720-546e14ea511b";
+        device = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
       }
     ];
+
+    boot = {
+      initrd = {
+        luks = {
+          devices = {
+            "luks-bd4924a7-a931-4592-890b-d7cc35be5e39" = {
+              device = "/dev/disk/by-uuid/bd4924a7-a931-4592-890b-d7cc35be5e39";
+            };
+
+            "luks-34ec5350-db4d-46fb-b370-feefe9d3de0a" = {
+              device = "/dev/disk/by-uuid/34ec5350-db4d-46fb-b370-feefe9d3de0a";
+            };
+          };
+        };
+      };
+
+      resumeDevice = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
+    };
 
     specificHardwareConfiguration = {
       systemArchitecture = "x86_64";
@@ -160,6 +214,7 @@
 
       kernelParams = [
         "intel_iommu=on"
+        "resume=/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a"
       ];
 
       extraGraphicsPackages = with pkgs; [
