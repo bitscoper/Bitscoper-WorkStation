@@ -467,18 +467,8 @@ in
       };
     };
 
-    kexec.enable = true;
-
-    crashDump = {
-      enable = false;
-
-      kernelParams = [
-        "1" # 1 = runlevel 1 / Single-User Mode
-        "boot.shell_on_fail"
-      ];
-
-      reservedMemory = "128M";
-    };
+    kexec.enable = false;
+    crashDump.enable = false;
 
     consoleLogLevel = 4; # 4 = KERN_WARNING
 
@@ -702,7 +692,7 @@ in
       enable = true;
       package = (
         pkgs.sudo.override {
-          withInsults = false; # Includes Profanity
+          withInsults = true; # May Include Profanity
         }
       );
 
@@ -740,6 +730,10 @@ in
           ];
         }
       ];
+
+      extraConfig = ''
+        Defaults pwfeedback
+      '';
     };
 
     polkit = {
@@ -772,7 +766,43 @@ in
       services = {
         login = {
           unixAuth = true;
-          # fprintAuth = true;
+          fprintAuth = !config.security.pam.services.gdm-fingerprint.fprintAuth;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        gdm-password = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        gdm-fingerprint = {
+          unixAuth = true;
+          fprintAuth = true;
 
           logFailures = true;
           nodelay = false;
@@ -807,6 +837,24 @@ in
         };
 
         sudo = {
+          unixAuth = true;
+          fprintAuth = true;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = true;
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        vlock = {
           unixAuth = true;
           fprintAuth = true;
 
@@ -859,7 +907,7 @@ in
 
           showMotd = true;
         };
-      };
+      }; # ls /etc/pam.d/
 
       loginLimits = [
         {
@@ -1268,8 +1316,8 @@ in
       };
     };
 
-    power-profiles-daemon.enable = false;
-    tlp.enable = false;
+    power-profiles-daemon.enable = !config.powerManagement.enable;
+    tlp.enable = !config.powerManagement.enable;
 
     thermald = {
       enable = true;
@@ -2413,16 +2461,12 @@ in
         bleachbit
         bluez-alsa
         bluez-tools
-        dislocker
         brasero
         brave
         brightnessctl
-        btrfs-heatmap
-        dduper
-        btrfs-progs
-        compsize
-        ntfs2btrfs
         btrfs-assistant
+        btrfs-heatmap
+        btrfs-progs
         bump
         bustle
         butt
@@ -2454,6 +2498,7 @@ in
         codevis
         colorgrind
         compose2nix
+        compsize
         concessio
         constrict
         contrast
@@ -2481,6 +2526,7 @@ in
         dconf2nix
         ddrescue
         ddrescueview
+        dduper
         debase
         delineate
         deluge-gtk
@@ -2489,6 +2535,7 @@ in
         diffoci
         dig
         dippi
+        dislocker
         dive
         dmg2img
         dmidecode
@@ -2579,21 +2626,34 @@ in
         gitlogue
         glib
         globe-cli
+        gnome-autoar
+        gnome-backgrounds
+        gnome-bluetooth
         gnome-calculator
         gnome-calendar
         gnome-characters
+        gnome-clocks
         gnome-console
         gnome-contacts
+        gnome-control-center
         gnome-decoder
+        gnome-epub-thumbnailer
+        gnome-extensions-cli
         gnome-firmware
         gnome-frog
         gnome-graphs
+        gnome-keysign
+        gnome-logs
         gnome-mahjongg
         gnome-multi-writer
         gnome-nettool
+        gnome-network-displays
         gnome-podcasts
+        gnome-power-manager
+        gnome-session-ctl
         gnome-tecla
         gnome-tweaks
+        gnome-video-effects
         gnome-weather
         gnss-share
         gnugrep
@@ -2653,6 +2713,7 @@ in
         jmol
         jstest-gtk
         jxrlib
+        kdePackages.kcachegrind
         kernel-hardening-checker
         kernelshark
         kexec-tools
@@ -2754,6 +2815,7 @@ in
         nmap
         noaa-apt
         nocturne
+        ntfs2btrfs
         ntfs3g
         ntfsprogs-plus
         nucleus
@@ -2856,7 +2918,6 @@ in
         sdrangel
         seabird
         seer # seergdb
-        selectdefaultapplication
         semver-tool
         sequoia-sq
         share-preview
@@ -3314,11 +3375,6 @@ in
         })
       ])
 
-      ++ (with kdePackages; [
-        kcachegrind
-        kjournald # kjournaldbrowser
-      ])
-
       ++ (with linphonePackages; [
         bc-decaf
         bc-ispell
@@ -3364,7 +3420,6 @@ in
       gnome-font-viewer
       gnome-maps
       gnome-music
-      gnome-software
       gnome-system-monitor
       gnome-text-editor
       gnome-tour
@@ -3405,7 +3460,6 @@ in
 
     sessionVariables = {
       NIXOS_OZONE_WL = 1;
-      MOZ_ENABLE_WAYLAND = 1;
 
       CHROME_EXECUTABLE = "brave";
 
@@ -4564,66 +4618,60 @@ in
           gnome-shell = {
             enable = config.services.desktopManager.gnome.enable;
 
-            extensions = [
+            extensions = with pkgs.gnomeExtensions; [
               {
-                package = pkgs.gnomeExtensions.user-themes;
+                package = user-themes;
               }
               {
-                package = pkgs.gnomeExtensions.appindicator;
+                package = appindicator;
               }
               {
-                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
+                package = bluetooth-battery-meter;
               }
               {
-                package = pkgs.gnomeExtensions.blur-my-shell;
+                package = blur-my-shell;
               }
               {
-                package = pkgs.gnomeExtensions.clipboard-indicator;
+                package = clipboard-indicator;
               }
               {
-                package = pkgs.gnomeExtensions.desktop-cube;
+                package = desktop-cube;
               }
               {
-                package = pkgs.gnomeExtensions.display-configuration-switcher;
+                package = display-configuration-switcher;
               }
               {
-                package = pkgs.gnomeExtensions.extra-reboot-options;
+                package = extra-reboot-options;
               }
               {
-                package = pkgs.gnomeExtensions.frequency-boost-switch;
+                package = frequency-boost-switch;
               }
               {
-                package = pkgs.gnomeExtensions.gamemode-shell-extension;
+                package = gamemode-shell-extension;
               }
               {
-                package = pkgs.gnomeExtensions.gjs-osk;
+                package = gjs-osk;
               }
               {
-                package = pkgs.gnomeExtensions.gsconnect;
+                package = places-status-indicator;
               }
               {
-                package = pkgs.gnomeExtensions.places-status-indicator;
+                package = privacy-settings-menu;
               }
               {
-                package = pkgs.gnomeExtensions.privacy-settings-menu;
+                package = sermon;
               }
               {
-                package = pkgs.gnomeExtensions.sermon;
+                package = top-bar-organizer;
               }
               {
-                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
+                package = touchpad-switcher;
               }
               {
-                package = pkgs.gnomeExtensions.top-bar-organizer;
+                package = vitals;
               }
               {
-                package = pkgs.gnomeExtensions.touchpad-switcher;
-              }
-              {
-                package = pkgs.gnomeExtensions.vitals;
-              }
-              {
-                package = pkgs.gnomeExtensions.wifi-qrcode;
+                package = wifi-qrcode;
               }
             ];
 
