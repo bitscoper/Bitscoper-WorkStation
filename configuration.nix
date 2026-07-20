@@ -9,23 +9,22 @@
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
+  grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
     numLatestPlatformVersions = 1;
     platformVersions = [
-      "latest"
       "28"
       "29"
       "30"
@@ -37,23 +36,25 @@ let
       "36"
       "36.1"
       "37.0"
+      "37.1"
+      "latest"
     ];
     useGoogleAPIs = false;
     useGoogleTVAddOns = false;
 
     platformToolsVersion = "latest";
     buildToolsVersions = [
-      "latest"
       "35.0.0"
       "36.1.0"
       "37.0.0"
+      "latest"
     ];
 
     includeNDK = true;
     ndkVersions = [
-      "latest"
       "28.2.13676358"
       "29.0.14206865"
+      "latest"
     ];
 
     cmdLineToolsVersion = "latest";
@@ -61,9 +62,9 @@ let
 
     includeCmake = true;
     cmakeVersions = [
-      "latest"
       "3.22.1"
       "4.1.2"
+      "latest"
     ];
 
     includeExtras = [
@@ -102,14 +103,6 @@ let
     size = builtins.floor (design_factor * 0.75); # 12
   };
 
-  wallpaper = builtins.fetchurl {
-    url = "https://raw.githubusercontent.com/NixOS/nixos-artwork/refs/heads/master/wallpapers/nix-wallpaper-nineish-catppuccin-${config.catppuccin.flavor}.png";
-  };
-
-  transparent_1x1_png_file = builtins.fetchurl {
-    url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
-  };
-
   tlsCertificateFiles =
     pkgs.runCommand "generate_tls_certificate"
       {
@@ -132,7 +125,6 @@ in
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
-    catppuccinThemeFlake.nixosModules.catppuccin
 
     ./hardware-and-user-configuration.nix
   ];
@@ -166,11 +158,7 @@ in
       max-jobs = 1;
     };
 
-    gc = {
-      automatic = !config.programs.nh.enable;
-      dates = "weekly";
-      persistent = true;
-    };
+    gc.automatic = !config.programs.nh.enable;
   };
 
   nixpkgs = {
@@ -181,11 +169,7 @@ in
     config = {
       allowUnfree = true;
 
-      permittedInsecurePackages = [
-        "electron-39.8.10" # For bitwarden-desktop
-        "opendkim-2.11.0-Beta2"
-      ]
-      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
+      permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
         "ventoy-gtk3-1.1.12"
       ];
 
@@ -194,93 +178,8 @@ in
 
     overlays = [
       (final: previous: {
-        catppuccin-grub =
-          (previous.catppuccin-grub.override {
-            flavor = config.catppuccin.flavor;
-          }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
-                cp ${wallpaper} $out/background.png
-
-                rm -f $out/logo.png
-                sed -i '/# Logo image/,+5d' $out/theme.txt
-                # Because the background already has the NixOS logo.
-
-                # Moving the boot menu to the center of the left half of the screen
-                sed -i 's/left = 50%-240/left = 5%/' $out/theme.txt
-                sed -i 's/top = 60%/top = 35%/' $out/theme.txt
-                sed -i 's/width = 480/width = 40%/' $out/theme.txt
-
-                # Preserving the relative position of the countdown
-                sed -i 's/top = 82%/top = 57%/' $out/theme.txt
-                sed -i 's/left = 35%/left = 5%/' $out/theme.txt
-                sed -i 's/width = 30%/width = 40%/' $out/theme.txt
-              ''; # installPhase Runs postInstall
-            });
-      })
-
-      (final: previous: {
-        catppuccin-gtk = stableNixPackages.catppuccin-gtk;
-      }) # Fixes Build Failure
-
-      (final: previous: {
-        catppuccin-plymouth =
-          (previous.catppuccin-plymouth.override {
-            variant = config.catppuccin.flavor;
-          }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
-                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
-
-                mkdir -p $THEME_DIRECTORY
-                cp ${wallpaper} $THEME_DIRECTORY/background.png
-              ''; # installPhase Runs postInstall
-            });
-      })
-
-      (final: previous: {
-        firefox-devedition = stableNixPackages.firefox-devedition;
-      }) # Fixes Build Failure
-
-      (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
-        };
-      })
-
-      (final: previous: {
-        proton-drive = previous.stdenvNoCC.mkDerivation rec {
-          pname = "proton-drive";
-          version = "0.4.6";
-
-          src = final.fetchurl {
-            url =
-              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
-                "https://proton.me/download/drive/cli/${version}/linux-x64/proton-drive"
-              else if config.nixpkgs.hostPlatform.system == "aarch64-linux" then
-                "https://proton.me/download/drive/cli/${version}/linux-arm64/proton-drive"
-              else
-                throw "No Proton Drive CLI build for ${config.nixpkgs.hostPlatform.system}!"; # https://proton.me/download/drive/cli/index.html
-
-            hash = "sha256-iaVBMaCBHkLqGOxDBz1us0fYD1lO0CJgCbuUEY9M2oY=";
-          };
-
-          dontUnpack = true;
-
-          installPhase = ''
-            install -Dm755 $src $out/bin/proton-drive
-          '';
-
-          meta = with final.lib; {
-            mainProgram = "proton-drive";
-            description = "Proton Drive CLI";
-            license = licenses.mit;
-            platforms = [
-              "aarch64-linux"
-              "x86_64-linux"
-            ];
-            homepage = "https://github.com/ProtonDriveApps/sdk/tree/main/js/cli/";
-          };
         };
       })
 
@@ -412,9 +311,8 @@ in
         gfxmodeEfi = "1920x1080,auto";
         gfxpayloadEfi = "keep";
 
-        theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
-
-        splashImage = pkgs.lib.mkForce wallpaper;
+        theme = grubThemeFlake.packages.${config.nixpkgs.hostPlatform.system}.nixos;
+        # TODO: splashImage
         splashMode = "normal";
 
         configurationLimit = 100;
@@ -587,14 +485,15 @@ in
     plymouth = {
       enable = true;
 
-      themePackages = with pkgs; [
-        catppuccin-plymouth # From config.nixpkgs.overlays
-      ];
-      theme = "catppuccin-${config.catppuccin.flavor}";
-
+      theme = "bgrt";
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
+      logo = "${pkgs.nixos-icons}/share/icons/hicolor/48x48/apps/nix-snowflake-white.png";
 
-      logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
+      showDelay = 0;
+
+      extraConfig = ''
+        UseFirmwareBackground=true
+      '';
     };
   };
 
@@ -626,6 +525,17 @@ in
         updateMicrocode = true;
         microcodePackage = pkgs."microcode-${config.specificHardwareConfiguration.cpuVendor}";
       };
+    };
+
+    block = {
+      scheduler = {
+        "mmcblk[0-9]*" = "bfq";
+        "nvme[0-9]*" = "none";
+      };
+
+      defaultScheduler = "none";
+      defaultSchedulerExclude = "loop[0-9]*";
+      defaultSchedulerRotational = "bfq";
     };
 
     i2c = {
@@ -765,9 +675,6 @@ in
     );
 
     tmpfiles.rules = [
-      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
-      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
-
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
       "d /var/lib/swtpm-localca 0750 tss root -"
@@ -776,7 +683,9 @@ in
 
   zramSwap = {
     enable = true;
+
     algorithm = config.boot.tmp.zramSettings.compression-algorithm;
+    swapDevices = 1;
   };
 
   security = {
@@ -846,11 +755,6 @@ in
       ];
     };
 
-    soteria = {
-      enable = true;
-      package = pkgs.soteria;
-    };
-
     pam = {
       mount = {
         enable = true;
@@ -868,43 +772,7 @@ in
       services = {
         login = {
           unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sddm = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        hyprlock = {
-          unixAuth = true;
-          fprintAuth = true;
+          # fprintAuth = true;
 
           logFailures = true;
           nodelay = false;
@@ -1131,9 +999,7 @@ in
 
       allowPing = true;
 
-      allowedTCPPorts = [
-        config.home-manager.users.normal.services.wayvnc.settings.port
-      ];
+      allowedTCPPorts = [ ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
@@ -1180,15 +1046,12 @@ in
     inputMethod = {
       enable = true;
 
-      type = "fcitx5";
-      fcitx5 = {
-        addons = with pkgs; [
-          fcitx5-gtk
-          fcitx5-openbangla-keyboard
+      type = "ibus";
+      ibus = {
+        engines = with pkgs; [
+          openbangla-keyboard
         ];
         waylandFrontend = true;
-
-        ignoreUserConfig = false;
       };
 
       enableGtk3 = true;
@@ -1286,6 +1149,18 @@ in
     };
 
     das_watchdog.enable = true;
+
+    fstrim = {
+      enable = true;
+      interval = "weekly";
+    };
+
+    btrfs.autoScrub = {
+      enable = true;
+      interval = "weekly";
+    };
+
+    beesd = { };
 
     dbus = {
       enable = true;
@@ -1416,6 +1291,7 @@ in
       enable = true;
       packages = with pkgs; [
         game-devices-udev-rules
+        gnome-settings-daemon
         libmtp.out
         rtl-sdr
       ];
@@ -1457,7 +1333,7 @@ in
       enable = true;
       package = (
         pkgs.gvfs.override {
-          gnomeSupport = false;
+          gnomeSupport = true;
           udevSupport = true;
         }
       );
@@ -1466,30 +1342,23 @@ in
     displayManager = {
       enable = true;
 
-      sddm = {
+      gdm = {
         enable = true;
-        package = pkgs.qt6Packages.sddm;
 
-        wayland = {
-          enable = true;
-          compositor = "kwin";
-        };
+        banner = config.networking.fqdn;
+        autoSuspend = false;
 
-        enableHidpi = true;
-
-        autoNumlock = false;
-        autoLogin.relogin = false;
-
-        settings = {
-          Wayland.SessionDir = "/etc/xdg/wayland-sessions/"; # With config.systemd.tmpfiles.rules
-        };
+        debug = false;
       };
-
-      defaultSession = "hyprland-uwsm";
 
       autoLogin.enable = false;
 
       logToJournal = true;
+    };
+
+    desktopManager.gnome = {
+      enable = true;
+      debug = false;
     };
 
     accounts-daemon.enable = true;
@@ -1672,9 +1541,43 @@ in
     };
 
     gnome = {
-      gnome-keyring.enable = true;
+      glib-networking.enable = true;
 
+      core-os-services.enable = true;
+      core-shell.enable = true;
+      gnome-settings-daemon.enable = true;
+
+      gnome-keyring.enable = true;
       gcr-ssh-agent.enable = !config.programs.gnupg.agent.enable;
+      gnome-online-accounts.enable = true;
+
+      gnome-user-share.enable = true;
+      rygel = {
+        enable = true;
+        package = pkgs.rygel;
+      };
+
+      gnome-remote-desktop.enable = true;
+
+      at-spi2-core.enable = true;
+      tinysparql.enable = true;
+      localsearch.enable = true;
+
+      evolution-data-server = {
+        enable = true;
+        plugins = with pkgs; [
+          evolution-ews
+        ];
+      };
+
+      core-apps.enable = true;
+      sushi.enable = true;
+      gnome-browser-connector.enable = true;
+
+      gnome-initial-setup.enable = false;
+      gnome-software.enable = false;
+      core-developer-tools.enable = false;
+      games.enable = false;
     };
 
     phpfpm = {
@@ -1958,80 +1861,6 @@ in
       '';
     };
 
-    postfix = {
-      enable = true;
-
-      enableSmtp = true;
-      enableSubmission = true;
-      enableSubmissions = true;
-
-      virtualMapType = "pcre";
-      aliasMapType = "pcre";
-      enableHeaderChecks = true;
-
-      setSendmail = true;
-
-      settings = {
-        main = {
-          mydomain = config.networking.fqdn;
-          myhostname = config.networking.fqdn;
-          myorigin = config.networking.fqdn;
-
-          smtpd_tls_security_level = "encrypt";
-          smtp_tls_security_level = "encrypt";
-
-          smtpd_tls_chain_files = [
-            tlsCertificateConcatenatedFile
-          ];
-          smtp_tls_CAfile = tlsCACertificateFile;
-
-          smtpd_banner = "$myhostname ESMTP";
-
-          disable_vrfy_command = true;
-        };
-      };
-    };
-
-    opendkim = {
-      enable = true;
-
-      domains = "csl:${config.networking.fqdn}";
-      selector = "default";
-    };
-
-    dovecot2 = {
-      enable = true;
-      package = (
-        pkgs.dovecot.override {
-          withLDAP = true;
-          withMySQL = true;
-          withPCRE2 = true;
-          withPgSQL = true;
-          withSQLite = true;
-          withUnwind = true;
-        }
-      );
-
-      enablePAM = true;
-      showPAMFailure = true;
-      createMailUser = true;
-
-      settings = {
-        dovecot_config_version = config.services.dovecot2.package.version;
-        dovecot_storage_version = config.services.dovecot2.package.version;
-
-        protocols = {
-          imap = true;
-          lmtp = true;
-          pop3 = true;
-        };
-
-        ssl_server_cert_file = tlsCertificateFile;
-        ssl_server_key_file = tlsCertificatePrivateKeyFile;
-        ssl_server_ca_file = tlsCACertificateFile;
-      };
-    };
-
     icecast = {
       enable = true;
 
@@ -2095,21 +1924,11 @@ in
       package = pkgs.cloudflared;
     };
 
-    flatpak = {
-      enable = true;
-      package = (
-        pkgs.flatpak.override {
-          withDconf = true;
-          withMan = true;
-          withPolkit = true;
-          withSystemd = true;
-        }
-      );
-    };
-
     sysstat = {
       enable = true;
     };
+
+    sysprof.enable = true;
 
     logrotate = {
       enable = true;
@@ -2120,33 +1939,6 @@ in
   };
 
   programs = {
-    uwsm = {
-      enable = true;
-      package = (
-        pkgs.uwsm.override {
-          fumonSupport = true;
-          uuctlSupport = false;
-          uwsmAppSupport = true;
-        }
-      );
-    };
-
-    hyprland = {
-      enable = true;
-      package = (
-        pkgs.hyprland.override {
-          debug = config.environment.enableDebugInfo;
-          enableXWayland = true;
-          withSystemd = true;
-          wrapRuntimeDeps = true;
-        }
-      );
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
-
-      withUWSM = true;
-      xwayland.enable = true;
-    };
-
     xwayland.enable = true;
 
     gamemode = {
@@ -2381,11 +2173,6 @@ in
           lockAll = true;
 
           settings = {
-            "org/gtk/settings/file-chooser" = {
-              show-hidden = true;
-              sort-directories-first = true;
-            };
-
             "org/gnome/desktop/interface" = {
               gtk-enable-primary-paste = true;
             };
@@ -2398,6 +2185,11 @@ in
 
             "org/gnome/desktop/privacy" = {
               remember-recent-files = false;
+            };
+
+            "org/gtk/settings/file-chooser" = {
+              show-hidden = true;
+              sort-directories-first = true;
             };
 
             "org/virt-manager/virt-manager" = {
@@ -2450,48 +2242,7 @@ in
       ];
     };
 
-    waybar = {
-      enable = !config.home-manager.users.normal.programs.waybar.enable;
-      package = (
-        pkgs.waybar.override {
-          cavaSupport = true;
-          enableManpages = true;
-          evdevSupport = true;
-          experimentalPatches = true;
-          gpsSupport = true;
-          inputSupport = true;
-          jackSupport = true;
-          mpdSupport = false;
-          mprisSupport = true;
-          niriSupport = false;
-          nlSupport = true;
-          pipewireSupport = true;
-          pulseSupport = true;
-          rfkillSupport = true;
-          sndioSupport = true;
-          systemdSupport = true;
-          traySupport = true;
-          udevSupport = true;
-          upowerSupport = true;
-          wireplumberSupport = true;
-          withMediaPlayer = true;
-
-          runTests = false;
-        }
-      );
-    };
-
-    nm-applet = {
-      enable = true;
-      package = pkgs.networkmanagerapplet;
-
-      indicator = true;
-    };
-
-    nautilus-open-any-terminal = {
-      enable = true;
-      terminal = "ptyxis";
-    };
+    gnome-disks.enable = true;
 
     seahorse.enable = true;
 
@@ -2502,161 +2253,6 @@ in
       package = (
         pkgs.virt-manager.override {
           spiceSupport = true;
-        }
-      );
-    };
-
-    firefox = {
-      enable = true;
-      package = pkgs.firefox-devedition;
-
-      languagePacks = [
-        "en-US"
-      ];
-
-      policies = {
-        SkipTermsOfUse = true;
-
-        DisableTelemetry = true;
-        DisableFirefoxStudies = true;
-        DisableFirefoxAccounts = true;
-        DisablePocket = true;
-
-        AppAutoUpdate = false;
-        BackgroundAppUpdate = false;
-        NoDefaultBookmarks = true;
-
-        HardwareAcceleration = true;
-        PostQuantumKeyAgreementEnabled = true;
-        DisablePrivateBrowsing = false;
-        CaptivePortal = true;
-
-        DisableDeveloperTools = false;
-        AllowFileSelectionDialogs = true;
-        DisableBuiltinPDFViewer = false;
-        VisualSearchEnabled = true;
-        SearchSuggestEnabled = true;
-        TranslateEnabled = true;
-        PrintingEnabled = true;
-
-        HttpsOnlyMode = "enabled";
-        OfferToSaveLogins = false;
-        AutofillAddressEnabled = false;
-        AutofillCreditCardEnabled = false;
-        PromptForDownloadLocation = false;
-        StartDownloadsInTempDirectory = false;
-
-        ExtensionSettings =
-          let
-            linkFormat = linkPart: "https://addons.mozilla.org/firefox/downloads/latest/${linkPart}/latest.xpi";
-          in
-          {
-            "@testpilot-containers" = {
-              install_url = linkFormat "multi-account-containers";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "FirefoxColor@mozilla.com" = {
-              install_url = linkFormat "firefox-color";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "uBlock0@raymondhill.net" = {
-              install_url = linkFormat "ublock-origin";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "jid1-BoFifL9Vbdl2zQ@jetpack" = {
-              install_url = linkFormat "decentraleyes";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "sponsorBlocker@ajay.app" = {
-              install_url = linkFormat "sponsorblock";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{dcb8caa2-63fa-41aa-a508-a45c5990ebdd}" = {
-              install_url = linkFormat "zjm-whatfont";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{2e5ff8c8-32fe-46d0-9fc8-6b8986621f3c}" = {
-              install_url = linkFormat "search_by_image";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{531906d3-e22f-4a6c-a102-8057b88a1a63}" = {
-              install_url = linkFormat "single-file";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{c5d69a8f-2ed0-46a7-afa4-b3a00dc58088}" = {
-              install_url = linkFormat "gopeed-extension";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "languagetool-webextension@languagetool.org" = {
-              install_url = linkFormat "languagetool";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "78272b6fa58f4a1abaac99321d503a20@proton.me" = {
-              install_url = linkFormat "proton-pass";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{446900e4-71c2-419f-a6a7-df9c091e268b}" = {
-              install_url = linkFormat "bitwarden-password-manager";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "jid0-adyhmvsP91nUO8pRv0Mn2VKeB84@jetpack" = {
-              install_url = linkFormat "raindropio";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "vpn@proton.ch" = {
-              install_url = linkFormat "proton-vpn-firefox-extension";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{8446b178-c865-4f5c-8ccc-1d7887811ae3}" = {
-              install_url = linkFormat "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-git";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            }; # Hardcoded ID for Catppuccin Mocha Lavender
-          }
-          // {
-            "queryamoid@kaply.com" = {
-              install_url = "https://github.com/mkaply/queryamoid/releases/download/v0.2/query_amo_addon_id-0.2-fx.xpi";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-          };
-      };
-    };
-
-    evince = {
-      enable = true;
-      package = (
-        pkgs.evince.override {
-          supportMultimedia = true;
-          withLibsecret = true;
         }
       );
     };
@@ -2721,11 +2317,6 @@ in
         obs-vaapi
         obs-vkcapture
       ];
-    };
-
-    wayvnc = {
-      enable = true;
-      package = pkgs.wayvnc;
     };
 
     localsend = {
@@ -2809,7 +2400,6 @@ in
         # freecad # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # sbomnix # FIXME: Build Failure
-        # sherlock # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
         aalib
         aapt
@@ -2834,6 +2424,7 @@ in
         apkleaks
         appimageupdate-qt
         arduino-cli
+        arduino-language-server
         ascii
         ascii-draw
         ascii-image-converter
@@ -2842,12 +2433,13 @@ in
         asciiquarium-transparent
         asnmap
         audacity
-        aurea
         autopsy
         avbroot
         avrdude
         bada-bib
         baobab
+        basedpyright
+        bash-language-server
         bcachefs-tools
         bcg729
         binary
@@ -2858,11 +2450,16 @@ in
         bleachbit
         bluez-alsa
         bluez-tools
+        dislocker
         brasero
         brave
         brightnessctl
         btrfs-heatmap
+        dduper
         btrfs-progs
+        compsize
+        ntfs2btrfs
+        btrfs-assistant
         bump
         bustle
         butt
@@ -2881,15 +2478,14 @@ in
         certdump
         cicero-tui
         cine
+        clang_22
         clang-analyzer
         clang-tools
-        clang_22
         clapgrep
         clinfo
         cloc
         cloneit
         cmake
-        cobang
         codec2
         codeowners
         codevis
@@ -2904,6 +2500,8 @@ in
         cron
         cryptsetup
         cscope
+        css-variables-language-server
+        ctags-lsp
         ctagsWrapped
         ctop
         cups-pk-helper
@@ -2932,6 +2530,8 @@ in
         dmg2img
         dmidecode
         dnsrecon
+        docker-compose-language-service
+        dockerfile-language-server
         door-knocker
         dosfstools
         dot2tex
@@ -2943,6 +2543,7 @@ in
         efivar
         egypt
         elastic
+        electron-mail
         elf-dissector
         eloquent
         emblem
@@ -2962,7 +2563,6 @@ in
         fdroidcl
         fdt-viewer
         fdupes
-        ferrishot
         ffmpegthumbnailer
         ffpb
         fh
@@ -2973,11 +2573,8 @@ in
         filen-cli
         filen-desktop
         findutils
-        firefox_decrypt
         flake-checker
         flare-floss
-        flatpak-builder
-        flatpak-xdg-utils
         flawz
         flutter
         foliate
@@ -3019,7 +2616,12 @@ in
         gitlogue
         glib
         globe-cli
+        gnome-calculator
+        gnome-calendar
         gnome-characters
+        gnome-console
+        gnome-contacts
+        gnome-decoder
         gnome-firmware
         gnome-frog
         gnome-graphs
@@ -3028,6 +2630,8 @@ in
         gnome-nettool
         gnome-podcasts
         gnome-tecla
+        gnome-tweaks
+        gnome-weather
         gnss-share
         gnugrep
         gnumake
@@ -3066,17 +2670,7 @@ in
         hurl
         hw-probe
         hydra-check
-        hyprgraphics
-        hyprland-protocols
-        hyprland-qt-support
-        hyprland-qtutils
-        hyprmagnifier
-        hyprpicker
-        hyprshutdown
-        hyprtoolkit
-        hyprutils
-        hyprwayland-scanner
-        hyprwire
+        hyprls
         i2c-tools
         iaito
         iconic
@@ -3096,7 +2690,6 @@ in
         jmol
         jstest-gtk
         jxrlib
-        karlender
         kernel-hardening-checker
         kernelshark
         kexec-tools
@@ -3104,6 +2697,7 @@ in
         kind
         kmod
         kotlin
+        kotlin-language-server
         krapslog
         kubectl
         kubernetes-controller-tools
@@ -3173,7 +2767,6 @@ in
         modem-manager-gui
         monkeys-audio
         morphosis
-        mousam
         mslicer
         mt-st
         mtools
@@ -3191,19 +2784,20 @@ in
         nix-health
         nix-info
         nix-query-tree-viewer
+        nixd
+        nixfmt
         nixmate
         nixpkgs-reviewFull
         nmap
         noaa-apt
         nocturne
         ntfs3g
+        ntfsprogs-plus
         nucleus
         numactl
         numatop
         nurl
         nvme-cli
-        nwg-bar
-        nwg-drawer
         obexftp
         oha
         onionshare-gui
@@ -3218,11 +2812,11 @@ in
         openssl
         orbvis
         otree
-        overskride
         packet
         paleta
         pana
         paper-clip
+        papers
         parallel-full
         parted
         pbzx
@@ -3248,29 +2842,25 @@ in
         podman-compose
         pods
         poop # POOP = Performance Optimizer Observation Platform
+        postgres-language-server
         powershell
+        prettier
         printrun
         procps
         profile-cleaner
         progress
         protocol
         proton-authenticator
-        proton-drive # From config.nixpkgs.overlays
         proton-pass
         proton-pass-cli
         proton-vpn
         proton-vpn-cli
-        protonmail-bridge
-        protonmail-bridge-gui
-        protonmail-desktop
         protonmail-export
         protonplus
         protontricks
         ps
         psmisc
-        pwvucontrol
         python3Packages.tkinter
-        qalculate-gtk
         qemu-user
         qemu-utils
         qr-backup
@@ -3281,6 +2871,7 @@ in
         radare2
         raider
         raindropio # From config.nixpkgs.overlays
+        refine
         resources
         rp-pppoe
         rpi-imager
@@ -3289,6 +2880,7 @@ in
         rtcqs # From config.nixpkgs.overlays
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
+        ruff
         runme
         rustc
         satdump
@@ -3305,11 +2897,13 @@ in
         semver-tool
         sequoia-sq
         share-preview
+        shellcheck
         shellclear
+        sherlock
+        shfmt
         shortwave
         simple-scan
         sipvicious
-        sl
         sleuthkit
         sloc
         smag
@@ -3322,6 +2916,7 @@ in
         spectre-meltdown-checker
         speedtest
         spytrap-adb
+        sql-formatter
         srain
         sslscan
         steam-run-free
@@ -3380,14 +2975,14 @@ in
         virt-top
         virt-v2v
         vorbis-tools
+        vscodium
         vulkan-tools
         vulnix
         wafw00f
         wakeonlan
-        warehouse
         wavemon
-        wayback-machine-archiver
         wayback_machine_downloader
+        wayback-machine-archiver
         waycheck
         waydroid-helper
         wayland-protocols
@@ -3395,7 +2990,6 @@ in
         wayland-utils
         waylevel
         wayscriber
-        weathr
         webcamize
         webfontkitgenerator
         websocat
@@ -3408,8 +3002,6 @@ in
         windowtolayer
         winetricks
         wl-clipboard
-        wpprobe
-        wvkbd # wvkbd-mobintl
         xar
         xdg-dbus-proxy
         xdg-user-dirs
@@ -3424,6 +3016,7 @@ in
         xoscope
         xscreenruler
         xvidcore
+        yaml-language-server
         yara-x
         yq
         yuview
@@ -3453,8 +3046,8 @@ in
         # (bottles.override {
         #   removeWarningPopup = true;
 
-        #   # extraLibraries = [ ];
-        #   # extraPkgs = [ ];
+        #   extraLibraries = [ ];
+        #   extraPkgs = [ ];
         # }) # FIXME: Build Failure
 
         (writeShellScriptBin "cpu-x" ''
@@ -3585,10 +3178,6 @@ in
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
         '') # With config.security.sudo.extraRules
 
-        (nwg-displays.override {
-          hyprlandSupport = true;
-        })
-
         (orca-slicer.override {
           withSystemd = true;
         })
@@ -3665,10 +3254,6 @@ in
           waylandSupport = true;
         })
 
-        (tree-sitter.override {
-          webUISupport = false; # FIXME: Build Failure
-        })
-
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -3676,17 +3261,15 @@ in
 
         config.hardware.firmware
         config.home-manager.users.normal.programs.dircolors.package # Overriden coreutils-full
-        config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
-        config.programs.nm-applet.package # Also Provides nm-connection-editor
         config.services.phpfpm.phpPackage
       ]
 
       ++ lib.optionals config.nixpkgs.config.allowUnfree [
         androidComposition.androidsdk # Custom Composition
         anydesk
-        megasync # OSS # FIXME: XWayland Problems
+        megasync # OSS
         rar
         unrar
 
@@ -3702,8 +3285,6 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
-      ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
-      ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
       ++ config.services.cockpit.plugins
@@ -3795,64 +3376,6 @@ in
         ortp
       ])
 
-      ++ (with tree-sitter-grammars; [
-        tree-sitter-awk
-        tree-sitter-bash
-        tree-sitter-bibtex
-        tree-sitter-c
-        tree-sitter-cmake
-        tree-sitter-comment
-        tree-sitter-cpp
-        tree-sitter-css
-        tree-sitter-csv
-        tree-sitter-dart
-        tree-sitter-diff
-        tree-sitter-dockerfile
-        tree-sitter-dot
-        tree-sitter-dtd
-        tree-sitter-git-config
-        tree-sitter-git-rebase
-        tree-sitter-gitattributes
-        tree-sitter-gitcommit
-        tree-sitter-gitignore
-        tree-sitter-graphql
-        tree-sitter-hosts
-        tree-sitter-html
-        tree-sitter-http
-        tree-sitter-hurl
-        tree-sitter-hyprlang
-        tree-sitter-ini
-        tree-sitter-javascript
-        tree-sitter-jq
-        tree-sitter-json
-        tree-sitter-kotlin
-        tree-sitter-latex
-        tree-sitter-ld
-        tree-sitter-llvm
-        tree-sitter-log
-        tree-sitter-lua
-        tree-sitter-mail
-        tree-sitter-make
-        tree-sitter-markdown
-        tree-sitter-markdown-inline
-        tree-sitter-mermaid
-        tree-sitter-nix
-        tree-sitter-passwd
-        tree-sitter-pem
-        tree-sitter-php
-        tree-sitter-powershell
-        tree-sitter-python
-        tree-sitter-query
-        tree-sitter-regex
-        tree-sitter-smali
-        tree-sitter-sql
-        tree-sitter-sshclientconfig
-        tree-sitter-todotxt
-        tree-sitter-toml
-        tree-sitter-xml
-        tree-sitter-yaml
-      ])
-
       ++ (with unixtools; [
         arp
         column
@@ -3871,6 +3394,22 @@ in
         write
         xxd
       ]);
+
+    gnome.excludePackages = with pkgs; [
+      decibels
+      epiphany
+      gnome-connections
+      gnome-font-viewer
+      gnome-maps
+      gnome-music
+      gnome-software
+      gnome-system-monitor
+      gnome-text-editor
+      gnome-tour
+      showtime
+      snapshot
+      yelp
+    ];
 
     wordlist = {
       enable = true;
@@ -3903,8 +3442,6 @@ in
     };
 
     sessionVariables = {
-      ADW_DISABLE_PORTAL = 1;
-
       NIXOS_OZONE_WL = 1;
       MOZ_ENABLE_WAYLAND = 1;
 
@@ -3918,7 +3455,7 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "uwsm-app -- xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'"; # FIXME
+      commands = "xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'"; # FIXME
 
       clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
       clean_repair_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
@@ -3948,7 +3485,7 @@ in
 
       settings = {
         default = [
-          "org.gnome.Ptyxis.desktop"
+          "org.gnome.Console.desktop"
         ];
       };
     };
@@ -3957,8 +3494,8 @@ in
       enable = true;
       extraPortals = [
         config.home-manager.users.normal.services.gnome-keyring.package
-        pkgs.xdg-desktop-portal-gtk
-      ]; # config.programs.hyprland.portalPackage adds xdg-desktop-portal-hyprland to it.
+        pkgs.xdg-desktop-portal-gnome
+      ];
 
       xdgOpenUsePortal = true;
 
@@ -4418,24 +3955,30 @@ in
         "video/VP9" = "io.github.diegopvlk.Cine.desktop";
         "video/x-matroska" = "io.github.diegopvlk.Cine.desktop"; # https://mime.wcode.net/mkv
 
-        "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
-        "application/msword" = "writer.desktop"; # .doc
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = "writer.desktop"; # .docx
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.template" = "writer.desktop"; # .dotx
+        "application/vnd.oasis.opendocument.text" = "onlyoffice-desktopeditors.desktop"; # .odt
+        "application/msword" = "onlyoffice-desktopeditors.desktop"; # .doc
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
+          "onlyoffice-desktopeditors.desktop"; # .docx
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.template" =
+          "onlyoffice-desktopeditors.desktop"; # .dotx
 
-        "application/vnd.oasis.opendocument.spreadsheet" = "calc.desktop"; # .ods
-        "application/vnd.ms-excel" = "calc.desktop"; # .xls
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = "calc.desktop"; # .xlsx
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.template" = "calc.desktop"; # .xltx
+        "application/vnd.oasis.opendocument.spreadsheet" = "onlyoffice-desktopeditors.desktop"; # .ods
+        "application/vnd.ms-excel" = "onlyoffice-desktopeditors.desktop"; # .xls
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
+          "onlyoffice-desktopeditors.desktop"; # .xlsx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template" =
+          "onlyoffice-desktopeditors.desktop"; # .xltx
 
-        "application/vnd.oasis.opendocument.presentation" = "impress.desktop"; # .odp
-        "application/vnd.ms-powerpoint" = "impress.desktop"; # .ppt
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
-        "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
+        "application/vnd.oasis.opendocument.presentation" = "onlyoffice-desktopeditors.desktop"; # .odp
+        "application/vnd.ms-powerpoint" = "onlyoffice-desktopeditors.desktop"; # .ppt
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
+          "onlyoffice-desktopeditors.desktop"; # .pptx
+        "application/vnd.openxmlformats-officedocument.presentationml.template" =
+          "onlyoffice-desktopeditors.desktop"; # .potx
 
-        "application/pdf" = "org.gnome.Evince.desktop";
+        "application/pdf" = "org.gnome.Papers.desktop";
 
-        "model/stl" = "fstlapp-fstl.desktop";
+        "model/stl" = "io.github.nokse22.Exhibit.desktop";
 
         "application/gzip" = "org.gnome.FileRoller.desktop";
         "application/vnd.rar" = "org.gnome.FileRoller.desktop";
@@ -4457,10 +4000,10 @@ in
         "application/x-bittorrent" = "deluge.desktop";
         "x-scheme-handler/magnet" = "deluge.desktop";
 
-        "x-scheme-handler/http" = "firefox-devedition.desktop";
-        "x-scheme-handler/https" = "firefox-devedition.desktop";
+        "x-scheme-handler/http" = "com.brave.Browser.desktop";
+        "x-scheme-handler/https" = "com.brave.Browser.desktop";
 
-        "x-scheme-handler/mailto" = "proton-mail.desktop";
+        "x-scheme-handler/mailto" = "electron-mail.desktop";
       };
     };
   };
@@ -4469,64 +4012,10 @@ in
 
   qt = {
     enable = true;
+
+    platformTheme = "gnome";
+    style = "adwaita-dark";
   };
-
-  catppuccin = {
-    enable = true;
-
-    enableReleaseCheck = true;
-    cache.enable = true;
-
-    autoEnable = true;
-    flavor = "mocha";
-    accent = "lavender";
-
-    grub.enable = false; # Done Manually Instead
-
-    tty = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-    };
-
-    plymouth.enable = false; # Done Manually Instead
-
-    sddm = {
-      enable = true;
-      assertQt6Sddm = true;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      background = wallpaper;
-
-      font = fontPreferences.name.sans_serif;
-      fontSize = toString fontPreferences.size;
-
-      loginBackground = true;
-      userIcon = true;
-
-      clockEnabled = true;
-    };
-
-    cursors = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-    };
-
-    gtk.icon.enable = false; # Done Manually Instead
-
-    fcitx5 = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      enableRounded = true;
-    };
-  }; # From catppuccinThemeFlake
 
   documentation = {
     enable = true;
@@ -4543,7 +4032,10 @@ in
         package = pkgs.man-db;
       };
 
-      cache.enable = true;
+      cache = {
+        enable = true;
+        generateAtRuntime = true;
+      }; # Spams "gzip: stdout: Broken pipe"
     };
 
     nixos = {
@@ -4638,8 +4130,6 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
-      catppuccinThemeFlake.homeModules.catppuccin
-
       {
         _class = "homeManager";
 
@@ -4656,13 +4146,9 @@ in
           pointerCursor = {
             enable = true;
 
-            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
+            name = "Adwaita";
+            package = pkgs.adwaita-icon-theme;
             size = builtins.floor (design_factor * 1.50); # 24
-
-            hyprcursor = {
-              enable = true;
-              size = config.home-manager.users.normal.home.pointerCursor.size;
-            };
 
             gtk = {
               enable = true;
@@ -4687,812 +4173,6 @@ in
           enableDebugInfo = config.environment.enableDebugInfo;
 
           stateVersion = config.system.stateVersion;
-        };
-
-        wayland.windowManager.hyprland = {
-          enable = config.programs.hyprland.enable;
-          package = config.programs.hyprland.package;
-
-          systemd = {
-            enable = false;
-
-            enableXdgAutostart = true;
-
-            variables = [
-              "--all"
-            ];
-          };
-
-          xwayland.enable = true;
-
-          configType = "lua";
-          sourceFirst = true;
-
-          extraConfig = ''
-            pcall(require, "monitors") -- Import if available.
-          ''; # nwg-displays
-
-          settings = {
-            monitor = [
-              {
-                output = ""; # "" = All
-                mode = "highres";
-                position = "auto";
-                transform = 0;
-                scale = 1;
-              } # Default
-            ];
-
-            on = {
-              _args = [
-                "hyprland.start"
-                (pkgs.lib.generators.mkLuaInline ''
-                  function()
-                    hl.exec_cmd("dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_ID") -- Fixes the Soteria Service Not Starting
-
-                    hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
-                  end
-                '')
-              ];
-            };
-
-            bind = [
-              {
-                _args = [
-                  "XF86MonBrightnessUp"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86MonBrightnessDown"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "XF86AudioRaiseVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioLowerVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMicMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "XF86AudioPlay"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPause"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioStop"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPrev"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioNext"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse_down"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse_up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + S"
-                  (pkgs.lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + right"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + down"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + left"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + SHIFT + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + S"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + S"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\", follow=false})")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + mouse:272"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              } # Left Button
-              {
-                _args = [
-                  "SUPER + mouse:273"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              } # Right Button
-              {
-                _args = [
-                  "ALT + F11"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
-                ];
-              }
-              {
-                _args = [
-                  "F11"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + Q"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.close()")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + Q"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + L"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + A"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
-                ];
-              }
-              {
-                _args = [
-                  "Print"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- ferrishot\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term ptyxis -fm nautilus\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + T"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- xdg-terminal-exec\")")
-                ];
-              }
-              {
-                _args = [
-                  "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nautilus\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nautilus\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --new-window\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
-                ];
-              }
-              {
-                _args = [
-                  "XF86Mail"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"proton-mail\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + E"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- zeditor\")")
-                ];
-              }
-            ];
-
-            config = {
-              general = {
-                allow_tearing = true;
-
-                gaps_workspaces = 0;
-
-                layout = "dwindle";
-
-                gaps_in = builtins.floor (design_factor / 4); # 4
-                gaps_out = {
-                  top = builtins.floor (design_factor / 4); # 4
-                  right = builtins.floor (design_factor / 4); # 4
-                  bottom = builtins.floor (design_factor / 4); # 4
-                  left = builtins.floor (design_factor / 4); # 4
-                };
-
-                float_gaps = builtins.floor (design_factor / 4); # 4
-
-                border_size = 1;
-                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
-                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
-
-                resize_on_border = true;
-                hover_icon_on_border = true;
-
-                no_focus_fallback = false;
-
-                snap = {
-                  enabled = true;
-
-                  respect_gaps = true;
-                  monitor_gap = builtins.floor (design_factor / 4); # 4
-                  window_gap = builtins.floor (design_factor / 4); # 4
-
-                  border_overlap = false;
-                };
-
-                modal_parent_blocking = true;
-
-                locale = "en_US";
-              };
-
-              decoration = {
-                shadow = {
-                  enabled = true;
-
-                  sharp = false;
-                };
-
-                border_part_of_window = true;
-                rounding = builtins.floor (design_factor / 2); # 8
-                rounding_power = 4.0; # 4.0 = Squircle
-
-                active_opacity = 1.0;
-                fullscreen_opacity = 1.0;
-                inactive_opacity = 1.0;
-
-                dim_special = 0.25;
-                dim_modal = true;
-                dim_inactive = false;
-                dim_strength = 0.0;
-
-                blur = {
-                  enabled = true;
-                  new_optimizations = true;
-
-                  special = true;
-                  popups = true;
-                  input_methods = true;
-
-                  ignore_opacity = false;
-                  xray = true;
-                };
-
-                glow = {
-                  enabled = false;
-                };
-              };
-
-              animations = {
-                enabled = true;
-
-                workspace_wraparound = false;
-              };
-
-              input = {
-                numlock_by_default = false;
-                kb_layout = "us";
-
-                force_no_accel = false;
-                scroll_button_lock = true;
-                natural_scroll = false;
-                left_handed = false;
-
-                special_fallthrough = false;
-
-                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
-                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
-                mouse_refocus = true;
-
-                touchpad = {
-                  disable_while_typing = true;
-
-                  flip_x = false;
-                  flip_y = false;
-
-                  middle_button_emulation = false;
-                  clickfinger_behavior = false;
-
-                  tap_to_click = true;
-
-                  tap_and_drag = true;
-                  drag_3fg = 1; # 1 = 3 Fingers # 2 = 4 Fingers
-                  drag_lock = 2; # 2 = Enabled Sticky
-
-                  natural_scroll = true;
-                };
-
-                touchdevice = {
-                  enabled = true;
-                };
-
-                tablet = {
-                  left_handed = false;
-                };
-
-                virtualkeyboard = {
-                  release_pressed_on_close = true;
-                };
-              };
-
-              gestures = {
-                workspace_swipe_create_new = true;
-                workspace_swipe_forever = true;
-
-                # Touchpad
-                workspace_swipe_invert = false;
-
-                # Touchscreen
-                workspace_swipe_touch = true;
-                workspace_swipe_touch_invert = false;
-              };
-
-              group = {
-                auto_group = false;
-
-                merge_groups_on_drag = true;
-                merge_groups_on_groupbar = true;
-
-                group_on_movetoworkspace = false;
-                merge_floated_into_tiled_on_groupbar = false;
-                insert_after_current = true;
-                focus_removed_window = true;
-
-                groupbar = {
-                  enabled = true;
-                  stacked = false;
-
-                  render_titles = true;
-                  scrolling = true;
-                  middle_click_close = false;
-
-                  keep_upper_gap = true;
-                  gradients = true;
-                  blur = true;
-                  round_only_edges = false;
-                  gradient_round_only_edges = false;
-                };
-              };
-
-              misc = {
-                disable_watchdog_warning = false;
-                disable_xdg_env_checks = false;
-                disable_autoreload = false;
-                disable_scale_notification = false;
-
-                allow_session_lock_restore = true;
-                session_lock_xray = false;
-
-                key_press_enables_dpms = true;
-                mouse_move_enables_dpms = true;
-                vrr = 1; # 1 = On
-                mouse_move_focuses_monitor = true;
-
-                disable_splash_rendering = true;
-                disable_hyprland_logo = true;
-
-                close_special_on_empty = true;
-
-                enable_swallow = true;
-
-                name_vk_after_proc = true;
-                enable_anr_dialog = true;
-
-                exit_window_retains_fullscreen = false;
-
-                focus_on_activate = true;
-                layers_hog_keyboard_focus = true;
-
-                always_follow_on_dnd = true;
-
-                animate_mouse_windowdragging = true;
-                animate_manual_resizes = true;
-
-                middle_click_paste = true;
-
-                font_family = fontPreferences.name.sans_serif;
-              };
-
-              binds = {
-                allow_workspace_cycles = false;
-                workspace_back_and_forth = false;
-                hide_special_on_workspace_change = false;
-
-                window_direction_monitor_fallback = true;
-                ignore_group_lock = false;
-                movefocus_cycles_groupfirst = true;
-                movefocus_cycles_fullscreen = false;
-                allow_pin_fullscreen = true;
-
-                disable_keybind_grabbing = true;
-                pass_mouse_when_bound = false;
-              };
-
-              xwayland = {
-                enabled = true;
-                create_abstract_socket = true;
-
-                force_zero_scaling = true; # Sacle = 1
-                use_nearest_neighbor = true;
-              };
-
-              render = {
-                cm_enabled = true;
-                cm_auto_hdr = 1; # 1 = Auto-switch to "cm, hdr" in fullscreen when needed.
-                send_content_type = true;
-                new_render_scheduling = true;
-                xp_mode = false;
-                commit_timing_enabled = true;
-              };
-
-              cursor = {
-                invisible = false;
-                hide_on_key_press = false;
-                hide_on_tablet = false;
-                hide_on_touch = true;
-
-                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
-                enable_hyprcursor = true;
-                sync_gsettings_theme = true;
-
-                no_warps = false;
-                persistent_warps = true;
-                warp_back_after_non_mouse_input = true;
-
-                zoom_rigid = true;
-                zoom_detached_camera = false;
-                zoom_disable_aa = false;
-              };
-
-              ecosystem = {
-                enforce_permissions = false;
-
-                no_update_news = false;
-                no_donation_nag = false;
-              };
-
-              quirks = {
-                prefer_hdr = 1; # 1 = Always
-              };
-
-              dwindle = {
-                force_split = 0; # 0 = Split Follows Mouse
-                use_active_for_splits = true;
-                smart_split = false;
-                preserve_split = true;
-
-                smart_resizing = true;
-
-                precise_mouse_move = true;
-              };
-            }; # Sorted from "General" to "Quirks" sccording to Wiki/Configuring/Basics/Variables.
-
-          };
         };
 
         xdg = {
@@ -5644,119 +4324,9 @@ in
 
           configFile = {
             "mimeapps.list".force = true;
-
-            "nwg-bar/bar.json" = {
-              enable = true;
-
-              source = pkgs.writeText "nwg-bar.json" ''
-                [
-                  {
-                    "label": "_Lock",
-                    "exec": "loginctl lock-session",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-lock-screen.svg"
-                  },
-                  {
-                    "label": "_Exit",
-                    "exec": "uwsm stop",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-log-out.svg"
-                  },
-                  {
-                    "label": "_Shutdown",
-                    "exec": "systemctl -i poweroff",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-shutdown.svg"
-                  },
-                  {
-                    "label": "_Reboot",
-                    "exec": "systemctl reboot",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-reboot.svg"
-                  }
-                ]''; # FIXME: hyprshutdown Does Not Work
-
-              target = "nwg-bar/bar.json";
-              executable = null;
-            };
-
-            "nwg-bar/style.css" = {
-              enable = true;
-
-              source = pkgs.writeText "nwg-bar.css" ''
-                window {
-                  border: 1px solid rgb(88, 91, 112);
-                  border-radius: ${toString (builtins.floor (design_factor / 2))}px;
-                }
-
-                #bar {
-                  margin: ${toString (builtins.floor (design_factor * 2))}px;
-                  font-size: ${toString (builtins.floor design_factor)}px;
-                  font-family: ${fontPreferences.name.sans_serif};
-                }
-
-                button,
-                image {
-                  box-shadow: none;
-                  border-style: none;
-                  background: none;
-                  color: rgb(205, 214, 244);
-                }
-
-                button {
-                  margin: ${toString (builtins.floor (design_factor / 4))}px;
-                  padding-top: ${toString (builtins.floor (design_factor / 2))}px;
-                }
-
-                button:hover {
-                  background-color: rgb(49, 50, 68);
-                }
-
-                button:focus {
-                  background-color: rgb(49, 50, 68);
-                }
-
-                grid {
-                  box-shadow: 0 0 ${toString (builtins.floor (design_factor * 3))}px rgb(49, 50, 68);
-                  border-radius: ${toString (builtins.floor (design_factor / 2))}px;
-                  background-color: rgb(17, 17, 27);
-                  padding: ${toString (builtins.floor (design_factor / 2))}px;
-                }'';
-              # Catppuccin Mocha
-              # "Surface 2" rgb(88, 91, 112)
-              # "Text" rgb(205, 214, 244)
-              # "Surface 0" rgb(49, 50, 68)
-              # "Crust" rgb(17, 17, 27)
-
-              target = "nwg-bar/style.css";
-              executable = null;
-            };
           };
 
-          dataFile = {
-            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
-              enable = true;
-
-              source = builtins.fetchurl {
-                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
-              };
-
-              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
-              executable = null;
-            };
-
-            "SourceGit/Catppuccin_${
-              pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
-            }${builtins.substring 1 255 config.catppuccin.flavor}.json" =
-              {
-                enable = true;
-
-                source = builtins.fetchurl {
-                  url = "https://raw.githubusercontent.com/sourcegit-scm/sourcegit-theme/refs/heads/main/themes/Catpuccin_Mocha.json";
-                };
-
-                target = "SourceGit/Catppuccin_${
-                  pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
-                }${builtins.substring 1 255 config.catppuccin.flavor}.json";
-                executable = null;
-              }; # Non-Standard Path
-          };
+          # dataFile = { };
 
           # stateFile = { };
 
@@ -5768,19 +4338,8 @@ in
 
           colorScheme = "dark";
           theme = {
-            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard+normal";
-            package = (
-              pkgs.catppuccin-gtk.override {
-                accents = [
-                  config.catppuccin.accent
-                ];
-                size = "standard";
-                tweaks = [
-                  "normal"
-                ];
-                variant = config.catppuccin.flavor;
-              }
-            );
+            name = "Adwaita";
+            package = pkgs.gnome-themes-extra;
           };
 
           font = {
@@ -5790,13 +4349,8 @@ in
           };
 
           iconTheme = {
-            name = "Papirus-Dark";
-            package = (
-              pkgs.catppuccin-papirus-folders.override {
-                accent = config.catppuccin.accent;
-                flavor = config.catppuccin.flavor;
-              }
-            );
+            name = config.home-manager.users.normal.gtk.theme.name;
+            package = config.home-manager.users.normal.gtk.theme.package;
           };
 
           cursorTheme = {
@@ -5883,66 +4437,23 @@ in
         };
 
         qt = {
-          enable = true;
+          enable = config.qt.enable;
 
-          platformTheme = {
-            name = "qtct";
-          };
+          platformTheme.name = "adwaita";
 
           style = {
-            name = "kvantum";
-          };
-
-          qt6ctSettings = {
-            Appearance = {
-              style = "kvantum-dark";
-              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-              standard_dialogs = "xdgdesktopportal";
-            };
-          };
-
-          qt5ctSettings = {
-            Appearance = {
-              style = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.style;
-              color_scheme_path = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.color_scheme_path;
-              standard_dialogs = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.standard_dialogs;
-            };
-          };
-
-          kvantum = {
-            enable = true;
-
-            settings = {
-              General = {
-                theme = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}";
-              };
-            };
+            name = config.qt.style;
+            package = with pkgs; [
+              adwaita-qt6
+              adwaita-qt
+            ];
           };
         };
 
         services = {
-          hypridle = {
+          polkit-gnome = {
             enable = true;
-            package = pkgs.hypridle;
-
-            settings = {
-              general = {
-                ignore_systemd_inhibit = false;
-                ignore_wayland_inhibit = false;
-                ignore_dbus_inhibit = false;
-
-                lock_cmd = "pidof hyprlock || uwsm-app -- hyprlock";
-              };
-
-              listener = [
-                {
-                  ignore_inhibit = false;
-
-                  timeout = 300; # 5 Minutes
-                  on-timeout = "loginctl lock-session";
-                }
-              ];
-            };
+            package = pkgs.polkit_gnome;
           };
 
           gnome-keyring = {
@@ -5956,774 +4467,9 @@ in
           };
 
           ssh-agent.enable = !config.programs.gnupg.agent.enable;
-
-          swaync = {
-            enable = true;
-            package = pkgs.swaynotificationcenter;
-          };
-
-          network-manager-applet = {
-            enable = config.programs.nm-applet.enable;
-            package = config.programs.nm-applet.package;
-          };
-
-          udiskie = {
-            enable = true;
-            package = pkgs.udiskie;
-
-            automount = true;
-            tray = "always";
-            notify = true;
-
-            settings = {
-              terminal = "${config.xdg.terminal-exec.package}/bin/xdg-terminal-exec -d"; # TODO: Check
-              file_manager = "${pkgs.xdg-utils}/bin/xdg-open";
-
-              menu = "nested";
-
-              password_cache = 5; # 5 Minutes
-            };
-          };
-
-          poweralertd.enable = true;
-
-          syshud = {
-            enable = true;
-            package = pkgs.syshud;
-
-            settings = {
-              listeners = "keyboard,backlight,audio_in,audio_out";
-              position = "bottom";
-              orientation = "h";
-              show-percentage = true;
-              transition-time = 250;
-              timeout = 2; # 2 Seconds
-            };
-          };
-
-          hyprpaper = {
-            enable = true;
-            package = pkgs.hyprpaper;
-
-            settings = {
-              ipc = "on";
-
-              splash = false;
-
-              wallpaper = {
-                monitor = "";
-                recursive = true;
-                path = wallpaper;
-                fit_mode = "cover";
-              };
-            };
-          };
-
-          wayvnc = {
-            enable = config.programs.wayvnc.enable;
-            package = config.programs.wayvnc.package;
-
-            settings = {
-              address = "127.0.0.1";
-              port = 5901;
-            };
-
-            autoStart = true;
-          };
         };
 
         programs = {
-          hyprlock = {
-            enable = true;
-            package = pkgs.hyprlock;
-
-            sourceFirst = true;
-
-            settings = {
-              general = {
-                immediate_render = true;
-                fractional_scaling = 2; # 2 = Automatic
-
-                text_trim = false;
-                hide_cursor = false;
-
-                ignore_empty_input = true;
-              };
-
-              auth = {
-                pam = {
-                  enabled = true;
-                  module = "hyprlock";
-                };
-
-                fingerprint = {
-                  enabled = true;
-                };
-              };
-
-              background = [
-                {
-                  monitor = ""; # "" = All
-                  path = wallpaper;
-                }
-              ];
-            }; # Addition
-          };
-
-          waybar = {
-            enable = true;
-            package = config.programs.waybar.package;
-
-            systemd = {
-              enable = true;
-
-              enableInspect = false;
-              enableDebug = config.environment.enableDebugInfo;
-            };
-
-            settings = {
-              top_bar = {
-                start_hidden = false;
-                reload_style_on_change = true;
-                position = "top";
-                exclusive = true;
-                layer = "top";
-                passthrough = false;
-                fixed-center = true;
-                spacing = builtins.floor (design_factor / 4); # 4
-
-                modules-left = [
-                  "group/backlight-and-idle-inhibitor"
-                  "group/wireplumber-and-bluetooth"
-                  "battery"
-                  "group/cpu-and-load-and-temperature"
-                  "group/memory-and-disk"
-                  "network"
-                ];
-
-                modules-center = [
-                  "group/clock-and-user"
-                ];
-
-                modules-right = [
-                  "systemd-failed-units"
-                  "custom/swaynotificationcenter"
-                  "tray"
-                  "gamemode"
-                  "group/taskbar-and-workspaces"
-                ];
-
-                "group/backlight-and-idle-inhibitor" = {
-                  modules = [
-                    "backlight"
-                    "idle_inhibitor"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                backlight = {
-                  interval = 1; # 1 Second
-
-                  format = "{percent}% {icon}";
-                  format-icons = [
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                  ]; # Only 9 icons are available.
-
-                  tooltip = true;
-                  tooltip-format = "{percent}% {icon}";
-
-                  on-scroll-up = "brightnessctl set +1%";
-                  on-scroll-down = "brightnessctl set 1%-";
-                  reverse-scrolling = false;
-                  reverse-mouse-scrolling = false;
-                  scroll-step = 1.0;
-
-                  on-click = "uwsm-app -- nwg-displays & uwsm-app -- com.sidevesh.Luminance";
-                };
-
-                idle_inhibitor = {
-                  start-activated = false;
-
-                  format = "{icon}";
-                  format-icons = {
-                    activated = "";
-                    deactivated = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format-activated = "{status}";
-                  tooltip-format-deactivated = "{status}";
-                };
-
-                "group/wireplumber-and-bluetooth" = {
-                  modules = [
-                    "wireplumber"
-                    "bluetooth"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                wireplumber = {
-                  only-physical = false;
-                  max-volume = 150.0; # According to Maximum Volume in pwvucontrol under Over-Amplification
-
-                  format = "{volume}% {icon} {format_source}";
-                  format-muted = "{icon} {format_source}";
-
-                  format-source = " {volume}% ";
-                  format-source-muted = "";
-
-                  format-icons = {
-                    default = [
-                      ""
-                      ""
-                      ""
-                    ]; # Only 3 icons are available.
-                    default-muted = "";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Node Nickname: {node_name}\nSource Description: {source_desc}";
-
-                  scroll-step = 1.0;
-                  reverse-scrolling = false;
-                  reverse-mouse-scrolling = false;
-                  on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
-                  on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
-
-                  on-click = "uwsm-app -- pwvucontrol & uwsm-app -- helvum";
-                  on-click-middle = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-                  on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
-                };
-
-                bluetooth = {
-                  format = "{status} {icon}";
-                  format-disabled = "Disabled {icon}";
-                  format-off = "Off {icon}";
-                  format-on = "On {icon}";
-                  format-connected = "{device_alias} {icon}";
-                  format-connected-battery = "{device_alias} 󰂱 ({device_battery_percentage}%)";
-                  format-icons = {
-                    no-controller = "󰂲";
-                    disabled = "󰂲";
-                    off = "󰂲";
-                    on = "󰂯";
-                    connected = "󰂱";
-                  };
-
-                  tooltip = true;
-                  tooltip-format = "Status: {status}\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
-                  tooltip-format-disabled = "Status: Disabled";
-                  tooltip-format-off = "Status: Off";
-                  tooltip-format-on = "Status: On\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
-                  tooltip-format-connected = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
-                  tooltip-format-connected-battery = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
-                  tooltip-format-enumerate-connected = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}";
-                  tooltip-format-enumerate-connected-battery = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}\n\tBattery: {device_battery_percentage}%";
-
-                  on-click = "uwsm-app -- overskride";
-                };
-
-                battery = {
-                  design-capacity = false;
-                  weighted-average = true;
-                  interval = 1; # 1 Second
-
-                  full-at = 100;
-                  states = {
-                    warning = 25;
-                    critical = 10;
-                  };
-
-                  format = "{capacity}% {icon}";
-                  format-plugged = "{capacity}% ";
-                  format-charging = "{capacity}% ";
-                  format-full = "{capacity}% {icon}";
-                  format-alt = "{time} {icon}";
-                  format-time = "{H} h {m} min";
-                  format-icons = [
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                  ]; # Only 5 icons are available.
-
-                  tooltip = true;
-                  tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                "group/cpu-and-load-and-temperature" = {
-                  modules = [
-                    "cpu"
-                    "load"
-                    "temperature"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                cpu = {
-                  interval = 1; # 1 Second
-
-                  format = "{usage}% ";
-
-                  tooltip = true;
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                load = {
-                  interval = 1; # 1 Second
-
-                  format = "{} "; # {} = {load1}
-
-                  tooltip = true;
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                temperature = {
-                  interval = 1; # 1 Second
-
-                  format = "{temperatureC}°C {icon}";
-                  format-critical = "{temperatureC}°C {icon}";
-                  format-icons = [
-                    ""
-                    ""
-                    ""
-                    ""
-                    ""
-                  ]; # Only 5 icons are available.
-
-                  tooltip = true;
-                  tooltip-format = "{temperatureF}°F\n{temperatureK}K";
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                "group/memory-and-disk" = {
-                  modules = [
-                    "memory"
-                    "disk"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                memory = {
-                  interval = 1; # 1 Second
-
-                  format = "{percentage}% ";
-
-                  tooltip = true;
-                  tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                disk = {
-                  path = "/";
-                  unit = "GB";
-                  interval = 1; # 1 Second
-
-                  format = "{percentage_used}% 󰋊";
-
-                  tooltip = true;
-                  tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                network = {
-                  interval = 1; # 1 Second
-
-                  format = "{bandwidthUpBytes} {bandwidthDownBytes}";
-                  format-disconnected = "Disconnected 󱘖";
-                  format-linked = "No IP 󰀦";
-                  format-ethernet = "{bandwidthUpBytes}   {bandwidthDownBytes}";
-                  format-wifi = "{bandwidthUpBytes}   {bandwidthDownBytes}";
-
-                  tooltip = true;
-                  tooltip-format = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-                  tooltip-format-disconnected = "Disconnected";
-                  tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-                  tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
-
-                  on-click = "uwsm-app -- resources";
-                };
-
-                "group/clock-and-user" = {
-                  modules = [
-                    "clock"
-                    "user"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = true;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                clock = {
-                  timezone = config.time.timeZone;
-                  locale = "en_US";
-                  interval = 1;
-
-                  format = "{:%I:%M %p}";
-                  format-alt = "{:%A, %B %d, %Y}";
-
-                  tooltip = true;
-                  tooltip-format = "<tt><small>{calendar}</small></tt>";
-
-                  calendar = {
-                    mode = "year";
-                    mode-mon-col = 3;
-                    weeks-pos = "right";
-
-                    format = {
-                      months = "<b>{}</b>";
-                      days = "{}";
-                      weekdays = "<b>{}</b>";
-                      weeks = "<i>{:%U}</i>";
-                      today = "<u>{}</u>";
-                    };
-                  };
-                };
-
-                user = {
-                  interval = 1; # 1 Second
-
-                  format = "{work_d}:{work_H}:{work_M}:{work_S} ";
-
-                  icon = false;
-
-                  open-on-click = false;
-                };
-
-                systemd-failed-units = {
-                  system = true;
-                  user = true;
-
-                  hide-on-ok = false;
-
-                  format = "{nr_failed_system}, {nr_failed_user} ";
-                  format-ok = "";
-
-                  on-click = "uwsm-app -- xdg-terminal-exec systemctl-tui";
-                };
-
-                "custom/swaynotificationcenter" = {
-                  exec-if = "which swaync-client";
-                  exec = "swaync-client --subscribe-waybar";
-                  return-type = "json";
-                  escape = true;
-
-                  format = "{} {icon}";
-                  format-icons = {
-                    notification = "<sup></sup>";
-                    none = "";
-
-                    inhibited-notification = "<sup></sup>";
-                    inhibited-none = "";
-
-                    dnd-notification = "<sup></sup>";
-                    dnd-none = "";
-
-                    dnd-inhibited-notification = "<sup></sup>";
-                    dnd-inhibited-none = "";
-                  };
-
-                  tooltip = true;
-
-                  on-click = "swaync-client --toggle-panel --skip-wait";
-                  on-click-middle = "swaync-client --close-all --skip-wait";
-                  on-click-right = "swaync-client --toggle-dnd --skip-wait";
-                };
-
-                tray = {
-                  show-passive-items = true;
-                  reverse-direction = false;
-                  icon-size = fontPreferences.size;
-                  spacing = builtins.floor (design_factor / 4); # 4
-                };
-
-                gamemode = {
-                  hide-not-running = true;
-
-                  use-icon = false;
-                  glyph = "󰊗";
-                  format = "{glyph} {count}";
-                  format-alt = "Games: {count}";
-
-                  tooltip = true;
-                  tooltip-format = "Games Running: {count}";
-                };
-
-                "group/taskbar-and-workspaces" = {
-                  modules = [
-                    "hyprland/workspaces"
-                    "wlr/taskbar"
-                  ];
-                  drawer = {
-                    click-to-reveal = false;
-                    transition-left-to-right = false;
-                    transition-duration = 500;
-                  };
-                  orientation = "inherit";
-                };
-
-                "wlr/taskbar" = {
-                  all-outputs = false;
-                  active-first = false;
-                  sort-by-app-id = false;
-                  format = "{icon}";
-                  icon-size = fontPreferences.size;
-                  markup = true;
-
-                  tooltip = true;
-                  tooltip-format = "Title: {title}\nName: {name}\nID: {app_id}\nState: {state}";
-
-                  on-click = "activate";
-                };
-
-                "hyprland/workspaces" = {
-                  all-outputs = false;
-                  show-special = true;
-                  special-visible-only = false;
-                  active-only = false;
-                  format = "{name}";
-                  move-to-monitor = false;
-
-                  on-click = "activate"; # FIXME: Does Not Work
-                };
-              };
-            };
-
-            style = ''
-              * {
-                font-family: ${fontPreferences.name.sans_serif};
-                font-size: ${toString fontPreferences.size}px;
-              }
-
-              window#waybar {
-                border: none;
-                background-color: transparent;
-              }
-
-              .modules-right > widget:last-child > #workspaces {
-                margin-right: 0px;
-              }
-
-              .modules-left > widget:first-child > #workspaces {
-                margin-left: 0px;
-              }
-
-              #backlight,
-              #idle_inhibitor,
-              #wireplumber,
-              #bluetooth,
-              #battery,
-              #cpu,
-              #load,
-              #temperature,
-              #memory,
-              #disk,
-              #network,
-              #clock,
-              #user,
-              #systemd-failed-units,
-              #custom-swaynotificationcenter,
-              #gamemode,
-              #window {
-                border-radius: ${toString design_factor}px;
-                background-color: @crust;
-                padding: ${toString (builtins.floor (design_factor / 8))}px ${
-                  toString (builtins.floor (design_factor / 2))
-                }px;
-                color: @text;
-              }
-
-              #idle_inhibitor,
-              #bluetooth,
-              #load,
-              #temperature,
-              #disk,
-              #user {
-                margin-left: ${toString (builtins.floor (design_factor / 4))}px;
-              }
-
-              #idle_inhibitor.deactivated {
-                color: @text;
-              }
-
-              #idle_inhibitor.activated {
-                color: @green;
-              }
-
-              #wireplumber.muted,
-              #wireplumber.sink-muted,
-              #wireplumber.source-muted {
-                color: @red;
-              }
-
-              #bluetooth.no-controller,
-              #bluetooth.disabled,
-              #bluetooth.off {
-                color: @red;
-              }
-
-              #bluetooth.on,
-              #bluetooth.discoverable,
-              #bluetooth.pairable {
-                color: @text;
-              }
-
-              #bluetooth.discovering,
-              #bluetooth.connected {
-                color: @green;
-              }
-
-              #battery.plugged,
-              #battery.full {
-                color: @text;
-              }
-
-              #battery.charging {
-                color: @green;
-              }
-
-              #battery.warning,
-              #temperature.warning {
-                color: @peach;
-              }
-
-              #battery.critical,
-              #temperature.critical {
-                color: @red;
-              }
-
-              #network.disabled,
-              #network.disconnected,
-              #network.linked {
-                color: @red;
-              }
-
-              #network.etherenet,
-              #network.wifi {
-                color: @text;
-              }
-
-              #systemd-failed-units.ok {
-                color: @text;
-              }
-
-              #systemd-failed-units.degraded {
-                color: @red;
-              }
-
-              #custom-swaynotificationcenter {
-                font-family: ${fontPreferences.name.mono};
-              }
-
-              #gamemode.running {
-                color: @green;
-              }
-
-              #workspaces,
-              #taskbar,
-              #tray {
-                background-color: transparent;
-              }
-
-              button {
-                margin: 0px ${toString (builtins.floor (design_factor / 8))}px;
-                border-radius: ${toString design_factor}px;
-                background-color: @crust;
-                padding: 0px;
-                color: @text;
-              }
-
-              button * {
-                padding: 0px ${toString (builtins.floor (design_factor / 4))}px;
-              }
-
-              button.active {
-                background-color: @mantle;
-              }
-
-              button:hover {
-                background-color: @surface0;
-              }
-
-              #window label {
-                padding: 0px ${toString (builtins.floor (design_factor / 4))}px;
-                font-size: ${toString fontPreferences.size}px;
-              }
-
-              #tray > widget {
-                border-radius: ${toString design_factor}px;
-                background-color: @crust;
-                color: @text;
-              }
-
-              #tray image {
-                padding: 0px ${toString (builtins.floor (design_factor / 2))}px;
-              }
-
-              #tray > .passive {
-                -gtk-icon-effect: dim;
-              }
-
-              #tray > .active {
-                background-color: @mantle;
-              }
-
-              #tray > .needs-attention {
-                background-color: @green;
-                -gtk-icon-effect: highlight;
-              }
-
-              #tray > widget:hover {
-                background-color: @surface0;
-              }
-            '';
-          };
-
-          ptyxis = {
-            enable = true;
-            package = pkgs.ptyxis;
-          };
-
           bash = {
             enable = true;
             package = pkgs.bashInteractive;
@@ -6773,16 +4519,6 @@ in
             );
 
             enableBashIntegration = true;
-          };
-
-          vivid = {
-            enable = true;
-            package = pkgs.vivid;
-
-            enableBashIntegration = true;
-
-            colorMode = "24-bit";
-            activeTheme = "catppuccin-${config.catppuccin.flavor}";
           };
 
           direnv = {
@@ -6861,738 +4597,82 @@ in
             enable = true;
           };
 
-          zed-editor = {
-            enable = true;
-            package = (
-              pkgs.zed-editor.override {
-                buildRemoteServer = true;
-              }
-            );
+          gnome-shell = {
+            enable = config.services.desktopManager.gnome.enable;
 
-            extraPackages =
-              with pkgs;
-              [
-                arduino-language-server
-                basedpyright
-                bash-language-server
-                css-variables-language-server
-                ctags-lsp
-                docker-compose-language-service
-                dockerfile-language-server
-                hyprls
-                kotlin-language-server
-                nixd
-                nixfmt
-                postgres-language-server
-                prettier
-                ruff
-                shellcheck
-                shfmt
-                sql-formatter
-                yaml-language-server
-              ]
-              ++ [
-                config.programs.evince.package
-              ];
-
-            installRemoteServer = true;
-            enableMcpIntegration = true;
-
-            # curl -s https://raw.githubusercontent.com/zed-industries/extensions/main/.gitmodules
             extensions = [
-              "arduino"
-              "assembly"
-              "awk"
-              "basher"
-              "bloc"
-              "bookmark"
-              "catppuccin"
-              "catppuccin-icons"
-              "comment"
-              "comment-block-snippets"
-              "css-variables"
-              "csv"
-              "ctags"
-              "dart"
-              "desktop"
-              "docker-compose"
-              "dockerfile"
-              "editorconfig"
-              "emoji-completions"
-              "env"
-              "flutter-snippets"
-              "git-firefly"
-              "github-actions"
-              "github-activity-summarizer"
-              "gitignore-templates"
-              "graphql"
-              "graphviz"
-              "groovy"
-              "html-snippets"
-              "http"
-              "hurl"
-              "hyprlang"
-              "import-cost-lsp"
-              "ini"
-              "intl-lens"
-              "javascript-snippets"
-              "keep-a-changelog-snippets"
-              "kubernetes-snippets"
-              "latex"
-              "live-server"
-              "log"
-              "logcat"
-              "ltex"
-              "lua"
-              "make"
-              "markdown-snippets"
-              "markdownlint"
-              "mermaid"
-              "nix"
-              "pbxproj"
-              "php"
-              "php-snippets"
-              "phpcs"
-              "phpmd"
-              "platformio"
-              "postgres-context-server"
-              "postgres-language-server"
-              "powershell"
-              "python-requirements"
-              "python-snippets"
-              "regedit"
-              "riverpod-dart-flutter-snippets"
-              "rpmspec"
-              "sieve"
-              "sql"
-              "ssh-config"
-              "stylelint"
-              "toml"
-              "unicode"
-              "vcard"
-              "xml"
+              {
+                package = pkgs.gnomeExtensions.user-themes;
+              }
+              {
+                package = pkgs.gnomeExtensions.appindicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.bluetooth-battery-meter;
+              }
+              {
+                package = pkgs.gnomeExtensions.blur-my-shell;
+              }
+              {
+                package = pkgs.gnomeExtensions.clipboard-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.desktop-cube;
+              }
+              {
+                package = pkgs.gnomeExtensions.display-configuration-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.extra-reboot-options;
+              }
+              {
+                package = pkgs.gnomeExtensions.frequency-boost-switch;
+              }
+              {
+                package = pkgs.gnomeExtensions.gamemode-shell-extension;
+              }
+              {
+                package = pkgs.gnomeExtensions.gjs-osk;
+              }
+              {
+                package = pkgs.gnomeExtensions.gsconnect;
+              }
+              {
+                package = pkgs.gnomeExtensions.places-status-indicator;
+              }
+              {
+                package = pkgs.gnomeExtensions.privacy-settings-menu;
+              }
+              {
+                package = pkgs.gnomeExtensions.sermon;
+              }
+              {
+                package = pkgs.gnomeExtensions.tailscale-qs; # FIXME: Incompatible
+              }
+              {
+                package = pkgs.gnomeExtensions.top-bar-organizer;
+              }
+              {
+                package = pkgs.gnomeExtensions.touchpad-switcher;
+              }
+              {
+                package = pkgs.gnomeExtensions.vitals;
+              }
+              {
+                package = pkgs.gnomeExtensions.wifi-qrcode;
+              }
             ];
 
-            mutableUserDebug = true;
-            mutableUserKeymaps = true;
-            mutableUserSettings = true;
-            mutableUserTasks = true;
-
-            userSettings = {
-              telemetry = {
-                diagnostics = false;
-                metrics = false;
-              };
-
-              title_bar = {
-                show_branch_name = true;
-                show_branch_status_icon = true;
-                show_menus = true;
-                show_onboarding_banner = true;
-                show_project_items = true;
-                show_sign_in = true;
-                show_user_menu = true;
-                show_user_picture = true;
-              };
-
-              toolbar = {
-                agent_review = true;
-                breadcrumbs = true;
-                code_actions = true;
-                quick_actions = true;
-                selections_menu = true;
-              };
-
-              status_bar = {
-                active_language_button = true;
-                cursor_position_button = true;
-                line_endings_button = true;
-              };
-              line_indicator_format = "long";
-
-              project_panel = {
-                button = true;
-
-                sticky_scroll = true;
-                entry_spacing = "comfortable";
-
-                indent_guides = {
-                  show = "always";
-                };
-
-                hide_root = false;
-                hide_hidden = false;
-                sort_mode = "directories_first";
-
-                folder_icons = true;
-                file_icons = true;
-                git_status = true;
-                show_diagnostics = "all";
-
-                scrollbar = {
-                  show = "auto";
-                };
-
-                drag_and_drop = true;
-              };
-
-              file_finder = {
-                file_icons = true;
-              };
-
-              outline_panel = {
-                button = true;
-
-                folder_icons = true;
-                file_icons = true;
-                git_status = true;
-
-                indent_guides = {
-                  show = "always";
-                };
-
-                scrollbar = {
-                  show = "auto";
-                };
-              };
-
-              git_panel = {
-                button = true;
-
-                scrollbar = {
-                  show = "auto";
-                };
-              };
-
-              collaboration_panel = {
-                button = true;
-              };
-
-              terminal = {
-                button = true;
-
-                toolbar = {
-                  breadcrumbs = true;
-                };
-
-                scrollbar = {
-                  show = "auto";
-                };
-
-                font_family = fontPreferences.name.mono;
-                font_size = builtins.floor design_factor;
-                line_height = "comfortable";
-
-                cursor_shape = "bar";
-                blinking = "on";
-
-                copy_on_select = false;
-                keep_selection_on_copy = true;
-
-                detect_venv = {
-                  on = {
-                    directories = [
-                      ".venv"
-                      "venv"
-                    ];
-                    activate_script = "default";
-                  };
-                };
-
-                env = {
-                  GIT_EDITOR = "zed --wait";
-                };
-              };
-
-              debugger = {
-                button = true;
-              };
-
-              tab_bar = {
-                show = true;
-
-                show_tab_bar_buttons = true;
-                show_nav_history_buttons = true;
-              };
-
-              tabs = {
-                file_icons = true;
-
-                show_close_button = "hover";
-                close_position = "right";
-
-                git_status = true;
-                show_diagnostics = "all";
-              };
-
-              search = {
-                button = true;
-              };
-
-              gutter = {
-                line_numbers = true;
-                runnables = true;
-                breakpoints = true;
-                folds = true;
-              };
-
-              scrollbar = {
-                show = "auto";
-                axes = {
-                  horizontal = true;
-                  vertical = true;
-                };
-
-                cursors = true;
-                diagnostics = "all";
-                git_diff = true;
-                search_results = true;
-                selected_symbol = true;
-                selected_text = true;
-              };
-
-              minimap = {
-                show = "auto";
-                display_in = "all_editors";
-                thumb = "always";
-              };
-
-              sticky_scroll = {
-                enabled = true;
-              };
-
-              indent_guides = {
-                enabled = true;
-
-                coloring = "indent_aware";
-                background_coloring = "disabled";
-              };
-
-              git = {
-                inline_blame = {
-                  enabled = true;
-
-                  show_commit_summary = true;
-                };
-
-                hunk_style = "staged_hollow";
-              };
-
-              diagnostics = {
-                button = true;
-
-                inline = {
-                  enabled = true;
-                };
-              };
-
-              inlay_hints = {
-                enabled = true;
-
-                show_background = false;
-
-                show_type_hints = true;
-                show_parameter_hints = true;
-                show_other_hints = true;
-              };
-
-              drag_and_drop_selection = {
-                enabled = true;
-              };
-
-              edit_predictions = {
-                mode = "subtle";
-
-                provider = "ollama";
-                ollama = { };
-              };
-
-              agent = {
-                enabled = true;
-                button = true;
-
-                # default_model = {
-                #   provider = "ollama";
-                # };
-
-                # inline_alternatives = [
-                #   {
-                #     provider = "ollama";
-                #   }
-                # ];
-              };
-
-              journal = {
-                hour_format = "hour12";
-              };
-
-              image_viewer = {
-                unit = "binary";
-              };
-
-              session = {
-                restore_unsaved_buffers = true;
-              };
-
-              use_system_prompts = true;
-              use_system_path_prompts = true;
-              close_on_file_delete = false;
-              confirm_quit = true;
-
-              vim_mode = false;
-              helix_mode = false;
-              hide_mouse = "never";
-
-              show_call_status_icon = true;
-
-              ui_font_family = fontPreferences.name.sans_serif;
-              ui_font_size = builtins.floor design_factor;
-
-              buffer_font_family = fontPreferences.name.mono;
-              buffer_font_size = builtins.floor design_factor;
-              buffer_font_features = {
-                calt = false; # Ligatures
-              };
-
-              cursor_shape = "bar";
-              cursor_blink = true;
-
-              soft_wrap = "editor_width";
-              show_whitespaces = "all";
-              show_wrap_guides = true;
-              lsp_document_colors = "inlay";
-              colorize_brackets = true;
-              current_line_highlight = "all";
-              selection_highlight = true;
-              rounded_selection = true;
-
-              inline_code_actions = true;
-              hover_popover_enabled = true;
-              hover_popover_sticky = true;
-              code_lens = "on";
-
-              disable_ai = false;
-              show_completions_on_input = true;
-              show_completion_documentation = true;
-              completion_menu_scrollbar = "auto";
-              auto_signature_help = true;
-              show_signature_help_after_edits = true;
-
-              use_auto_surround = true;
-              extend_comment_on_newline = false;
-              auto_indent = "syntax_aware";
-              auto_indent_on_paste = true;
-              hard_tabs = false;
-              tab_size = 2;
-
-              line_ending = "detect";
-              format_on_save = "on";
-              redact_private_values = true;
-
-              file_types = {
-                Diff = [
-                  "diff"
-                ];
-
-                "Git Attributes" = [
-                  "**/{git,.git,.git/info}/attributes"
-                ];
-                "Git Config" = [
-                  "*.gitconfig"
-                  "**/{git,.git,.git/modules,.git/modules/*}/config"
-                ];
-                "Git Ignore" = [
-                  "**/{git,.git}/ignore"
-                  "**/.git/info/exclude"
-                ];
-
-                "HTML" = [
-                  "*.svg"
-                  "*.xhtml"
-                ];
-
-                Dockerfile = [
-                  "Dockerfile.*"
-                ];
-
-                "GitHub Actions" = [
-                  ".github/workflows/*.yaml"
-                  ".github/workflows/*.yml"
-                ];
-
-                "Python constraints" = [
-                  "*constraints*.txt"
-                ];
-                "Python requirements" = [
-                  "**/requirements/*.{in,txt}"
-                  "*requirements*.{in,txt}"
-                ];
-
-                "JSON" = [
-                  "*.webmanifest"
-                ];
-              };
-
-              languages = {
-                Nix = {
-                  language_servers = [
-                    "nixd"
-                    "!nil"
-                  ];
-
-                  formatter = {
-                    external = {
-                      command = "nixfmt";
-                      arguments = [ ];
-                    };
-                  };
-                };
-
-                "Shell Script" = {
-                  formatter = {
-                    external = {
-                      command = "shfmt";
-                      arguments = [
-                        "--filename"
-                        "{buffer_path}"
-                        "--indent"
-                        "2"
-                      ];
-                    };
-                  };
-                };
-
-                C = {
-                  language_servers = [
-                    "ctags-lsp"
-                  ];
-                };
-
-                "C++" = {
-                  language_servers = [
-                    "ctags-lsp"
-                  ];
-                };
-
-                PHP = {
-                  language_servers = [
-                    "phpactor"
-                    "phpcs"
-                    "phpmd"
-                    "ctags-lsp"
-                    "!intelephense"
-                    "!phptools"
-                  ];
-
-                  code_actions_on_format = {
-                    "source.fixAll" = true;
-                  };
-                };
-
-                JavaScript = {
-                  formatter = {
-                    external = {
-                      command = "prettier";
-                      arguments = [
-                        "--stdin-filepath"
-                        "{buffer_path}"
-                      ];
-                    };
-                  };
-
-                  code_actions_on_format = {
-                    "source.fixAll.eslint" = true;
-                  };
-                };
-
-                Python = {
-                  language_servers = [
-                    "basedpyright"
-                    "ruff"
-                    "ctags-lsp"
-                  ];
-
-                  formatter = {
-                    language_server = {
-                      name = "ruff";
-                    };
-                  };
-
-                  code_actions_on_format = {
-                    "source.organizeImports.ruff" = true;
-                  };
-                };
-
-                SQL = {
-                  formatter = {
-                    external = {
-                      command = "sql-formatter";
-                      # arguments = [
-                      #   "--language"
-                      #   "postgresql"
-                      # ];
-                      # # Or
-                      # arguments = [
-                      #   "--language"
-                      #   "mariadb"
-                      # ];
-                    };
-                  };
-                };
-
-                CSS = {
-                  code_actions_on_format = {
-                    "source.fixAll.stylelint" = true;
-                  };
-                };
-
-                Markdown = {
-                  indent_list_on_tab = true;
-                  extend_list_on_newline = true;
-
-                  remove_trailing_whitespace_on_save = false;
-                };
-              };
-
-              global_lsp_settings = {
-                button = true;
-
-                semantic_token_rules = [
-                  {
-                    token_type = "comment";
-                  }
-                ];
-              };
-
-              lsp = {
-                # unicode = {
-                #   settings = {
-                #     include_all_symbols = true;
-                #   };
-                # }; # FIXME: Errors
-
-                nixd = {
-                  initialization_options = {
-                    formatting = {
-                      command = [
-                        "nixfmt"
-                      ];
-                    };
-                  };
-                };
-
-                clangd = {
-                  binary = {
-                    path = "${pkgs.clang-tools}/bin/clangd";
-                    arguments = [ ];
-                  };
-                };
-
-                arduino-language-server = {
-                  binary = {
-                    path = "${pkgs.arduino-language-server}/bin/arduino-language-server";
-                    arguments = [
-                      "--fqbn"
-                      "arduino:avr"
-                    ];
-                  };
-                };
-
-                dart = {
-                  binary = {
-                    path = "${pkgs.flutter}/bin/dart";
-                    arguments = [
-                      "language-server"
-                      "--protocol=lsp"
-                    ];
-                  };
-                };
-
-                phpmd = {
-                  settings = {
-                    rulesets = "cleancode,codesize,controversial,design,naming,unusedcode";
-                  };
-                };
-
-                eslint = {
-                  settings = {
-                    workingDirectory = {
-                      mode = "auto";
-                    };
-                  };
-                };
-
-                css-variables = {
-                  settings = {
-                    cssVariables = {
-                      undefinedVarFallback = "info";
-                    };
-                  };
-                };
-
-                ltex = {
-                  settings = {
-                    ltex = {
-                      language = "auto";
-                    };
-                  };
-                };
-                texlab = {
-                  settings = {
-                    texlab = {
-                      build = {
-                        onSave = true;
-                        forwardSearchAfter = true;
-                      };
-                      forwardSearch = {
-                        executable = "evince-synctex";
-                        args = [
-                          "-f"
-                          "%l"
-                          "%p"
-                          "\"texlab -i %f -l %l\""
-                        ];
-                      };
-                    };
-                  };
-                };
-
-                yaml-language-server = {
-                  binary = {
-                    path = "${pkgs.yaml-language-server}/bin/yaml-language-server";
-                    arguments = [ ];
-                  };
-
-                  settings = {
-                    yaml = {
-                      schemaStore = {
-                        enable = true;
-                      };
-
-                      keyOrdering = true;
-                      singleQuote = false;
-                    };
-                  };
-                };
-              };
+            theme = {
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
-
-            defaultEditor = true;
           };
 
           bat = {
             enable = config.programs.bat.enable;
             package = config.programs.bat.package;
             extraPackages = config.programs.bat.extraPackages;
-          };
-
-          firefox = {
-            enable = config.programs.firefox.enable;
-            package = config.programs.firefox.package;
-
-            languagePacks = config.programs.firefox.languagePacks;
-
-            policies = config.programs.firefox.policies;
           };
 
           brave = {
@@ -7690,154 +4770,6 @@ in
             package = pkgs.texinfoInteractive;
           };
         };
-
-        catppuccin = {
-          enable = config.catppuccin.enable;
-
-          enableReleaseCheck = config.catppuccin.enableReleaseCheck;
-          cache.enable = config.catppuccin.cache.enable;
-
-          autoEnable = config.catppuccin.autoEnable;
-          flavor = config.catppuccin.flavor;
-          accent = config.catppuccin.accent;
-
-          hyprtoolkit = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          hyprland = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          hyprlock = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            useDefaultConfig = true;
-          };
-
-          cursors = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          gtk.icon.enable = false; # Done Manually Instead
-
-          qt5ct = {
-            enable = config.catppuccin.enable;
-            assertPlatformTheme = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          kvantum = {
-            enable = config.catppuccin.enable;
-            assertStyle = true;
-            apply = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          waybar = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            mode = "prependImport";
-          };
-
-          swaync = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-
-            font = fontPreferences.name.sans_serif;
-            fontSize = toString fontPreferences.size;
-          };
-
-          starship = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          fcitx5 = {
-            enable = config.catppuccin.enable;
-            apply = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            enableRounded = true;
-          };
-
-          vivid = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          television = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          zed = {
-            enable = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            icons = {
-              enable = true;
-
-              flavor = config.catppuccin.flavor;
-            };
-
-            italics = false;
-          };
-
-          bat = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          firefox = {
-            enable = config.catppuccin.enable;
-            force = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          }; # FIXME: Does Not Work
-
-          mangohud = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          obs = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          }; # Settings > Appearance > Theme, Style
-        }; # From catppuccinThemeFlake
 
         manual = {
           manpages.enable = true;

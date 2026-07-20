@@ -171,6 +171,8 @@
     swapDevices = [
       {
         device = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
+
+        discardPolicy = "both";
       }
     ];
 
@@ -180,10 +182,16 @@
           devices = {
             "luks-bd4924a7-a931-4592-890b-d7cc35be5e39" = {
               device = "/dev/disk/by-uuid/bd4924a7-a931-4592-890b-d7cc35be5e39";
+
+              allowDiscards = true;
+              bypassWorkqueues = true;
             };
 
             "luks-34ec5350-db4d-46fb-b370-feefe9d3de0a" = {
               device = "/dev/disk/by-uuid/34ec5350-db4d-46fb-b370-feefe9d3de0a";
+
+              allowDiscards = true;
+              bypassWorkqueues = true;
             };
           };
         };
