@@ -982,17 +982,6 @@ in
     useDHCP = if config.networking.networkmanager.dhcp == "internal" then false else true;
     dhcpcd.enable = false;
 
-    modemmanager = {
-      enable = true;
-      package = (
-        pkgs.modemmanager.override {
-          withIntrospection = true;
-          withPolkit = true;
-          withSystemd = true;
-        }
-      );
-    };
-
     networkmanager = {
       enable = true;
       package = (
@@ -1227,7 +1216,7 @@ in
       };
     };
 
-    automatic-timezoned.enable = false;
+    automatic-timezoned.enable = !config.services.tzupdate.enable;
 
     tzupdate = {
       enable = true;
@@ -1414,15 +1403,6 @@ in
       #   enable = true;
       #   driver = ;
       # };
-    };
-
-    pcscd = {
-      enable = true;
-
-      plugins = with pkgs; [
-        ccid
-        ifdnfc
-      ];
     };
 
     pipewire = {
@@ -2477,7 +2457,6 @@ in
         cavasik
         cbonsai
         cdrkit
-        celeste
         celestia
         celt
         censor
@@ -2788,7 +2767,6 @@ in
         millisecond
         minikube
         mixxx
-        modem-manager-gui
         monkeys-audio
         morphosis
         mslicer
@@ -2847,7 +2825,6 @@ in
         pbzx
         pcb2gcode
         pciutils
-        pcsc-tools
         pdfarranger
         pe-bear
         pev
@@ -3212,13 +3189,6 @@ in
 
         (parabolic.override {
           yt-dlp = config.home-manager.users.normal.programs.yt-dlp.package;
-        })
-
-        (pcscliteWithPolkit.override {
-          dbusSupport = true;
-          polkitSupport = true;
-          systemdSupport = true;
-          udevSupport = true;
         })
 
         (python315FreeThreading.override {
@@ -4611,10 +4581,6 @@ in
             enableBashIntegration = config.programs.television.enableBashIntegration;
           };
 
-          mcp = {
-            enable = true;
-          };
-
           gnome-shell = {
             enable = config.services.desktopManager.gnome.enable;
 
@@ -4679,6 +4645,198 @@ in
               name = config.home-manager.users.normal.gtk.theme.name;
               package = config.home-manager.users.normal.gtk.theme.package;
             };
+          };
+
+          vscodium = {
+            enable = true;
+            package = (
+              pkgs.vscodium.override {
+                useVSCodeRipgrep = false;
+              }
+            );
+
+            mutableExtensionsDir = true;
+
+            profiles = {
+              default = {
+                extensions =
+                  with pkgs.vscode-extensions;
+                  [
+                    aaron-bond.better-comments
+                    adpyke.codesnap
+                    albymor.increment-selection
+                    alefragnani.bookmarks
+                    alexisvt.flutter-snippets
+                    anweber.vscode-httpyac
+                    bradgashler.htmltagwrap
+                    chanhx.crabviz
+                    codezombiech.gitignore
+                    coolbear.systemd-unit-file
+                    cweijan.vscode-database-client2
+                    davidanson.vscode-markdownlint
+                    dbaeumer.vscode-eslint
+                    dendron.adjust-heading-level
+                    docker.docker
+                    dotenv.dotenv-vscode
+                    ecmel.vscode-html-css
+                    esbenp.prettier-vscode
+                    fabiospampinato.vscode-open-in-github
+                    foxundermoon.shell-format
+                    grapecity.gc-excelviewer
+                    gruntfuggly.todo-tree
+                    hars.cppsnippets
+                    hbenl.vscode-test-explorer
+                    ibm.output-colorizer
+                    iciclesoft.workspacesort
+                    iliazeus.vscode-ansi
+                    james-yu.latex-workshop
+                    jbockle.jbockle-format-files
+                    jellyedwards.gitsweep
+                    jnoortheen.nix-ide
+                    jock.svg
+                    lokalise.i18n-ally
+                    mads-hartmann.bash-ide-vscode
+                    mathiasfrohlich.kotlin
+                    mechatroner.rainbow-csv
+                    mishkinf.goto-next-previous-member
+                    mkhl.direnv
+                    moshfeu.compare-folders
+                    ms-kubernetes-tools.vscode-kubernetes-tools
+                    njpwerner.autodocstring
+                    oderwat.indent-rainbow
+                    platformio.platformio-vscode-ide
+                    quicktype.quicktype
+                    rioj7.commandonallfiles
+                    rubymaniac.vscode-paste-and-indent
+                    ryu1kn.partial-diff
+                    shardulm94.trailing-spaces
+                    spywhere.guides
+                    stylelint.vscode-stylelint
+                    tailscale.vscode-tailscale
+                    tamasfe.even-better-toml
+                    timonwong.shellcheck
+                    usernamehw.errorlens
+                    vincaslt.highlight-matching-tag
+                    vscjava.vscode-gradle
+                    wmaurer.change-case
+                    xdebug.php-debug
+                    zainchen.json
+                    zhwu95.riscv
+                  ]
+
+                  ++ (with pkgs.vscode-extensions.bierner; [
+                    color-info
+                    docs-view
+                    emojisense
+                    github-markdown-preview
+                    markdown-checkbox
+                    markdown-emoji
+                    markdown-footnotes
+                    markdown-mermaid
+                    markdown-preview-github-styles
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.dart-code; [
+                    dart-code
+                    flutter
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.formulahendry; [
+                    auto-close-tag
+                    auto-rename-tag
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.github; [
+                    vscode-github-actions
+                    vscode-pull-request-github
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.ms-python; [
+                    black-formatter
+                    debugpy
+                    flake8
+                    isort
+                    mypy-type-checker
+                    pylint
+                    python
+                    vscode-pylance # Unfree
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.ms-vscode; [
+                    cmake-tools
+                    cpptools # Unfree
+                    hexeditor
+                    live-server
+                    makefile-tools
+                    test-adapter-converter
+                  ])
+
+                  ++ (with pkgs.vscode-extensions.redhat; [
+                    vscode-xml
+                    vscode-yaml
+                  ])
+
+                  ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
+                    {
+                      name = "arb-editor";
+                      publisher = "Google";
+                      version = "0.2.2";
+                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
+                    }
+                    {
+                      name = "github-local-actions";
+                      publisher = "SanjulaGanepola";
+                      version = "1.2.5";
+                      sha256 = "gc3iOB/ibu4YBRdeyE6nmG72RbAsV0WIhiD8x2HNCfY=";
+                    }
+                    {
+                      name = "pubspec-assist";
+                      publisher = "jeroen-meijer";
+                      version = "2.4.0";
+                      sha256 = "COjlH34kGHTrgd7gCYIozEA3i1KkwHLRU09yaE0TsOk=";
+                    }
+                    {
+                      name = "unique-lines";
+                      publisher = "bibhasdn";
+                      version = "1.0.0";
+                      sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
+                    }
+                    {
+                      name = "vscode-ollama";
+                      publisher = "warm3snow";
+                      version = "1.2.1";
+                      sha256 = "rp7F0KU17BG1e18oB1/law0hnnxAn2MxqB3fvYcYXMA=";
+                    }
+                    {
+                      name = "vscode-serial-monitor";
+                      publisher = "ms-vscode";
+                      version = "0.13.251128001";
+                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
+                    }
+                    {
+                      name = "vscode-sort";
+                      publisher = "henriiik";
+                      version = "0.2.5";
+                      sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
+                    }
+                    {
+                      name = "vscode-sort-json";
+                      publisher = "richie5um2";
+                      version = "1.20.0";
+                      sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
+                    }
+                  ];
+
+                enableUpdateCheck = true;
+                enableExtensionUpdateCheck = true;
+
+                enableMcpIntegration = true;
+              };
+            };
+          };
+
+          mcp = {
+            enable = true;
           };
 
           bat = {
