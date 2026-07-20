@@ -131,6 +131,8 @@ in
 
   nix = {
     enable = true;
+    package = pkgs.nix;
+
     channel.enable = true;
 
     settings = {
@@ -159,6 +161,21 @@ in
     };
 
     gc.automatic = !config.programs.nh.enable;
+
+    optimise = {
+      automatic = true;
+
+      dates = "weekly";
+      persistent = true;
+    };
+
+    daemonCPUSchedPolicy = "batch";
+    daemonIOSchedClass = "best-effort";
+
+    firewall.enable = false;
+
+    checkConfig = true;
+    checkAllErrors = true;
   };
 
   nixpkgs = {
@@ -312,7 +329,7 @@ in
         gfxpayloadEfi = "keep";
 
         theme = grubThemeFlake.packages.${config.nixpkgs.hostPlatform.system}.nixos;
-        # TODO: splashImage
+        splashImage = "${config.boot.loader.grub.theme}/background.png";
         splashMode = "normal";
 
         configurationLimit = 100;
@@ -1271,24 +1288,14 @@ in
       ignoreLid = true;
     };
 
-    acpid = {
-      enable = true;
-
-      # powerEventCommands = '''';
-      # acEventCommands = '''';
-      # lidEventCommands = '''';
-
-      logEvents = false;
-    };
-
     logind = {
       settings = {
         Login = {
           killUserProcesses = true;
 
-          lidSwitch = "ignore";
-          lidSwitchDocked = "ignore";
-          lidSwitchExternalPower = "ignore";
+          lidSwitch = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
+          lidSwitchDocked = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
+          lidSwitchExternalPower = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
 
           powerKey = "poweroff";
           powerKeyLongPress = "poweroff";
@@ -1303,6 +1310,16 @@ in
           hibernateKeyLongPress = "hibernate";
         };
       };
+    };
+
+    acpid = {
+      enable = true;
+
+      # powerEventCommands = '''';
+      # acEventCommands = '''';
+      # lidEventCommands = '''';
+
+      logEvents = false;
     };
 
     power-profiles-daemon.enable = !config.powerManagement.enable;
@@ -1891,6 +1908,8 @@ in
       enable = true;
       package = pkgs.ollama-cpu; # Or pkgs.ollama-vulkan Or pkgs.ollama
 
+      syncModels = false;
+
       host = "0.0.0.0";
       port = 11434;
       openFirewall = true;
@@ -1908,11 +1927,6 @@ in
 
       port = 0; # 0 = Automatic
       openFirewall = true;
-    };
-
-    cloudflared = {
-      enable = true;
-      package = pkgs.cloudflared;
     };
 
     sysstat = {
@@ -2336,9 +2350,12 @@ in
         noto-fonts-color-emoji
         noto-fonts-lgc-plus
       ]
-      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        corefonts
-      ];
+      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
+        with pkgs;
+        [
+          corefonts
+        ]
+      );
 
     fontconfig = {
       enable = true;
@@ -2429,7 +2446,6 @@ in
         avrdude
         bada-bib
         baobab
-        basedpyright
         bash-language-server
         bcachefs-tools
         bcg729
@@ -2789,6 +2805,7 @@ in
         nixd
         nixfmt
         nixmate
+        nixoscope
         nixpkgs-reviewFull
         nmap
         noaa-apt
@@ -2882,7 +2899,6 @@ in
         rtcqs # From config.nixpkgs.overlays
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
-        ruff
         runme
         rustc
         satdump
@@ -3483,9 +3499,11 @@ in
         pkgs.xdg-desktop-portal-gnome
       ];
 
-      xdgOpenUsePortal = true;
+      configPackages = with pkgs; [
+        gnome-session
+      ];
 
-      # config = { };
+      xdgOpenUsePortal = true;
     };
 
     mime = {
@@ -3497,103 +3515,103 @@ in
       defaultApplications = {
         "inode/directory" = "nautilus.desktop";
 
-        "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
-        "text/cache-manifest" = "dev.zed.Zed.desktop";
-        "text/calendar" = "dev.zed.Zed.desktop";
-        "text/cql" = "dev.zed.Zed.desktop";
-        "text/cql-expression" = "dev.zed.Zed.desktop";
-        "text/cql-identifier" = "dev.zed.Zed.desktop";
-        "text/css" = "dev.zed.Zed.desktop";
-        "text/csv" = "dev.zed.Zed.desktop";
-        "text/csv-schema" = "dev.zed.Zed.desktop";
-        "text/directory" = "dev.zed.Zed.desktop";
-        "text/dns" = "dev.zed.Zed.desktop";
-        "text/ecmascript" = "dev.zed.Zed.desktop";
-        "text/encaprtp" = "dev.zed.Zed.desktop";
-        "text/enriched" = "dev.zed.Zed.desktop";
-        "text/fhirpath" = "dev.zed.Zed.desktop";
-        "text/flexfec" = "dev.zed.Zed.desktop";
-        "text/fwdred" = "dev.zed.Zed.desktop";
-        "text/gff3" = "dev.zed.Zed.desktop";
-        "text/grammar-ref-list" = "dev.zed.Zed.desktop";
-        "text/hl7v2" = "dev.zed.Zed.desktop";
-        "text/html" = "dev.zed.Zed.desktop";
-        "text/javascript" = "dev.zed.Zed.desktop";
-        "text/jcr-cnd" = "dev.zed.Zed.desktop";
-        "text/markdown" = "dev.zed.Zed.desktop";
-        "text/mizar" = "dev.zed.Zed.desktop";
-        "text/n3" = "dev.zed.Zed.desktop";
-        "text/org" = "dev.zed.Zed.desktop";
-        "text/parameters" = "dev.zed.Zed.desktop";
-        "text/parityfec" = "dev.zed.Zed.desktop";
-        "text/plain" = "dev.zed.Zed.desktop";
-        "text/provenance-notation" = "dev.zed.Zed.desktop";
-        "text/prs.fallenstein.rst" = "dev.zed.Zed.desktop";
-        "text/prs.lines.tag" = "dev.zed.Zed.desktop";
-        "text/prs.prop.logic" = "dev.zed.Zed.desktop";
-        "text/prs.texi" = "dev.zed.Zed.desktop";
-        "text/raptorfec" = "dev.zed.Zed.desktop";
-        "text/RED" = "dev.zed.Zed.desktop";
-        "text/rfc822-headers" = "dev.zed.Zed.desktop";
-        "text/richtext" = "dev.zed.Zed.desktop";
-        "text/rtf" = "dev.zed.Zed.desktop";
-        "text/rtp-enc-aescm128" = "dev.zed.Zed.desktop";
-        "text/rtploopback" = "dev.zed.Zed.desktop";
-        "text/rtx" = "dev.zed.Zed.desktop";
-        "text/SGML" = "dev.zed.Zed.desktop";
-        "text/shaclc" = "dev.zed.Zed.desktop";
-        "text/shex" = "dev.zed.Zed.desktop";
-        "text/spdx" = "dev.zed.Zed.desktop";
-        "text/strings" = "dev.zed.Zed.desktop";
-        "text/t140" = "dev.zed.Zed.desktop";
-        "text/tab-separated-values" = "dev.zed.Zed.desktop";
-        "text/troff" = "dev.zed.Zed.desktop";
-        "text/turtle" = "dev.zed.Zed.desktop";
-        "text/ulpfec" = "dev.zed.Zed.desktop";
-        "text/uri-list" = "dev.zed.Zed.desktop";
-        "text/vcard" = "dev.zed.Zed.desktop";
-        "text/vnd.a" = "dev.zed.Zed.desktop";
-        "text/vnd.abc" = "dev.zed.Zed.desktop";
-        "text/vnd.ascii-art" = "dev.zed.Zed.desktop";
-        "text/vnd.curl" = "dev.zed.Zed.desktop";
-        "text/vnd.debian.copyright" = "dev.zed.Zed.desktop";
-        "text/vnd.DMClientScript" = "dev.zed.Zed.desktop";
-        "text/vnd.dvb.subtitle" = "dev.zed.Zed.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "dev.zed.Zed.desktop";
-        "text/vnd.exchangeable" = "dev.zed.Zed.desktop";
-        "text/vnd.familysearch.gedcom" = "dev.zed.Zed.desktop";
-        "text/vnd.ficlab.flt" = "dev.zed.Zed.desktop";
-        "text/vnd.fly" = "dev.zed.Zed.desktop";
-        "text/vnd.fmi.flexstor" = "dev.zed.Zed.desktop";
-        "text/vnd.gml" = "dev.zed.Zed.desktop";
-        "text/vnd.graphviz" = "dev.zed.Zed.desktop";
-        "text/vnd.hans" = "dev.zed.Zed.desktop";
-        "text/vnd.hgl" = "dev.zed.Zed.desktop";
-        "text/vnd.in3d.3dml" = "dev.zed.Zed.desktop";
-        "text/vnd.in3d.spot" = "dev.zed.Zed.desktop";
-        "text/vnd.IPTC.NewsML" = "dev.zed.Zed.desktop";
-        "text/vnd.IPTC.NITF" = "dev.zed.Zed.desktop";
-        "text/vnd.latex-z" = "dev.zed.Zed.desktop";
-        "text/vnd.motorola.reflex" = "dev.zed.Zed.desktop";
-        "text/vnd.ms-mediapackage" = "dev.zed.Zed.desktop";
-        "text/vnd.net2phone.commcenter.command" = "dev.zed.Zed.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "dev.zed.Zed.desktop";
-        "text/vnd.senx.warpscript" = "dev.zed.Zed.desktop";
-        "text/vnd.si.uricatalogue" = "dev.zed.Zed.desktop";
-        "text/vnd.sosi" = "dev.zed.Zed.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "dev.zed.Zed.desktop";
-        "text/vnd.trolltech.linguist" = "dev.zed.Zed.desktop";
-        "text/vnd.typst" = "dev.zed.Zed.desktop";
-        "text/vnd.vcf" = "dev.zed.Zed.desktop";
-        "text/vnd.wap.si" = "dev.zed.Zed.desktop";
-        "text/vnd.wap.sl" = "dev.zed.Zed.desktop";
-        "text/vnd.wap.wml" = "dev.zed.Zed.desktop";
-        "text/vnd.wap.wmlscript" = "dev.zed.Zed.desktop";
-        "text/vnd.zoo.kcl" = "dev.zed.Zed.desktop";
-        "text/vtt" = "dev.zed.Zed.desktop";
-        "text/wgsl" = "dev.zed.Zed.desktop";
-        "text/xml" = "dev.zed.Zed.desktop";
-        "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
+        "text/1d-interleaved-parityfec" = "codium.desktop";
+        "text/cache-manifest" = "codium.desktop";
+        "text/calendar" = "codium.desktop";
+        "text/cql" = "codium.desktop";
+        "text/cql-expression" = "codium.desktop";
+        "text/cql-identifier" = "codium.desktop";
+        "text/css" = "codium.desktop";
+        "text/csv" = "codium.desktop";
+        "text/csv-schema" = "codium.desktop";
+        "text/directory" = "codium.desktop";
+        "text/dns" = "codium.desktop";
+        "text/ecmascript" = "codium.desktop";
+        "text/encaprtp" = "codium.desktop";
+        "text/enriched" = "codium.desktop";
+        "text/fhirpath" = "codium.desktop";
+        "text/flexfec" = "codium.desktop";
+        "text/fwdred" = "codium.desktop";
+        "text/gff3" = "codium.desktop";
+        "text/grammar-ref-list" = "codium.desktop";
+        "text/hl7v2" = "codium.desktop";
+        "text/html" = "codium.desktop";
+        "text/javascript" = "codium.desktop";
+        "text/jcr-cnd" = "codium.desktop";
+        "text/markdown" = "codium.desktop";
+        "text/mizar" = "codium.desktop";
+        "text/n3" = "codium.desktop";
+        "text/org" = "codium.desktop";
+        "text/parameters" = "codium.desktop";
+        "text/parityfec" = "codium.desktop";
+        "text/plain" = "codium.desktop";
+        "text/provenance-notation" = "codium.desktop";
+        "text/prs.fallenstein.rst" = "codium.desktop";
+        "text/prs.lines.tag" = "codium.desktop";
+        "text/prs.prop.logic" = "codium.desktop";
+        "text/prs.texi" = "codium.desktop";
+        "text/raptorfec" = "codium.desktop";
+        "text/RED" = "codium.desktop";
+        "text/rfc822-headers" = "codium.desktop";
+        "text/richtext" = "codium.desktop";
+        "text/rtf" = "codium.desktop";
+        "text/rtp-enc-aescm128" = "codium.desktop";
+        "text/rtploopback" = "codium.desktop";
+        "text/rtx" = "codium.desktop";
+        "text/SGML" = "codium.desktop";
+        "text/shaclc" = "codium.desktop";
+        "text/shex" = "codium.desktop";
+        "text/spdx" = "codium.desktop";
+        "text/strings" = "codium.desktop";
+        "text/t140" = "codium.desktop";
+        "text/tab-separated-values" = "codium.desktop";
+        "text/troff" = "codium.desktop";
+        "text/turtle" = "codium.desktop";
+        "text/ulpfec" = "codium.desktop";
+        "text/uri-list" = "codium.desktop";
+        "text/vcard" = "codium.desktop";
+        "text/vnd.a" = "codium.desktop";
+        "text/vnd.abc" = "codium.desktop";
+        "text/vnd.ascii-art" = "codium.desktop";
+        "text/vnd.curl" = "codium.desktop";
+        "text/vnd.debian.copyright" = "codium.desktop";
+        "text/vnd.DMClientScript" = "codium.desktop";
+        "text/vnd.dvb.subtitle" = "codium.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "codium.desktop";
+        "text/vnd.exchangeable" = "codium.desktop";
+        "text/vnd.familysearch.gedcom" = "codium.desktop";
+        "text/vnd.ficlab.flt" = "codium.desktop";
+        "text/vnd.fly" = "codium.desktop";
+        "text/vnd.fmi.flexstor" = "codium.desktop";
+        "text/vnd.gml" = "codium.desktop";
+        "text/vnd.graphviz" = "codium.desktop";
+        "text/vnd.hans" = "codium.desktop";
+        "text/vnd.hgl" = "codium.desktop";
+        "text/vnd.in3d.3dml" = "codium.desktop";
+        "text/vnd.in3d.spot" = "codium.desktop";
+        "text/vnd.IPTC.NewsML" = "codium.desktop";
+        "text/vnd.IPTC.NITF" = "codium.desktop";
+        "text/vnd.latex-z" = "codium.desktop";
+        "text/vnd.motorola.reflex" = "codium.desktop";
+        "text/vnd.ms-mediapackage" = "codium.desktop";
+        "text/vnd.net2phone.commcenter.command" = "codium.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "codium.desktop";
+        "text/vnd.senx.warpscript" = "codium.desktop";
+        "text/vnd.si.uricatalogue" = "codium.desktop";
+        "text/vnd.sosi" = "codium.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "codium.desktop";
+        "text/vnd.trolltech.linguist" = "codium.desktop";
+        "text/vnd.typst" = "codium.desktop";
+        "text/vnd.vcf" = "codium.desktop";
+        "text/vnd.wap.si" = "codium.desktop";
+        "text/vnd.wap.sl" = "codium.desktop";
+        "text/vnd.wap.wml" = "codium.desktop";
+        "text/vnd.wap.wmlscript" = "codium.desktop";
+        "text/vnd.zoo.kcl" = "codium.desktop";
+        "text/vtt" = "codium.desktop";
+        "text/wgsl" = "codium.desktop";
+        "text/xml" = "codium.desktop";
+        "text/xml-external-parsed-entity" = "codium.desktop";
 
         "image/aces" = "org.gnome.Loupe.desktop";
         "image/apng" = "org.gnome.Loupe.desktop";
@@ -4286,9 +4304,9 @@ in
             enable = config.xdg.portal.enable;
             extraPortals = config.xdg.portal.extraPortals;
 
-            xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
+            configPackages = config.xdg.portal.configPackages;
 
-            config = config.xdg.portal.config;
+            xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
           };
 
           mime.enable = true;
@@ -4647,6 +4665,10 @@ in
             };
           };
 
+          mcp = {
+            enable = true;
+          };
+
           vscodium = {
             enable = true;
             package = (
@@ -4707,7 +4729,6 @@ in
                     platformio.platformio-vscode-ide
                     quicktype.quicktype
                     rioj7.commandonallfiles
-                    rubymaniac.vscode-paste-and-indent
                     ryu1kn.partial-diff
                     shardulm94.trailing-spaces
                     spywhere.guides
@@ -4759,12 +4780,10 @@ in
                     mypy-type-checker
                     pylint
                     python
-                    vscode-pylance # Unfree
                   ])
 
                   ++ (with pkgs.vscode-extensions.ms-vscode; [
                     cmake-tools
-                    cpptools # Unfree
                     hexeditor
                     live-server
                     makefile-tools
@@ -4802,12 +4821,6 @@ in
                       sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
                     }
                     {
-                      name = "vscode-ollama";
-                      publisher = "warm3snow";
-                      version = "1.2.1";
-                      sha256 = "rp7F0KU17BG1e18oB1/law0hnnxAn2MxqB3fvYcYXMA=";
-                    }
-                    {
                       name = "vscode-serial-monitor";
                       publisher = "ms-vscode";
                       version = "0.13.251128001";
@@ -4825,18 +4838,21 @@ in
                       version = "1.20.0";
                       sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
                     }
-                  ];
+                  ]
+                  ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
+                    with pkgs.vscode-extensions;
+                    [
+                      ms-vscode.cpptools
+                      ms-python.vscode-pylance
+                    ]
+                  );
 
                 enableUpdateCheck = true;
                 enableExtensionUpdateCheck = true;
 
-                enableMcpIntegration = true;
+                enableMcpIntegration = config.home-manager.users.normal.programs.mcp.enable;
               };
             };
-          };
-
-          mcp = {
-            enable = true;
           };
 
           bat = {
