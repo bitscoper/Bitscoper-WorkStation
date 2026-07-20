@@ -859,24 +859,6 @@ in
 
           showMotd = true;
         };
-
-        cockpit = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
       };
 
       loginLimits = [
@@ -1060,8 +1042,9 @@ in
   };
 
   time = {
-    timeZone = "Asia/Dhaka";
     hardwareClockInLocalTime = false;
+
+    timeZone = null;
   };
 
   virtualisation = {
@@ -1193,6 +1176,18 @@ in
             "~."
           ];
         };
+      };
+    };
+
+    automatic-timezoned.enable = false;
+
+    tzupdate = {
+      enable = true;
+      package = pkgs.tzupdate;
+
+      timer = {
+        enable = true;
+        interval = "hourly";
       };
     };
 
@@ -1487,7 +1482,7 @@ in
         gutenprintBin
       ];
 
-      cups-pdf.enable = true;
+      cups-pdf.enable = false;
 
       listenAddresses = [
         "*:631"
@@ -1750,38 +1745,6 @@ in
       openFirewall = true;
     };
 
-    cockpit = {
-      enable = true;
-      package = (
-        pkgs.cockpit.override {
-          withBranding = true;
-        }
-      );
-      plugins = with pkgs; [
-        cockpit-files
-        cockpit-machines
-        cockpit-podman
-      ];
-
-      port = 9090;
-      allowed-origins = [
-        "*"
-      ];
-
-      showBanner = true;
-
-      settings = {
-        WebService = {
-          AllowUnencrypted = false;
-
-          LoginTo = true;
-          AllowMultiHost = true;
-        };
-      };
-
-      openFirewall = true;
-    };
-
     postgresql = {
       enable = true;
       package = (
@@ -1988,7 +1951,7 @@ in
       settings = {
         follow_symlinks = true;
 
-        add_newline = true;
+        add_newline = false;
       };
     };
 
@@ -3287,7 +3250,6 @@ in
       ++ config.hardware.sane.extraBackends
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
-      ++ config.services.cockpit.plugins
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
@@ -4327,20 +4289,12 @@ in
           };
 
           # dataFile = { };
-
           # stateFile = { };
-
           # cacheFile = { };
         };
 
         gtk = {
           enable = true;
-
-          colorScheme = "dark";
-          theme = {
-            name = "Adwaita";
-            package = pkgs.gnome-themes-extra;
-          };
 
           font = {
             name = fontPreferences.name.sans_serif;
@@ -4348,29 +4302,36 @@ in
             size = fontPreferences.size;
           };
 
+          colorScheme = "dark";
+          theme = {
+            name = "Adwaita";
+            package = pkgs.gnome-themes-extra;
+          };
+
           iconTheme = {
-            name = config.home-manager.users.normal.gtk.theme.name;
-            package = config.home-manager.users.normal.gtk.theme.package;
+            name = "Adwaita";
+            package = pkgs.gnome-themes-extra;
           };
 
           cursorTheme = {
             name = config.home-manager.users.normal.home.pointerCursor.name;
+            package = config.home-manager.users.normal.home.pointerCursor.package;
             size = config.home-manager.users.normal.home.pointerCursor.size;
           };
 
           gtk4 = {
             enable = true;
 
-            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
             font = {
               name = config.home-manager.users.normal.gtk.font.name;
               package = config.home-manager.users.normal.gtk.font.package;
               size = config.home-manager.users.normal.gtk.font.size;
+            };
+
+            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
+            theme = {
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             iconTheme = {
@@ -4380,6 +4341,7 @@ in
 
             cursorTheme = {
               name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              package = config.home-manager.users.normal.gtk.cursorTheme.package;
               size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
@@ -4387,16 +4349,16 @@ in
           gtk3 = {
             enable = true;
 
-            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
             font = {
               name = config.home-manager.users.normal.gtk.font.name;
               package = config.home-manager.users.normal.gtk.font.package;
               size = config.home-manager.users.normal.gtk.font.size;
+            };
+
+            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
+            theme = {
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             iconTheme = {
@@ -4406,6 +4368,7 @@ in
 
             cursorTheme = {
               name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              package = config.home-manager.users.normal.gtk.cursorTheme.package;
               size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
@@ -4413,15 +4376,15 @@ in
           gtk2 = {
             enable = true;
 
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
             font = {
               name = config.home-manager.users.normal.gtk.font.name;
               package = config.home-manager.users.normal.gtk.font.package;
               size = config.home-manager.users.normal.gtk.font.size;
+            };
+
+            theme = {
+              name = config.home-manager.users.normal.gtk.theme.name;
+              package = config.home-manager.users.normal.gtk.theme.package;
             };
 
             iconTheme = {
@@ -4431,6 +4394,7 @@ in
 
             cursorTheme = {
               name = config.home-manager.users.normal.gtk.cursorTheme.name;
+              package = config.home-manager.users.normal.gtk.cursorTheme.package;
               size = config.home-manager.users.normal.gtk.cursorTheme.size;
             };
           };
