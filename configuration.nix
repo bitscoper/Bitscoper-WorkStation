@@ -195,6 +195,16 @@ in
 
     overlays = [
       (final: previous: {
+        fprintd = previous.fprintd.override {
+          libfprint = previous.libfprint.overrideAttrs (oldAttributes: {
+            mesonFlags = (oldAttributes.mesonFlags or [ ]) ++ [
+              "-Ddrivers=all"
+            ];
+          });
+        };
+      })
+
+      (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
         };
@@ -312,39 +322,62 @@ in
     loader = {
       efi.canTouchEfiVariables = true;
 
-      grub = {
-        enable = true;
+      grub =
+        let
+          bgrtBmp = builtins.path {
+            path = "/sys/firmware/acpi/bgrt/image";
+            name = "bgrt.bmp";
+          };
 
-        copyKernels = true;
-
-        efiSupport = true;
-        zfsSupport = true;
-        enableCryptodisk = true;
-        useOSProber = true;
-
-        fsIdentifier = "uuid";
-        device = "nodev";
-
-        gfxmodeEfi = "1920x1080,auto";
-        gfxpayloadEfi = "keep";
-
-        theme = grubThemeFlake.packages.${config.nixpkgs.hostPlatform.system}.nixos;
-        splashImage = "${config.boot.loader.grub.theme}/background.png";
-        splashMode = "normal";
-
-        configurationLimit = 100;
-        extraEntriesBeforeNixOS = false;
-
-        memtest86 = {
+          bgrtPng =
+            pkgs.runCommand "bgrtSplash.png"
+              {
+                nativeBuildInputs = [
+                  pkgs.imagemagick
+                ];
+              }
+              ''
+                magick BMP:${bgrtBmp} \
+                  -resize 1920x1080\> \
+                  -background "#000000" \
+                  -gravity center \
+                  -extent 1920x1080 \
+                  $out
+              '';
+        in
+        {
           enable = true;
 
-          params = [
-            "btrace"
-          ];
-        };
+          copyKernels = true;
 
-        forceInstall = false;
-      };
+          efiSupport = true;
+          zfsSupport = true;
+          enableCryptodisk = true;
+          useOSProber = true;
+
+          fsIdentifier = "uuid";
+          device = "nodev";
+
+          gfxmodeEfi = "1920x1080,auto";
+          gfxpayloadEfi = "keep";
+
+          theme = grubThemeFlake.packages.${config.nixpkgs.hostPlatform.system}.nixos;
+          splashImage = bgrtPng;
+          splashMode = "normal";
+
+          configurationLimit = 100;
+          extraEntriesBeforeNixOS = false;
+
+          memtest86 = {
+            enable = true;
+
+            params = [
+              "btrace"
+            ];
+          };
+
+          forceInstall = false;
+        };
 
       timeout = 1; # 1 Second
     };
@@ -435,7 +468,7 @@ in
     extraModprobeConfig = ''
       options kvm report_ignored_msrs=0
     ''
-    + config.specificHardwareConfiguration.extraModprobeConfig; # From hardware-and-user-configuration.nix
+    + config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-and-user-configuration.nix
 
     kernelParams = [
       "boot.shell_on_fail"
@@ -450,7 +483,7 @@ in
       "udev.log_level=err"
       "udev.log_priority=err"
     ]
-    ++ config.specificHardwareConfiguration.kernelParams; # From hardware-and-user-configuration.nix
+    ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-and-user-configuration.nix
 
     initrd = {
       enable = true;
@@ -461,7 +494,7 @@ in
         "usbhid"
         "xhci_pci"
       ]
-      ++ config.specificHardwareConfiguration.availableKernelModules; # From hardware-and-user-configuration.nix
+      ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-and-user-configuration.nix
 
       systemd = {
         enable = true;
@@ -556,8 +589,8 @@ in
       enable = true;
       enable32Bit = true;
 
-      extraPackages = config.specificHardwareConfiguration.extraGraphicsPackages; # From hardware-and-user-configuration.nix
-      extraPackages32 = config.specificHardwareConfiguration.extraGraphicsPackages32; # From hardware-and-user-configuration.nix
+      extraPackages = config.specificHardwareConfiguration.hardware.graphics.extraPackages; # From hardware-and-user-configuration.nix
+      extraPackages32 = config.specificHardwareConfiguration.hardware.graphics.extraPackages32; # From hardware-and-user-configuration.nix
     };
 
     sensor = {
@@ -1416,10 +1449,10 @@ in
       enable = true;
       package = if config.services.fprintd.tod.enable then pkgs.fprintd-tod else pkgs.fprintd;
 
-      # tod = {
-      #   enable = true;
-      #   driver = ;
-      # };
+      tod = {
+        enable = config.specificHardwareConfiguration.services.fprintd.tod.enable;
+        driver = pkgs.lib.optionals config.services.fprintd.tod.enable config.specificHardwareConfiguration.services.fprintd.tod.package;
+      };
     };
 
     pipewire = {

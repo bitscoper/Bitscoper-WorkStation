@@ -1,5 +1,7 @@
 # By Abdullah As-Sadeed
 
+# ASUS VivoBook X415EA 1.0
+
 {
   config,
   lib,
@@ -31,14 +33,38 @@
         example = "";
       };
 
-      availableKernelModules = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`boot.initrd.availableKernelModules`";
-        default = [ ];
-        example = [ ];
+      boot = {
+        extraModprobeConfig = lib.mkOption {
+          type = lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`boot.extraModprobeConfig`";
+          default = [ ];
+          example = [ ];
+        };
+
+        kernelParams = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`boot.kernelParams`";
+          default = [ ];
+          example = [ ];
+        };
+
+        initrd = {
+          availableKernelModules = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`boot.initrd.availableKernelModules`";
+            default = [ ];
+            example = [ ];
+          };
+        };
       };
 
       kernelModules = lib.mkOption {
@@ -51,44 +77,54 @@
         example = [ ];
       };
 
-      extraModprobeConfig = lib.mkOption {
-        type = lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`boot.extraModprobeConfig`";
-        default = [ ];
-        example = [ ];
+      hardware = {
+        graphics = {
+          extraPackages = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`hardware.graphics.extraPackages`";
+            default = [ ];
+            example = [ ];
+          };
+
+          extraPackages32 = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`hardware.graphics.extraPackages32`";
+            default = [ ];
+            example = [ ];
+          };
+        };
       };
 
-      kernelParams = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`boot.kernelParams`";
-        default = [ ];
-        example = [ ];
-      };
+      services = {
+        fprintd = {
+          tod = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              internal = false;
+              visible = true;
+              readOnly = false;
+              description = "`config.services.fprintd.tod.enable`";
+              default = [ ];
+              example = [ ];
+            };
 
-      extraGraphicsPackages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`hardware.graphics.extraPackages`";
-        default = [ ];
-        example = [ ];
-      };
-
-      extraGraphicsPackages32 = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`hardware.graphics.extraPackages32`";
-        default = [ ];
-        example = [ ];
+            package = lib.mkOption {
+              type = lib.types.package;
+              internal = false;
+              visible = true;
+              readOnly = false;
+              description = "`config.services.fprintd.tod.package`";
+              default = [ ];
+              example = [ ];
+            };
+          };
+        };
       };
     };
 
@@ -100,7 +136,7 @@
         readOnly = false;
         description = "Password 1";
         default = "";
-        example = "3x@mp13P@$$w0rd";
+        example = "";
       };
 
       password_2 = lib.mkOption {
@@ -110,7 +146,7 @@
         readOnly = false;
         description = "Password 2";
         default = "";
-        example = "3x@mp13P@$$w0rd";
+        example = "";
       };
     };
   };
@@ -204,39 +240,58 @@
       systemArchitecture = "x86_64";
       cpuVendor = "intel";
 
-      availableKernelModules = [
-        "ahci"
-        "nvme"
-        "rtsx_usb_sdmmc"
-        "sd_mod"
-      ];
+      boot = {
+        extraModprobeConfig = ''
+          options kvm_intel nested=1
+        '';
+
+        kernelParams = [
+          "intel_iommu=on"
+          "resume=/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a"
+        ];
+
+        initrd = {
+          availableKernelModules = [
+            "ahci"
+            "nvme"
+            "rtsx_usb_sdmmc"
+            "sd_mod"
+          ];
+        };
+      };
 
       kernelModules = [
         "i915"
         "kvm-intel"
+        "spi_pxa2xx_platform"
+        "spidev"
       ];
 
-      extraModprobeConfig = ''
-        options kvm_intel nested=1
-      '';
+      hardware = {
+        graphics = {
+          extraPackages = with pkgs; [
+            intel-compute-runtime
+            intel-gmmlib
+            intel-media-driver
+            libvpl
+            vpl-gpu-rt
+          ];
 
-      kernelParams = [
-        "intel_iommu=on"
-        "resume=/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a"
-      ];
+          extraPackages32 = with pkgs.pkgsi686Linux; [
+            intel-media-driver
+          ];
+        };
+      };
 
-      extraGraphicsPackages = with pkgs; [
-        # intel-ocl # FIXME: Build Failure
-        intel-compute-runtime
-        intel-gmmlib
-        intel-media-driver
-        libvpl
-        vpl-gpu-rt
-      ];
+      services = {
+        fprintd = {
+          tod = {
+            enable = false;
+            package = pkgs.libfprint-2-tod1-elan;
+          };
+        };
+      };
 
-      extraGraphicsPackages32 = with pkgs.pkgsi686Linux; [
-        intel-media-driver
-      ];
     };
 
     secrets = {
