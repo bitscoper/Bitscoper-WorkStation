@@ -184,6 +184,7 @@ in
     };
 
     config = {
+      allowAliases = false;
       allowUnfree = true;
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
@@ -194,16 +195,6 @@ in
     };
 
     overlays = [
-      (final: previous: {
-        fprintd = previous.fprintd.override {
-          libfprint = previous.libfprint.overrideAttrs (oldAttributes: {
-            mesonFlags = (oldAttributes.mesonFlags or [ ]) ++ [
-              "-Ddrivers=all"
-            ];
-          });
-        };
-      })
-
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
@@ -454,7 +445,7 @@ in
     hardwareScan = true;
 
     kernelModules = [
-      "at24" # SDR/DDR/DDR2/DDR3 SPD and I2C
+      "at24" # SDR/DDR/DDR2/DDR3 SPD and I²C
       "ee1004" # DDR4 SPD
       "spd5118" # DDR5 SPD
     ]
@@ -1243,6 +1234,7 @@ in
       implementation = "broker";
 
       packages = with pkgs; [
+        fprintd
         gnome2.GConf
         libvirt-dbus
       ];
@@ -1382,8 +1374,8 @@ in
         KERNEL=="rtc0", GROUP="audio"
         KERNEL=="hpet", GROUP="audio"
         DEVPATH=="/devices/virtual/misc/cpu_dma_latency", OWNER="root", GROUP="audio", MODE="0660"
-        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
-      ''; # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
+      ''
+      + config.specificHardwareConfiguration.services.udev.extraRules;
     };
 
     smartd = {
@@ -1440,6 +1432,11 @@ in
 
     desktopManager.gnome = {
       enable = true;
+
+      sessionPath = with pkgs; [
+        gdm
+      ];
+
       debug = false;
     };
 
@@ -1557,7 +1554,7 @@ in
         (gutenprint.override {
           cupsSupport = true;
         })
-        gutenprintBin
+        gutenprint-bin
       ];
 
       cups-pdf.enable = false;
@@ -2641,7 +2638,7 @@ in
         gh2md
         ghatm
         ghrepo-stats
-        gimp3-with-plugins
+        gimp-with-plugins
         gist
         git-big-picture
         git-filter-repo
@@ -3041,7 +3038,7 @@ in
         waylevel
         wayscriber
         webcamize
-        webfontkitgenerator
+        webfont-bundler
         websocat
         wev
         whatfiles

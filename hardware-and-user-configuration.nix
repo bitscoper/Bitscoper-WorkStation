@@ -1,6 +1,8 @@
 # By Abdullah As-Sadeed
 
-# ASUS VivoBook X415EA 1.0
+# ASUS VivoBook X415EA 1.0 with the ELAN7001 SPI Fingerprint Sensor and the 04F3:3128 I²C Touchpad
+
+# for d in /sys/class/hidraw/hidraw*; do echo "== $d =="; readlink -f "$d/device"; cat "$d/device/uevent" 2>/dev/null || true; done
 
 {
   config,
@@ -102,6 +104,18 @@
       };
 
       services = {
+        udev = {
+          extraRules = lib.mkOption {
+            type = lib.types.str;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`services.udev.extraRules`";
+            default = [ ];
+            example = [ ];
+          };
+        };
+
         fprintd = {
           tod = {
             enable = lib.mkOption {
@@ -109,7 +123,7 @@
               internal = false;
               visible = true;
               readOnly = false;
-              description = "`config.services.fprintd.tod.enable`";
+              description = "`services.fprintd.tod.enable`";
               default = [ ];
               example = [ ];
             };
@@ -119,7 +133,7 @@
               internal = false;
               visible = true;
               readOnly = false;
-              description = "`config.services.fprintd.tod.package`";
+              description = "`services.fprintd.tod.package`";
               default = [ ];
               example = [ ];
             };
@@ -236,6 +250,28 @@
       resumeDevice = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
     };
 
+    systemd = {
+      services = {
+        bind-elan7001-spi = {
+          description = "Bind ELAN7001 SPI Fingerprint Sensor";
+
+          wantedBy = [
+            "multi-user.target"
+          ];
+          after = [
+            "systemd-modules-load.service"
+          ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+
+            ExecStart = "/bin/sh -c 'if [ -d /sys/bus/spi/devices/spi-ELAN7001:00 ]; then echo spidev > /sys/bus/spi/devices/spi-ELAN7001:00/driver_override && echo spi-ELAN7001:00 > /sys/bus/spi/drivers/spidev/bind; fi'";
+          };
+        };
+      };
+    };
+
     specificHardwareConfiguration = {
       systemArchitecture = "x86_64";
       cpuVendor = "intel";
@@ -243,6 +279,7 @@
       boot = {
         extraModprobeConfig = ''
           options kvm_intel nested=1
+          options spidev bufsiz=16642
         '';
 
         kernelParams = [
@@ -284,10 +321,14 @@
       };
 
       services = {
+        udev = {
+          extraRules = "";
+        };
+
         fprintd = {
           tod = {
             enable = false;
-            package = pkgs.libfprint-2-tod1-elan;
+            package = pkgs.emptyDirectory;
           };
         };
       };
