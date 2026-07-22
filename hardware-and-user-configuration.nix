@@ -1,8 +1,8 @@
 # By Abdullah As-Sadeed
 
-# ASUS VivoBook X415EA 1.0 with the ELAN7001 SPI Fingerprint Sensor and the 04F3:3128 I²C Touchpad
+# ASUS VivoBook X415EA 1.0 with the ELAN7001 SPI Touch Fingerprint Sensor and the 04F3:3128 I²C Touchpad
 
-# for d in /sys/class/hidraw/hidraw*; do echo "== $d =="; readlink -f "$d/device"; cat "$d/device/uevent" 2>/dev/null || true; done
+# for device in /sys/class/hidraw/hidraw*; do echo "== $device =="; readlink -f "$device/device"; cat "$device/device/uevent" 2>/dev/null || true; done
 
 {
   config,
@@ -332,7 +332,6 @@
           };
         };
       };
-
     };
 
     secrets = {

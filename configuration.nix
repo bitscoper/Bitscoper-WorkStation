@@ -606,15 +606,19 @@ in
 
       powerOnBoot = true;
 
-      input.General = {
-        IdleTimeout = 0; # 0 = Disabled
-        LEAutoSecurity = true;
-        ClassicBondedOnly = true;
-        UserspaceHID = true;
+      input = {
+        General = {
+          IdleTimeout = 0; # 0 = Disabled
+          LEAutoSecurity = true;
+          ClassicBondedOnly = true;
+          UserspaceHID = true;
+        };
       };
 
-      network.General = {
-        DisableSecurity = false;
+      network = {
+        General = {
+          DisableSecurity = false;
+        };
       };
 
       settings = {
@@ -957,18 +961,21 @@ in
           type = "-";
           value = "unlimited";
         }
+
         {
           domain = "@audio";
           item = "rtprio";
           type = "-";
           value = "99";
         }
+
         {
           domain = "@audio";
           item = "nofile";
           type = "soft";
           value = "99999";
         }
+
         {
           domain = "@audio";
           item = "nofile";
@@ -1406,7 +1413,7 @@ in
     gvfs = {
       enable = true;
       package = (
-        pkgs.gvfs.override {
+        pkgs.gnome.gvfs.override {
           gnomeSupport = true;
           udevSupport = true;
         }
@@ -2439,7 +2446,6 @@ in
         # reiser4progs # Marked as Broken
         # sbomnix # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
-        aalib
         aapt
         acl
         acpica-tools
@@ -2453,7 +2459,6 @@ in
         alac
         alsa-plugins
         alsa-utils
-        alsa-utils-nhlt
         android-backup-extractor
         android-tools
         ansilove
@@ -2462,10 +2467,11 @@ in
         apkleaks
         appimageupdate-qt
         arduino-cli
-        arduino-language-server
+        arduino-core
+        arduino-ide
+        arduino-ota
         ascii
         ascii-draw
-        ascii-image-converter
         asciinema
         asciinema-agg
         asciiquarium-transparent
@@ -2476,9 +2482,7 @@ in
         avrdude
         bada-bib
         baobab
-        bash-language-server
         bcachefs-tools
-        bcg729
         binary
         binutils
         binwalk
@@ -2489,7 +2493,6 @@ in
         bluez-tools
         brasero
         brave
-        brightnessctl
         btrfs-assistant
         btrfs-heatmap
         btrfs-progs
@@ -2501,14 +2504,12 @@ in
         carburetor
         cartero
         cavasik
-        cbonsai
         cdrkit
         celestia
         celt
         censor
         certbot-full
         certdump
-        cicero-tui
         cine
         clang_22
         clang-analyzer
@@ -2518,7 +2519,6 @@ in
         cloc
         cloneit
         cmake
-        codec2
         codeowners
         codevis
         colorgrind
@@ -2533,13 +2533,9 @@ in
         cron
         cryptsetup
         cscope
-        css-variables-language-server
-        ctags-lsp
         ctagsWrapped
-        ctop
         cups-pk-helper
         cups-printers
-        cursor-clip
         curtail
         cve-bin-tool
         cyclonedx-cli
@@ -2552,7 +2548,6 @@ in
         ddrescue
         ddrescueview
         dduper
-        debase
         delineate
         deluge-gtk
         desktop-file-utils
@@ -2565,8 +2560,6 @@ in
         dmg2img
         dmidecode
         dnsrecon
-        docker-compose-language-service
-        dockerfile-language-server
         door-knocker
         dosfstools
         dot2tex
@@ -2586,14 +2579,12 @@ in
         erofs-utils
         esptool
         etherape
-        evtest
         evtest-qt
         exfatprogs
         exiftool
         extract-dtb
         f2fs-tools
         fastlane
-        fd
         fdk_aac
         fdroidcl
         fdt-viewer
@@ -2622,7 +2613,6 @@ in
         freerouting
         fritzing
         fwupd-efi
-        gama-tui
         gamepad-mirror
         gawd
         gawk
@@ -2633,7 +2623,6 @@ in
         gerbolyze
         gh
         gh-contribs
-        gh-notify
         gh-skyline # Generates STL File
         gh2md
         ghatm
@@ -2650,7 +2639,6 @@ in
         github-distributed-owners
         gitlogue
         glib
-        globe-cli
         gnome-autoar
         gnome-backgrounds
         gnome-bluetooth
@@ -2680,7 +2668,7 @@ in
         gnome-tweaks
         gnome-video-effects
         gnome-weather
-        gnss-share
+        gnome.nixos-gsettings-overrides
         gnugrep
         gnumake
         gnused
@@ -2691,11 +2679,9 @@ in
         gource
         gpredict
         gpu-viewer
-        gradle-completion
         graphviz
         greaseweazle
         groovy
-        gsm
         gsmartcontrol
         gtk-frdp
         gtk-vnc
@@ -2704,21 +2690,16 @@ in
         guestfs-tools
         gzip
         halftone
-        hashcat
-        hashcat-utils
         hashes
         hdparm
         helvum
         hfsprogs
-        hicolor-icon-theme
         hieroglyphic
         horizon-eda
         host
         hstsparser
-        hurl
         hw-probe
         hydra-check
-        hyprls
         i2c-tools
         iaito
         iconic
@@ -2726,13 +2707,11 @@ in
         ifuse
         imhex
         impression
-        indent
         inetutils
         inkcut
         inkscape-with-extensions
         inotify-tools
         interception-tools
-        iotop-c
         iplookup-gtk
         jfsutils
         jmol
@@ -2741,12 +2720,10 @@ in
         kdePackages.kcachegrind
         kernel-hardening-checker
         kernelshark
-        kexec-tools
         killall
         kind
         kmod
         kotlin
-        kotlin-language-server
         krapslog
         kubectl
         kubernetes-controller-tools
@@ -2756,14 +2733,11 @@ in
         letterpress
         libaom
         libarchive
-        libcanberra-gtk2
-        libcanberra-gtk3
         libde265
         libfreeaptx
         libhsts
         libilbc
         libimobiledevice
-        libinput
         liblc3
         libnotify
         libogg
@@ -2787,7 +2761,6 @@ in
         lshw
         lsof
         lsscsi
-        lssecret
         luminance
         lvm2
         lynis
@@ -2798,7 +2771,6 @@ in
         macchanger
         mailcap
         mapscii
-        md-tui
         mdns-scanner
         megacmd
         meld
@@ -2835,6 +2807,7 @@ in
         nixd
         nixfmt
         nixmate
+        nixos-artwork.wallpapers.gnome-dark
         nixoscope
         nixpkgs-reviewFull
         nmap
@@ -2854,7 +2827,6 @@ in
         openai-whisper
         openapv
         opencore-amr
-        opendmarc
         openh264
         openjpeg
         openobex
@@ -2882,19 +2854,16 @@ in
         picard
         picard-tools
         pinta
-        pipes
         pitivi
         pkg-config
         platformio
         play
-        playerctl
         podman-compose
         pods
         poop # POOP = Performance Optimizer Observation Platform
-        postgres-language-server
         powershell
         prettier
-        printrun
+        printrun # Printerface, Pronsole
         procps
         profile-cleaner
         progress
@@ -2909,7 +2878,6 @@ in
         protontricks
         ps
         psmisc
-        python3Packages.tkinter
         qemu-user
         qemu-utils
         qr-backup
@@ -2957,13 +2925,11 @@ in
         smartmontools
         sof-tools
         songrec
-        sound-theme-freedesktop
         sourcegit
         sox
         spectre-meltdown-checker
         speedtest
         spytrap-adb
-        sql-formatter
         srain
         sslscan
         steam-run-free
@@ -2983,7 +2949,6 @@ in
         tauno-monitor
         telegraph
         teleprompter
-        termdown
         terminaltexteffects
         texliveFull
         texlivePackages.latexmk
@@ -3006,7 +2971,6 @@ in
         unhide
         unhide-gui
         uni2ascii
-        unimatrix
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
@@ -3017,22 +2981,18 @@ in
         util-linux
         valgrind
         valuta
-        vex-tui
         video2x
-        virt-top
         virt-v2v
         vorbis-tools
         vscodium
         vulkan-tools
         vulnix
         wafw00f
-        wakeonlan
         wavemon
         wayback_machine_downloader
         wayback-machine-archiver
         waycheck
         waydroid-helper
-        wayland-protocols
         wayland-scanner
         wayland-utils
         waylevel
@@ -3046,15 +3006,12 @@ in
         whois
         whosthere
         wildcard
-        windowtolayer
         winetricks
         wl-clipboard
         xar
-        xdg-dbus-proxy
         xdg-user-dirs
         xdg-user-dirs-gtk
         xdg-utils
-        xdot
         xeol
         xfsdump
         xfsprogs
@@ -3063,9 +3020,7 @@ in
         xoscope
         xscreenruler
         xvidcore
-        yaml-language-server
         yara-x
-        yq
         yuview
         zenity
         zenmap
@@ -3487,10 +3442,10 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'"; # FIXME
+      commands = "xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'";
 
-      clean_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
-      clean_repair_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
+      clean_optimise_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
+      clean_repair_optimise_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
     };
 
     # extraInit = '''';
@@ -4357,7 +4312,9 @@ in
           };
 
           configFile = {
-            "mimeapps.list".force = true;
+            "mimeapps.list" = {
+              force = true;
+            };
           };
 
           # dataFile = { };
@@ -4588,15 +4545,6 @@ in
 
           # texlive = { };
 
-          jq = {
-            enable = true;
-            package = (
-              pkgs.jq.override {
-                onigurumaSupport = true;
-              }
-            );
-          };
-
           fastfetch = {
             enable = true;
             package = (
@@ -4692,6 +4640,33 @@ in
             theme = {
               name = config.home-manager.users.normal.gtk.theme.name;
               package = config.home-manager.users.normal.gtk.theme.package;
+            };
+          };
+
+          keychain.enable = !config.programs.gnupg.agent.enable;
+
+          gpg = {
+            enable = true;
+            package = config.programs.gnupg.package;
+
+            mutableKeys = true;
+            mutableTrust = true;
+
+            settings = {
+              no-comments = false;
+            };
+
+            scdaemonSettings = {
+              disable-ccid = true;
+            };
+
+            dirmngrSettings = {
+              allow-version-check = true;
+              keyserver = "hkps://keys.openpgp.org/";
+            };
+
+            gpgsmSettings = {
+              with-key-data = true;
             };
           };
 
@@ -4832,36 +4807,42 @@ in
                       version = "0.2.2";
                       sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
                     }
+
                     {
                       name = "github-local-actions";
                       publisher = "SanjulaGanepola";
                       version = "1.2.5";
                       sha256 = "gc3iOB/ibu4YBRdeyE6nmG72RbAsV0WIhiD8x2HNCfY=";
                     }
+
                     {
                       name = "pubspec-assist";
                       publisher = "jeroen-meijer";
                       version = "2.4.0";
                       sha256 = "COjlH34kGHTrgd7gCYIozEA3i1KkwHLRU09yaE0TsOk=";
                     }
+
                     {
                       name = "unique-lines";
                       publisher = "bibhasdn";
                       version = "1.0.0";
                       sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
                     }
+
                     {
                       name = "vscode-serial-monitor";
                       publisher = "ms-vscode";
                       version = "0.13.251128001";
                       sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
                     }
+
                     {
                       name = "vscode-sort";
                       publisher = "henriiik";
                       version = "0.2.5";
                       sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
                     }
+
                     {
                       name = "vscode-sort-json";
                       publisher = "richie5um2";
@@ -4944,33 +4925,6 @@ in
             package = config.services.openssh.package;
 
             enableDefaultConfig = false;
-          };
-
-          keychain.enable = !config.programs.gnupg.agent.enable;
-
-          gpg = {
-            enable = true;
-            package = config.programs.gnupg.package;
-
-            mutableKeys = true;
-            mutableTrust = true;
-
-            settings = {
-              no-comments = false;
-            };
-
-            scdaemonSettings = {
-              disable-ccid = true;
-            };
-
-            dirmngrSettings = {
-              allow-version-check = true;
-              keyserver = "hkps://keys.openpgp.org/";
-            };
-
-            gpgsmSettings = {
-              with-key-data = true;
-            };
           };
 
           man = {
