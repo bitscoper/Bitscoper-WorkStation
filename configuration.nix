@@ -9,14 +9,14 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
@@ -709,6 +709,15 @@ in
       }
     );
 
+    settings = {
+      Manager = {
+        DefaultIOAccounting = true;
+        DefaultIPAccounting = true;
+
+        DefaultLimitNOFILE = 524288; # Esync
+      };
+    };
+
     tmpfiles.rules = [
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
@@ -973,15 +982,29 @@ in
           domain = "@audio";
           item = "nofile";
           type = "soft";
-          value = "99999";
+          value = "524288"; # 524288 > 99999
         }
 
         {
           domain = "@audio";
           item = "nofile";
           type = "hard";
-          value = "99999";
+          value = "524288"; # 524288 > 99999
         }
+
+        {
+          domain = config.users.users.normal.name;
+          item = "nofile";
+          type = "soft";
+          value = "524288";
+        } # Esync
+
+        {
+          domain = config.users.users.normal.name;
+          item = "nofile";
+          type = "hard";
+          value = "524288";
+        } # Esync
       ];
     };
 
@@ -1116,7 +1139,7 @@ in
       type = "ibus";
       ibus = {
         engines = with pkgs; [
-          openbangla-keyboard
+          stableNixPackages.openbangla-keyboard
         ];
         waylandFrontend = true;
       };
@@ -2439,10 +2462,13 @@ in
       with pkgs;
       [
         # bitwarden-desktop # FIXME: Build Failure
+        # cve-bin-tool # FIXME: Build Failure
         # cyclonedx-python # FIXME: Build Failure
         # dart # flutter adds the compatible version
+        # dnsrecon # FIXME: Build Failure
         # exhibit # FIXME: Build Failure
         # freecad # FIXME: Build Failure
+        # lyto # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # sbomnix # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
@@ -2537,7 +2563,6 @@ in
         cups-pk-helper
         cups-printers
         curtail
-        cve-bin-tool
         cyclonedx-cli
         d-spy
         daemon
@@ -2559,7 +2584,6 @@ in
         dive
         dmg2img
         dmidecode
-        dnsrecon
         door-knocker
         dosfstools
         dot2tex
@@ -2743,6 +2767,7 @@ in
         libogg
         libopus
         libsecret
+        libsixel
         libultrahdr
         libva-utils
         libvpx
@@ -2765,7 +2790,6 @@ in
         lvm2
         lynis
         lyrebird
-        lyto
         lyx
         lzham
         macchanger
@@ -2874,8 +2898,7 @@ in
         proton-vpn
         proton-vpn-cli
         protonmail-export
-        protonplus
-        protontricks
+        protonup-qt
         ps
         psmisc
         qemu-user
@@ -2985,7 +3008,6 @@ in
         virt-v2v
         vorbis-tools
         vscodium
-        vulkan-tools
         vulnix
         wafw00f
         wavemon
@@ -3006,7 +3028,6 @@ in
         whois
         whosthere
         wildcard
-        winetricks
         wl-clipboard
         xar
         xdg-user-dirs
@@ -3280,6 +3301,7 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
+      ++ config.home-manager.users.normal.programs.lutris.extraPackages
       ++ config.programs.bat.extraPackages
       ++ config.programs.obs-studio.plugins
       ++ config.services.pipewire.extraLv2Packages
@@ -4896,6 +4918,32 @@ in
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
+          };
+
+          lutris = {
+            enable = true;
+            package = (
+              pkgs.lutris.override {
+                steamSupport = config.nixpkgs.config.allowUnfree;
+              }
+            );
+
+            extraPackages =
+              with pkgs;
+              [
+                gamemode
+                gamescope
+                protontricks
+                vulkan-loader
+                vulkan-tools
+                winetricks
+              ]
+              ++ [
+                config.home-manager.users.normal.programs.mangohud.package
+              ];
+
+            # winePackages = with pkgs; [ ];
+            # protonPackages = with pkgs; [ ];
           };
 
           yt-dlp = {
