@@ -103,6 +103,18 @@
         };
       };
 
+      systemd = {
+        tmpfiles.rules = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`systemd.tmpfiles.rules`";
+          default = [ ];
+          example = [ ];
+        };
+      };
+
       services = {
         udev = {
           extraRules = lib.mkOption {
@@ -170,7 +182,9 @@
       "/" = {
         device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
         fsType = "btrfs";
+
         options = [
+          "async"
           "autodefrag"
           "compress=zstd:1"
           "discard=async"
@@ -183,6 +197,7 @@
       "/boot" = {
         device = "/dev/disk/by-uuid/9A25-C94D";
         fsType = "vfat";
+
         options = [
           "fmask=0077"
           "dmask=0077"
@@ -192,31 +207,53 @@
       "/nix" = {
         device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
         fsType = "btrfs";
+
         options = [
           "subvol=nix"
-          "compress=zstd:1"
-          "noatime"
-          "discard=async"
-          "ssd"
-          "space_cache=v2"
+          "async"
           "autodefrag"
+          "compress=zstd:1"
+          "discard=async"
+          "noatime"
+          "space_cache=v2"
+          "ssd"
         ];
       };
 
       "/home" = {
         device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
         fsType = "btrfs";
+
         options = [
           "subvol=home"
-          "compress=zstd:1"
-          "noatime"
-          "discard=async"
-          "ssd"
-          "space_cache=v2"
+          "async"
           "autodefrag"
+          "compress=zstd:1"
+          "discard=async"
+          "noatime"
+          "space_cache=v2"
+          "ssd"
         ];
       };
-    };
+
+      "/mnt/I_SATA_SSD" = {
+        device = "/dev/disk/by-partlabel/I_SATA_SSD";
+        fsType = "xfs";
+
+        options = [
+          "async"
+          "attr2"
+          "defaults"
+          "discard"
+          # "discard=async"
+          "inode64"
+          "largeio"
+          "noatime"
+          "nofail"
+          "swalloc"
+        ];
+      };
+    }; # Mounts
 
     swapDevices = [
       {
@@ -318,6 +355,12 @@
             intel-media-driver
           ];
         };
+      };
+
+      systemd = {
+        tmpfiles.rules = [
+          "d /mnt/I_SATA_SSD 0777 root root -"
+        ];
       };
 
       services = {

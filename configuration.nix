@@ -722,7 +722,8 @@ in
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
       "d /var/lib/swtpm-localca 0750 tss root -"
-    ];
+    ]
+    ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
   };
 
   zramSwap = {
@@ -2461,16 +2462,11 @@ in
     systemPackages =
       with pkgs;
       [
-        # bitwarden-desktop # FIXME: Build Failure
         # cve-bin-tool # FIXME: Build Failure
-        # cyclonedx-python # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # dnsrecon # FIXME: Build Failure
-        # exhibit # FIXME: Build Failure
-        # freecad # FIXME: Build Failure
         # lyto # FIXME: Build Failure
         # reiser4progs # Marked as Broken
-        # sbomnix # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
         aapt
         acl
@@ -2513,6 +2509,7 @@ in
         binutils
         binwalk
         bitwarden-cli
+        bitwarden-desktop
         blanket
         bleachbit
         bluez-alsa
@@ -2564,6 +2561,7 @@ in
         cups-printers
         curtail
         cyclonedx-cli
+        cyclonedx-python
         d-spy
         daemon
         darktable
@@ -2605,6 +2603,7 @@ in
         etherape
         evtest-qt
         exfatprogs
+        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -2634,6 +2633,7 @@ in
         footage
         fork-cleaner
         freac
+        freecad
         freerouting
         fritzing
         fwupd-efi
@@ -2926,6 +2926,7 @@ in
         satellite
         sbc
         sbom2dot
+        sbomnix
         schroedinger
         scorecard
         screen
@@ -3065,13 +3066,6 @@ in
           zlibSupport = true;
           zstdSupport = true;
         })
-
-        # (bottles.override {
-        #   removeWarningPopup = true;
-
-        #   extraLibraries = [ ];
-        #   extraPkgs = [ ];
-        # }) # FIXME: Build Failure
 
         (writeShellScriptBin "cpu-x" ''
           exec sudo -E ${cpu-x}/bin/cpu-x "$@"
@@ -3284,7 +3278,6 @@ in
 
       ++ lib.optionals config.nixpkgs.config.allowUnfree [
         androidComposition.androidsdk # Custom Composition
-        anydesk
         megasync # OSS
         rar
         unrar
@@ -4876,7 +4869,6 @@ in
                     with pkgs.vscode-extensions;
                     [
                       ms-vscode.cpptools
-                      ms-python.vscode-pylance
                     ]
                   );
 
