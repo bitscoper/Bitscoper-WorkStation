@@ -9,17 +9,18 @@
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
   grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  plasmaManagerFlake = builtins.getFlake "github:nix-community/plasma-manager/trunk";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -75,32 +76,20 @@ let
     includeEmulator = true;
     emulatorVersion = "latest";
 
-    includeSystemImages = true;
+    includeSystemImages = false; # Disabled because it includes all from platformVersions
     systemImageTypes = [
       "default" # Vanilla
     ];
-    abiVersions = [
-      "arm64-v8a"
-      "armeabi-v7a"
-      "x86_64"
-    ];
+    abiVersions =
+      pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "x86_64-linux") [
+        "x86_64"
+      ]
+      ++ pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "aarch64-linux") [
+        "arm64-v8a"
+        "armeabi-v7a"
+      ];
 
     includeSources = false;
-  };
-
-  design_factor = 16;
-
-  fontPreferences = {
-    package = pkgs.nerd-fonts.noto;
-
-    name = {
-      mono = "NotoMono Nerd Font Mono";
-      sans_serif = "NotoSans Nerd Font";
-      serif = "NotoSerif Nerd Font";
-      emoji = "Noto Color Emoji";
-    };
-
-    size = builtins.floor (design_factor * 0.75); # 12
   };
 
   tlsCertificateFiles =
@@ -119,6 +108,21 @@ let
   tlsCertificateFile = "${tlsCertificateFiles}/certificate.crt";
   tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
+
+  designFactor = 16;
+
+  fontPreferences = {
+    package = pkgs.nerd-fonts.noto;
+
+    name = {
+      mono = "NotoMono Nerd Font Mono";
+      sansSerif = "NotoSans Nerd Font";
+      serif = "NotoSerif Nerd Font";
+      emoji = "Noto Color Emoji";
+    };
+
+    size = builtins.floor (designFactor * 0.75); # 12
+  };
 in
 {
   _class = "nixos";
@@ -213,10 +217,10 @@ in
               else
                 throw "No ${config.nixpkgs.hostPlatform.system} AppImage for Raindrop.io!";
 
-            hash = "sha256-bR1dLoKderCw5e0oEYWYQX6gfENub/NJilRrXs+bsTo=";
+            hash = "sha256-wQJMFMQjkeMhOt2qE41cPKjjMgPNdpqQ3YGKtNWgvSk=";
           };
 
-          raindropioExtracted = final.appimageTools.extractType2 {
+          raindropioExtracted = final.appimageTools.extract {
             pname = "raindropio";
             version = "latest";
             inherit src;
@@ -276,6 +280,11 @@ in
     };
 
     activationScripts = {
+      linkLocales = ''
+        mkdir -p /usr/share/i18n
+        ln -sfn /run/current-system/sw/share/i18n/locales /usr/share/i18n/locales
+      '';
+
       copyOnlyOfficeFonts =
         let
           fonts = config.fonts.packages;
@@ -433,6 +442,7 @@ in
     extraModulePackages = with config.boot.kernelPackages; [
       # zfs_2_4 # FIXME: Build Failure
       apfs
+      bcachefs
       cpupower
       mm-tools
       openafs
@@ -457,7 +467,7 @@ in
     ];
 
     extraModprobeConfig = ''
-      options kvm report_ignored_msrs=0
+      options kvm ignore_msrs=1 report_ignored_msrs=0
     ''
     + config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-and-user-configuration.nix
 
@@ -701,7 +711,7 @@ in
       pkgs.systemd.override {
         withAcl = true;
         withCryptsetup = true;
-        withDocumentation = true;
+        withDocumentation = config.documentation.enable;
         withLogind = true;
         withOpenSSL = true;
         withPam = true;
@@ -819,86 +829,110 @@ in
       };
 
       services = {
+        kde = {
+          unixAuth = true;
+          fprintAuth =
+            if config.services.fprintd.enable then
+              !config.security.pam.services.kde-fingerprint.fprintAuth
+            else
+              false;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        plasmalogin = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        plasmalogin-greeter = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        kde-fingerprint = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
         login = {
           unixAuth = true;
-          fprintAuth = !config.security.pam.services.gdm-fingerprint.fprintAuth;
+          fprintAuth = config.services.fprintd.enable;
 
           logFailures = true;
           nodelay = false;
 
-          enableGnomeKeyring = true;
-
-          gnupg = {
+          kwallet = {
             enable = true;
-            storeOnly = false;
-            noAutostart = false;
+
+            forceRun = false;
           };
-
-          showMotd = true;
-        };
-
-        gdm-password = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        gdm-fingerprint = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        su = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sudo = {
-          unixAuth = true;
-          fprintAuth = true;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = true;
 
           gnupg = {
             enable = true;
@@ -911,12 +945,60 @@ in
 
         vlock = {
           unixAuth = true;
-          fprintAuth = true;
+          fprintAuth = config.services.fprintd.enable;
 
           logFailures = true;
           nodelay = false;
 
-          enableGnomeKeyring = true;
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        su = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
+
+          gnupg = {
+            enable = true;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        sudo = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
 
           gnupg = {
             enable = true;
@@ -929,12 +1011,16 @@ in
 
         polkit-1 = {
           unixAuth = true;
-          fprintAuth = true;
+          fprintAuth = config.services.fprintd.enable;
 
           logFailures = true;
           nodelay = false;
 
-          enableGnomeKeyring = true;
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
 
           gnupg = {
             enable = true;
@@ -947,12 +1033,16 @@ in
 
         sshd = {
           unixAuth = true;
-          fprintAuth = true;
+          fprintAuth = config.services.fprintd.enable;
 
           logFailures = true;
           nodelay = false;
 
-          enableGnomeKeyring = true;
+          kwallet = {
+            enable = true;
+
+            forceRun = false;
+          };
 
           gnupg = {
             enable = true;
@@ -1090,7 +1180,10 @@ in
 
       allowPing = true;
 
-      allowedTCPPorts = [ ];
+      allowedTCPPorts = [
+        3389 # RDP
+        5900 # VNC
+      ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
@@ -1140,7 +1233,7 @@ in
       type = "ibus";
       ibus = {
         engines = with pkgs; [
-          stableNixPackages.openbangla-keyboard
+          openbangla-keyboard
         ];
         waylandFrontend = true;
       };
@@ -1266,7 +1359,6 @@ in
 
       packages = with pkgs; [
         fprintd
-        gnome2.GConf
         libvirt-dbus
       ];
     };
@@ -1396,7 +1488,6 @@ in
       enable = true;
       packages = with pkgs; [
         game-devices-udev-rules
-        gnome-settings-daemon
         libmtp.out
         rtl-sdr
       ];
@@ -1434,41 +1525,32 @@ in
       package = pkgs.zram-generator;
     };
 
-    gvfs = {
-      enable = true;
-      package = (
-        pkgs.gnome.gvfs.override {
-          gnomeSupport = true;
-          udevSupport = true;
-        }
-      );
-    };
-
     displayManager = {
       enable = true;
 
-      gdm = {
+      plasma-login-manager = {
         enable = true;
+        package = pkgs.kdePackages.plasma-login-manager;
 
-        banner = config.networking.fqdn;
-        autoSuspend = false;
-
-        debug = false;
+        settings = {
+          Users = {
+            ReuseSession = false;
+          };
+        };
       };
+
+      defaultSession = "plasma"; # Wayland
 
       autoLogin.enable = false;
 
       logToJournal = true;
     };
 
-    desktopManager.gnome = {
+    desktopManager.plasma6 = {
       enable = true;
 
-      sessionPath = with pkgs; [
-        gdm
-      ];
-
-      debug = false;
+      enableQt5Integration = true;
+      notoPackage = pkgs.noto-fonts;
     };
 
     accounts-daemon.enable = true;
@@ -1639,46 +1721,6 @@ in
       port = 2947;
 
       debugLevel = 0; # 0 = No Debugging
-    };
-
-    gnome = {
-      glib-networking.enable = true;
-
-      core-os-services.enable = true;
-      core-shell.enable = true;
-      gnome-settings-daemon.enable = true;
-
-      gnome-keyring.enable = true;
-      gcr-ssh-agent.enable = !config.programs.gnupg.agent.enable;
-      gnome-online-accounts.enable = true;
-
-      gnome-user-share.enable = true;
-      rygel = {
-        enable = true;
-        package = pkgs.rygel;
-      };
-
-      gnome-remote-desktop.enable = true;
-
-      at-spi2-core.enable = true;
-      tinysparql.enable = true;
-      localsearch.enable = true;
-
-      evolution-data-server = {
-        enable = true;
-        plugins = with pkgs; [
-          evolution-ews
-        ];
-      };
-
-      core-apps.enable = true;
-      sushi.enable = true;
-      gnome-browser-connector.enable = true;
-
-      gnome-initial-setup.enable = false;
-      gnome-software.enable = false;
-      core-developer-tools.enable = false;
-      games.enable = false;
     };
 
     phpfpm = {
@@ -1994,8 +2036,6 @@ in
       enable = true;
     };
 
-    sysprof.enable = true;
-
     logrotate = {
       enable = true;
 
@@ -2201,7 +2241,7 @@ in
         enableSSHSupport = true;
 
         pinentryPackage = (
-          pkgs.pinentry-gnome3.override {
+          pkgs.pinentry-qt.override {
             withLibsecret = true;
           }
         );
@@ -2244,9 +2284,7 @@ in
             };
 
             "org/gnome/desktop/wm/preferences" = {
-              action-double-click-titlebar = "toggle-maximize";
               button-layout = "appmenu:maximize,close";
-              focus-mode = "mouse";
             };
 
             "org/gnome/desktop/privacy" = {
@@ -2308,9 +2346,11 @@ in
       ];
     };
 
-    gnome-disks.enable = true;
+    partition-manager = {
+      enable = true;
+    };
 
-    seahorse.enable = true;
+    k3b.enable = true;
 
     system-config-printer.enable = true;
 
@@ -2329,24 +2369,12 @@ in
       gdb = true;
     };
 
-    wireshark = {
-      enable = true;
-      package = (
-        pkgs.wireshark.override {
-          libpcap = (
-            pkgs.libpcap.override {
-              withBluez = true;
-              withRdma = true;
-              withRemote = true;
-            }
-          );
-          withExtras = true;
-          withQt = true;
-        }
-      );
+    kde-pim = {
+      enable = false;
 
-      dumpcap.enable = true;
-      usbmon.enable = true;
+      kontact = false;
+      kmail = false;
+      merkuro = false;
     };
 
     obs-studio = {
@@ -2385,17 +2413,34 @@ in
       ];
     };
 
-    localsend = {
+    kdeconnect = {
       enable = true;
-      package = pkgs.localsend;
-
-      openFirewall = true;
     };
 
     ssh = {
       package = config.services.openssh.package;
 
       startAgent = !config.programs.gnupg.agent.enable;
+    };
+
+    wireshark = {
+      enable = true;
+      package = (
+        pkgs.wireshark.override {
+          libpcap = (
+            pkgs.libpcap.override {
+              withBluez = true;
+              withRdma = true;
+              withRemote = true;
+            }
+          );
+          withExtras = true;
+          withQt = true;
+        }
+      );
+
+      dumpcap.enable = true;
+      usbmon.enable = true;
     };
   };
 
@@ -2431,7 +2476,7 @@ in
         ];
 
         sansSerif = [
-          fontPreferences.name.sans_serif
+          fontPreferences.name.sansSerif
         ];
 
         serif = [
@@ -2462,9 +2507,8 @@ in
     systemPackages =
       with pkgs;
       [
-        # cve-bin-tool # FIXME: Build Failure
         # dart # flutter adds the compatible version
-        # dnsrecon # FIXME: Build Failure
+        # gnome-nettool # Not Found
         # lyto # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # soundconverter # FIXME: Build Failure
@@ -2484,10 +2528,12 @@ in
         android-backup-extractor
         android-tools
         ansilove
+        apfs-fuse
         apfsprogs
         apkeep
         apkleaks
         appimageupdate-qt
+        archivemount
         arduino-cli
         arduino-core
         arduino-ide
@@ -2499,13 +2545,14 @@ in
         asciiquarium-transparent
         asnmap
         audacity
+        audio-sharing
         autopsy
         avbroot
         avrdude
         bada-bib
-        baobab
         bcachefs-tools
         binary
+        bindfs
         binutils
         binwalk
         bitwarden-cli
@@ -2514,8 +2561,8 @@ in
         bleachbit
         bluez-alsa
         bluez-tools
-        brasero
         brave
+        btfs
         btrfs-assistant
         btrfs-heatmap
         btrfs-progs
@@ -2533,6 +2580,7 @@ in
         censor
         certbot-full
         certdump
+        chunkfs
         cine
         clang_22
         clang-analyzer
@@ -2549,22 +2597,25 @@ in
         compsize
         concessio
         constrict
-        contrast
         coulomb
         cramfsprogs
         crlfuzz
         cron
+        crow-translate
         cryptsetup
         cscope
         ctagsWrapped
         cups-pk-helper
         cups-printers
         curtail
+        cve-bin-tool
         cyclonedx-cli
         cyclonedx-python
         d-spy
         daemon
         darktable
+        darling-dmg
+        davfs2
         dbeaver-bin # Disabling Theming Allows to Use GTK Theme
         dconf-editor
         dconf2nix
@@ -2572,16 +2623,17 @@ in
         ddrescueview
         dduper
         delineate
-        deluge-gtk
         desktop-file-utils
-        dialect
         diffoci
         dig
+        digikam
         dippi
         dislocker
+        disorderfs
         dive
         dmg2img
         dmidecode
+        dnsrecon
         door-knocker
         dosfstools
         dot2tex
@@ -2592,12 +2644,12 @@ in
         efibootmgr
         efivar
         egypt
-        elastic
         electron-mail
         elf-dissector
         eloquent
         emblem
         enumerepo
+        envfs
         erofs-utils
         esptool
         etherape
@@ -2617,7 +2669,6 @@ in
         fh
         field-monitor
         file
-        file-roller
         fileinfo
         filen-cli
         filen-desktop
@@ -2625,17 +2676,19 @@ in
         flake-checker
         flare-floss
         flawz
+        flightgear
         flutter
         foliate
         font-manager
         fontfor
         fontforge-gtk
-        footage
         fork-cleaner
         freac
         freecad
         freerouting
         fritzing
+        fuse-overlayfs
+        fuse3
         fwupd-efi
         gamepad-mirror
         gawd
@@ -2663,65 +2716,39 @@ in
         github-distributed-owners
         gitlogue
         glib
-        gnome-autoar
-        gnome-backgrounds
-        gnome-bluetooth
-        gnome-calculator
-        gnome-calendar
-        gnome-characters
-        gnome-clocks
-        gnome-console
-        gnome-contacts
-        gnome-control-center
-        gnome-decoder
-        gnome-epub-thumbnailer
-        gnome-extensions-cli
         gnome-firmware
         gnome-frog
-        gnome-graphs
-        gnome-keysign
-        gnome-logs
-        gnome-mahjongg
         gnome-multi-writer
-        gnome-nettool
-        gnome-network-displays
-        gnome-podcasts
-        gnome-power-manager
-        gnome-session-ctl
-        gnome-tecla
-        gnome-tweaks
-        gnome-video-effects
-        gnome-weather
-        gnome.nixos-gsettings-overrides
         gnugrep
         gnumake
         gnused
         gnutar
         go2tv
         google-lighthouse
-        gopeed
         gource
+        gphoto2fs
         gpredict
         gpu-viewer
         graphviz
         greaseweazle
         groovy
-        gsmartcontrol
         gtk-frdp
         gtk-vnc
         gtkhash
-        gucharmap
         guestfs-tools
         gzip
         halftone
         hashes
         hdparm
+        heaptrack
         helvum
         hfsprogs
+        hfsutils
         hieroglyphic
         horizon-eda
         host
         hstsparser
+        httpdirfs
         hw-probe
         hydra-check
         i2c-tools
@@ -2730,7 +2757,6 @@ in
         iftop
         ifuse
         imhex
-        impression
         inetutils
         inkcut
         inkscape-with-extensions
@@ -2741,7 +2767,7 @@ in
         jmol
         jstest-gtk
         jxrlib
-        kdePackages.kcachegrind
+        kdiff3
         kernel-hardening-checker
         kernelshark
         killall
@@ -2749,10 +2775,14 @@ in
         kmod
         kotlin
         krapslog
+        krename
+        krita
+        krita-plugin-gmic
         kubectl
         kubernetes-controller-tools
         kubescape
         kubeshark
+        labplot
         lenspect
         letterpress
         libaom
@@ -2778,18 +2808,14 @@ in
         lld_22
         llmfit
         llvm_22
-        lock
         logtop
         lorem
-        loupe
         lsb-release
         lshw
         lsof
         lsscsi
-        luminance
         lvm2
         lynis
-        lyrebird
         lyx
         lzham
         macchanger
@@ -2797,7 +2823,7 @@ in
         mapscii
         mdns-scanner
         megacmd
-        meld
+        mergerfs
         mermaid-cli
         mesa-demos
         meshlab
@@ -2811,12 +2837,12 @@ in
         mixxx
         monkeys-audio
         morphosis
+        mousam
+        mp3fs
         mslicer
         mt-st
         mtools
         mysqltuner
-        nautilus
-        nautilus-python
         nethogs
         netpeek
         newelle
@@ -2831,7 +2857,6 @@ in
         nixd
         nixfmt
         nixmate
-        nixos-artwork.wallpapers.gnome-dark
         nixoscope
         nixpkgs-reviewFull
         nmap
@@ -2840,7 +2865,6 @@ in
         ntfs2btrfs
         ntfs3g
         ntfsprogs-plus
-        nucleus
         numactl
         numatop
         nurl
@@ -2848,6 +2872,7 @@ in
         obexftp
         oha
         onionshare-gui
+        openafs
         openai-whisper
         openapv
         opencore-amr
@@ -2862,7 +2887,6 @@ in
         paleta
         pana
         paper-clip
-        papers
         parallel-full
         parted
         pbzx
@@ -2877,9 +2901,8 @@ in
         pgread
         picard
         picard-tools
-        pinta
-        pitivi
         pkg-config
+        plasmaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.rc2nix # From plasmaManagerFlake
         platformio
         play
         podman-compose
@@ -2901,6 +2924,7 @@ in
         protonup-qt
         ps
         psmisc
+        qalculate-gtk
         qemu-user
         qemu-utils
         qr-backup
@@ -2911,8 +2935,6 @@ in
         radare2
         raider
         raindropio # From config.nixpkgs.overlays
-        refine
-        resources
         rp-pppoe
         rpi-imager
         rpmextract
@@ -2941,7 +2963,7 @@ in
         sherlock
         shfmt
         shortwave
-        simple-scan
+        simple-mtpfs
         sipvicious
         sleuthkit
         sloc
@@ -2954,8 +2976,13 @@ in
         spectre-meltdown-checker
         speedtest
         spytrap-adb
+        squashfsTools
+        squashfuse
         srain
+        sshfs
+        sshfs-fuse
         sslscan
+        stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
         stenc
@@ -2963,13 +2990,12 @@ in
         strace-analyzer
         streamlit
         subfinder
-        subtitleeditor
+        subtitleedit # Waiting for Version 5
         svt-av1
         switcheroo
         syft
         symlinks
-        systemctl-tui
-        szyszka
+        systemdgenie
         tauno-monitor
         telegraph
         teleprompter
@@ -2995,6 +3021,7 @@ in
         unhide
         unhide-gui
         uni2ascii
+        unionfs-fuse
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
@@ -3040,7 +3067,6 @@ in
         xfstests
         xhost
         xoscope
-        xscreenruler
         xvidcore
         yara-x
         yuview
@@ -3181,10 +3207,6 @@ in
           })
         )
 
-        (gparted-full.override {
-          withAllTools = true;
-        })
-
         (guvcview.override {
           pulseaudioSupport = true;
           useQt = false;
@@ -3218,6 +3240,12 @@ in
           withOpenssl = true;
           withReadline = true;
           withSqlite = true;
+        })
+
+        (qbittorrent.override {
+          guiSupport = true;
+          trackerSearch = true;
+          webuiSupport = true;
         })
 
         (sdrpp.override {
@@ -3319,13 +3347,13 @@ in
 
       ++ (with gst_all_1; [
         (gst-libav.override {
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
         })
 
         (gst-plugins-bad.override {
           ajaSupport = true;
           bluezSupport = true;
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
           enableGplPlugins = true;
           enableZbar = true;
           guiSupport = true;
@@ -3339,12 +3367,12 @@ in
         (gst-plugins-base.override {
           enableAlsa = true;
           enableCdparanoia = true;
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
           enableWayland = true;
         })
 
         (gst-plugins-good.override {
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
           enableJack = true;
           enableWayland = true;
           gtkSupport = true;
@@ -3352,16 +3380,249 @@ in
         })
 
         (gst-plugins-ugly.override {
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
           enableGplPlugins = true;
         })
 
         (gstreamer.override {
-          enableDocumentation = true;
+          enableDocumentation = config.documentation.enable;
         })
       ])
 
+      ++ (with kdePackages; [
+        accounts-qml-module
+        accounts-qt
+        applet-window-buttons6
+        appstream-qt
+        ark
+        audiocd-kio
+        baloo
+        baloo-widgets
+        bluedevil
+        bluez-qt
+        colord-kde
+        discover
+        dolphin
+        dolphin-plugins
+        drkonqi
+        dynamic-workspaces
+        ffmpegthumbs
+        filelight
+        frameworkintegration
+        gwenview
+        kaccounts-integration
+        kaccounts-providers
+        kactivitymanagerd
+        kalgebra
+        kalzium
+        kamera
+        karchive
+        kauth
+        kbookmarks
+        kcachegrind
+        kcharselect
+        kclock
+        kcmutils
+        kcodecs
+        kcolorchooser
+        kcolorpicker
+        kcolorscheme
+        kcompletion
+        kconfig
+        kconfigwidgets
+        kcoreaddons
+        kcrash
+        kcron
+        kdav
+        kdbusaddons
+        kde-cli-tools
+        kde-gtk-config
+        kde-inotify-survey
+        kdebugsettings
+        kdecoration
+        kded
+        kdegraphics-mobipocket
+        kdegraphics-thumbnailers
+        kdenetwork-filesharing
+        kdenlive
+        kdeplasma-addons
+        kdesu
+        kdiagram
+        kdialog
+        kdnssd
+        kdsoap
+        kdsoap-ws-discovery-client
+        keditbookmarks
+        kfilemetadata
+        kfind
+        kgamma
+        kget
+        kglobalaccel
+        kglobalacceld
+        kguiaddons
+        khelpcenter
+        kholidays
+        ki18n
+        kiconthemes
+        kidentitymanagement
+        kidletime
+        kimageannotator
+        kimageformats
+        kimagemapeditor
+        kinfocenter
+        kio
+        kio-admin
+        kio-extras
+        kio-extras-kf5
+        kio-fuse
+        kio-gdrive
+        kio-zeroconf
+        kirigami
+        kirigami-addons
+        kitemmodels
+        kitemviews
+        kjobwidgets
+        kjournald
+        kleopatra
+        kmag
+        kmahjongg
+        kmenuedit
+        kmime
+        kmousetool
+        kmouth
+        knewstuff
+        knighttime
+        knotifications
+        knotifyconfig
+        kontrast
+        kpackage
+        kparts
+        kpipewire
+        kpkpass
+        kplotting
+        kpmcore
+        kpty
+        krdp
+        krfb
+        krohnkite
+        kruler
+        krunner
+        ksanecore
+        kscreen
+        kscreenlocker
+        kservice
+        kshisen
+        ksshaskpass
+        kstatusnotifieritem
+        ksvg
+        ksystemlog
+        ksystemstats
+        kubrick
+        kunifiedpush
+        kunitconversion
+        kwallet
+        kwallet-pam
+        kwalletmanager
+        kwayland
+        kwayland-integration
+        kwidgetsaddons
+        kwin
+        kwindowsystem
+        kxmlgui
+        kzones
+        layer-shell-qt
+        libgravatar
+        libiodata
+        libkcddb
+        libkdcraw
+        libkexiv2
+        libkgapi
+        libkleo
+        libkmahjongg
+        libksane
+        libkscreen
+        libksysguard
+        libktorrent
+        libplasma
+        libqaccessibilityclient
+        marble
+        mimetreeparser
+        mlt
+        modemmanager-qt
+        networkmanager-qt
+        okular
+        packagekit-qt
+        plasma-activities
+        plasma-activities-stats
+        plasma-browser-integration
+        plasma-disks
+        plasma-firewall
+        plasma-integration
+        plasma-keyboard
+        plasma-nm
+        plasma-systemmonitor
+        plasma-thunderbolt
+        plasma-vault
+        plasma-wayland-protocols
+        plasma-workspace
+        plasma-workspace-wallpapers
+        plymouth-kcm
+        polkit-kde-agent-1
+        polkit-qt-1
+        poppler
+        powerdevil
+        print-manager
+        qca
+        qhotkey
+        qrca
+        qt-color-widgets
+        qt6gtk2
+        qtbase
+        qtconnectivity
+        qtgraphs
+        qtimageformats
+        qtkeychain
+        qtlocation
+        qtmultimedia
+        qtnetworkauth
+        qtpositioning
+        qtremoteobjects
+        qtsensors
+        qtserialbus
+        qtserialport
+        qtshadertools
+        qtsvg
+        qttools
+        qttranslations
+        qtutilities
+        qtvirtualkeyboard
+        qtwayland
+        qtwebengine
+        qtwebsockets
+        qtwebview
+        quazip
+        qxlsx
+        signon-kwallet-extension
+        signond
+        skanpage
+        solid
+        sonnet
+        spectacle
+        step
+        svgpart
+        syntax-highlighting
+        systemsettings
+        taglib
+        threadweaver
+        timed
+        wallpaper-engine-plugin
+        wayland
+        wayland-protocols
+        wayqt
+      ])
+
       ++ (with linphonePackages; [
+        # linphone-desktop # FIXME: Build Failure
         bc-decaf
         bc-ispell
         bc-mbedtls
@@ -3372,9 +3633,7 @@ in
         belle-sip
         belr
         bzrtp
-        liblinphone
         lime
-        linphone-desktop
         mediastreamer2
         msopenh264
         ortp
@@ -3399,33 +3658,16 @@ in
         xxd
       ]);
 
-    gnome.excludePackages = with pkgs; [
-      decibels
-      epiphany
-      gnome-connections
-      gnome-font-viewer
-      gnome-maps
-      gnome-music
-      gnome-system-monitor
-      gnome-text-editor
-      gnome-tour
-      showtime
-      snapshot
-      yelp
+    plasma6.excludePackages = with pkgs.kdePackages; [
+      elisa
+      kate
     ];
 
-    wordlist = {
-      enable = true;
-      lists = {
-        WORDLISTS = [
-          "${pkgs.rockyou}/share/wordlists/rockyou.txt"
-          # (builtins.toFile "extra-wordlist" '''')
-        ];
-      };
-    };
+    wordlist.enable = false;
 
     pathsToLink = [
       "/share/applications"
+      "/share/i18n"
       "/share/xdg-desktop-portal"
     ];
 
@@ -3445,6 +3687,8 @@ in
     };
 
     sessionVariables = {
+      ADW_DISABLE_PORTAL = 1;
+
       NIXOS_OZONE_WL = 1;
 
       CHROME_EXECUTABLE = "brave";
@@ -3487,21 +3731,18 @@ in
 
       settings = {
         default = [
-          "org.gnome.Console.desktop"
+          "org.kde.konsole.desktop"
         ];
       };
     };
 
     portal = {
       enable = true;
-      extraPortals = [
-        config.home-manager.users.normal.services.gnome-keyring.package
-        pkgs.xdg-desktop-portal-gnome
+      extraPortals = with pkgs; [
+        kdePackages.xdg-desktop-portal-kde
       ];
 
-      configPackages = with pkgs; [
-        gnome-session
-      ];
+      # configPackages = with pkgs; [ ];
 
       xdgOpenUsePortal = true;
     };
@@ -3513,7 +3754,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "nautilus.desktop";
+        "inode/directory" = "org.kde.dolphin.desktop";
 
         "text/1d-interleaved-parityfec" = "codium.desktop";
         "text/cache-manifest" = "codium.desktop";
@@ -3613,91 +3854,91 @@ in
         "text/xml" = "codium.desktop";
         "text/xml-external-parsed-entity" = "codium.desktop";
 
-        "image/aces" = "org.gnome.Loupe.desktop";
-        "image/apng" = "org.gnome.Loupe.desktop";
-        "image/avci" = "org.gnome.Loupe.desktop";
-        "image/avcs" = "org.gnome.Loupe.desktop";
-        "image/avif" = "org.gnome.Loupe.desktop";
-        "image/bmp" = "org.gnome.Loupe.desktop";
-        "image/cgm" = "org.gnome.Loupe.desktop";
-        "image/dicom-rle" = "org.gnome.Loupe.desktop";
-        "image/dpx" = "org.gnome.Loupe.desktop";
-        "image/emf" = "org.gnome.Loupe.desktop";
-        "image/fits" = "org.gnome.Loupe.desktop";
-        "image/g3fax" = "org.gnome.Loupe.desktop";
-        "image/gif" = "org.gnome.Loupe.desktop";
-        "image/heic-sequence" = "org.gnome.Loupe.desktop";
-        "image/heic" = "org.gnome.Loupe.desktop";
-        "image/heif-sequence" = "org.gnome.Loupe.desktop";
-        "image/heif" = "org.gnome.Loupe.desktop";
-        "image/hej2k" = "org.gnome.Loupe.desktop";
-        "image/hsj2" = "org.gnome.Loupe.desktop";
-        "image/ief" = "org.gnome.Loupe.desktop";
-        "image/j2c" = "org.gnome.Loupe.desktop";
-        "image/jaii" = "org.gnome.Loupe.desktop";
-        "image/jais" = "org.gnome.Loupe.desktop";
-        "image/jls" = "org.gnome.Loupe.desktop";
-        "image/jp2" = "org.gnome.Loupe.desktop";
-        "image/jpeg" = "org.gnome.Loupe.desktop";
-        "image/jph" = "org.gnome.Loupe.desktop";
-        "image/jphc" = "org.gnome.Loupe.desktop";
-        "image/jpm" = "org.gnome.Loupe.desktop";
-        "image/jpx" = "org.gnome.Loupe.desktop";
-        "image/jxl" = "org.gnome.Loupe.desktop";
-        "image/jxr" = "org.gnome.Loupe.desktop";
-        "image/jxrA" = "org.gnome.Loupe.desktop";
-        "image/jxrS" = "org.gnome.Loupe.desktop";
-        "image/jxs" = "org.gnome.Loupe.desktop";
-        "image/jxsc" = "org.gnome.Loupe.desktop";
-        "image/jxsi" = "org.gnome.Loupe.desktop";
-        "image/jxss" = "org.gnome.Loupe.desktop";
-        "image/ktx" = "org.gnome.Loupe.desktop";
-        "image/ktx2" = "org.gnome.Loupe.desktop";
-        "image/naplps" = "org.gnome.Loupe.desktop";
-        "image/png" = "org.gnome.Loupe.desktop";
-        "image/prs.btif" = "org.gnome.Loupe.desktop";
-        "image/prs.pti" = "org.gnome.Loupe.desktop";
-        "image/pwg-raster" = "org.gnome.Loupe.desktop";
-        "image/svg+xml" = "org.gnome.Loupe.desktop";
-        "image/t38" = "org.gnome.Loupe.desktop";
-        "image/tiff-fx" = "org.gnome.Loupe.desktop";
-        "image/tiff" = "org.gnome.Loupe.desktop";
-        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
-        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
-        "image/vnd.clip" = "org.gnome.Loupe.desktop";
-        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
-        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
-        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
-        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
-        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
-        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
-        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
-        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.fst" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
-        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
-        "image/vnd.mix" = "org.gnome.Loupe.desktop";
-        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
-        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
-        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
-        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
-        "image/vnd.svf" = "org.gnome.Loupe.desktop";
-        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
-        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
-        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
-        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
-        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
-        "image/webp" = "org.gnome.Loupe.desktop";
-        "image/wmf" = "org.gnome.Loupe.desktop";
-        "image/x-emf" = "org.gnome.Loupe.desktop";
-        "image/x-wmf" = "org.gnome.Loupe.desktop";
+        "image/aces" = "org.kde.gwenview.desktop";
+        "image/apng" = "org.kde.gwenview.desktop";
+        "image/avci" = "org.kde.gwenview.desktop";
+        "image/avcs" = "org.kde.gwenview.desktop";
+        "image/avif" = "org.kde.gwenview.desktop";
+        "image/bmp" = "org.kde.gwenview.desktop";
+        "image/cgm" = "org.kde.gwenview.desktop";
+        "image/dicom-rle" = "org.kde.gwenview.desktop";
+        "image/dpx" = "org.kde.gwenview.desktop";
+        "image/emf" = "org.kde.gwenview.desktop";
+        "image/fits" = "org.kde.gwenview.desktop";
+        "image/g3fax" = "org.kde.gwenview.desktop";
+        "image/gif" = "org.kde.gwenview.desktop";
+        "image/heic-sequence" = "org.kde.gwenview.desktop";
+        "image/heic" = "org.kde.gwenview.desktop";
+        "image/heif-sequence" = "org.kde.gwenview.desktop";
+        "image/heif" = "org.kde.gwenview.desktop";
+        "image/hej2k" = "org.kde.gwenview.desktop";
+        "image/hsj2" = "org.kde.gwenview.desktop";
+        "image/ief" = "org.kde.gwenview.desktop";
+        "image/j2c" = "org.kde.gwenview.desktop";
+        "image/jaii" = "org.kde.gwenview.desktop";
+        "image/jais" = "org.kde.gwenview.desktop";
+        "image/jls" = "org.kde.gwenview.desktop";
+        "image/jp2" = "org.kde.gwenview.desktop";
+        "image/jpeg" = "org.kde.gwenview.desktop";
+        "image/jph" = "org.kde.gwenview.desktop";
+        "image/jphc" = "org.kde.gwenview.desktop";
+        "image/jpm" = "org.kde.gwenview.desktop";
+        "image/jpx" = "org.kde.gwenview.desktop";
+        "image/jxl" = "org.kde.gwenview.desktop";
+        "image/jxr" = "org.kde.gwenview.desktop";
+        "image/jxrA" = "org.kde.gwenview.desktop";
+        "image/jxrS" = "org.kde.gwenview.desktop";
+        "image/jxs" = "org.kde.gwenview.desktop";
+        "image/jxsc" = "org.kde.gwenview.desktop";
+        "image/jxsi" = "org.kde.gwenview.desktop";
+        "image/jxss" = "org.kde.gwenview.desktop";
+        "image/ktx" = "org.kde.gwenview.desktop";
+        "image/ktx2" = "org.kde.gwenview.desktop";
+        "image/naplps" = "org.kde.gwenview.desktop";
+        "image/png" = "org.kde.gwenview.desktop";
+        "image/prs.btif" = "org.kde.gwenview.desktop";
+        "image/prs.pti" = "org.kde.gwenview.desktop";
+        "image/pwg-raster" = "org.kde.gwenview.desktop";
+        "image/svg+xml" = "org.kde.gwenview.desktop";
+        "image/t38" = "org.kde.gwenview.desktop";
+        "image/tiff-fx" = "org.kde.gwenview.desktop";
+        "image/tiff" = "org.kde.gwenview.desktop";
+        "image/vnd.adobe.photoshop" = "org.kde.gwenview.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.kde.gwenview.desktop";
+        "image/vnd.blockfact.facti" = "org.kde.gwenview.desktop";
+        "image/vnd.clip" = "org.kde.gwenview.desktop";
+        "image/vnd.cns.inf2" = "org.kde.gwenview.desktop";
+        "image/vnd.dece.graphic" = "org.kde.gwenview.desktop";
+        "image/vnd.djvu" = "org.kde.gwenview.desktop";
+        "image/vnd.dvb.subtitle" = "org.kde.gwenview.desktop";
+        "image/vnd.dwg" = "org.kde.gwenview.desktop";
+        "image/vnd.dxf" = "org.kde.gwenview.desktop";
+        "image/vnd.fastbidsheet" = "org.kde.gwenview.desktop";
+        "image/vnd.fpx" = "org.kde.gwenview.desktop";
+        "image/vnd.fst" = "org.kde.gwenview.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.kde.gwenview.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.kde.gwenview.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.kde.gwenview.desktop";
+        "image/vnd.microsoft.icon" = "org.kde.gwenview.desktop";
+        "image/vnd.mix" = "org.kde.gwenview.desktop";
+        "image/vnd.mozilla.apng" = "org.kde.gwenview.desktop";
+        "image/vnd.ms-modi" = "org.kde.gwenview.desktop";
+        "image/vnd.net-fpx" = "org.kde.gwenview.desktop";
+        "image/vnd.pco.b16" = "org.kde.gwenview.desktop";
+        "image/vnd.radiance" = "org.kde.gwenview.desktop";
+        "image/vnd.sealed.png" = "org.kde.gwenview.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.kde.gwenview.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.kde.gwenview.desktop";
+        "image/vnd.svf" = "org.kde.gwenview.desktop";
+        "image/vnd.tencent.tap" = "org.kde.gwenview.desktop";
+        "image/vnd.valve.source.texture" = "org.kde.gwenview.desktop";
+        "image/vnd.wap.wbmp" = "org.kde.gwenview.desktop";
+        "image/vnd.xiff" = "org.kde.gwenview.desktop";
+        "image/vnd.zbrush.pcx" = "org.kde.gwenview.desktop";
+        "image/webp" = "org.kde.gwenview.desktop";
+        "image/wmf" = "org.kde.gwenview.desktop";
+        "image/x-emf" = "org.kde.gwenview.desktop";
+        "image/x-wmf" = "org.kde.gwenview.desktop";
 
         "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
         "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
@@ -3980,19 +4221,19 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.template" =
           "onlyoffice-desktopeditors.desktop"; # .potx
 
-        "application/pdf" = "org.gnome.Papers.desktop";
+        "application/pdf" = "org.kde.okular.desktop";
 
         "model/stl" = "io.github.nokse22.Exhibit.desktop";
 
-        "application/gzip" = "org.gnome.FileRoller.desktop";
-        "application/vnd.rar" = "org.gnome.FileRoller.desktop";
-        "application/x-7z-compressed" = "org.gnome.FileRoller.desktop";
-        "application/x-arj" = "org.gnome.FileRoller.desktop";
-        "application/x-bzip2" = "org.gnome.FileRoller.desktop";
-        "application/x-gtar" = "org.gnome.FileRoller.desktop";
-        "application/x-rar-compressed " = "org.gnome.FileRoller.desktop"; # More Common Than "application/vnd.rar"
-        "application/x-tar" = "org.gnome.FileRoller.desktop";
-        "application/zip" = "org.gnome.FileRoller.desktop";
+        "application/gzip" = "org.kde.ark.desktop";
+        "application/vnd.rar" = "org.kde.ark.desktop";
+        "application/x-7z-compressed" = "org.kde.ark.desktop";
+        "application/x-arj" = "org.kde.ark.desktop";
+        "application/x-bzip2" = "org.kde.ark.desktop";
+        "application/x-gtar" = "org.kde.ark.desktop";
+        "application/x-rar-compressed " = "org.kde.ark.desktop"; # More Common Than "application/vnd.rar"
+        "application/x-tar" = "org.kde.ark.desktop";
+        "application/zip" = "org.kde.ark.desktop";
 
         "font/collection" = "com.github.FontManager.FontViewer.desktop";
         "font/otf" = "com.github.FontManager.FontViewer.desktop";
@@ -4001,8 +4242,8 @@ in
         "font/woff" = "com.github.FontManager.FontViewer.desktop";
         "font/woff2" = "com.github.FontManager.FontViewer.desktop";
 
-        "application/x-bittorrent" = "deluge.desktop";
-        "x-scheme-handler/magnet" = "deluge.desktop";
+        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
+        "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
@@ -4017,8 +4258,8 @@ in
   qt = {
     enable = true;
 
-    platformTheme = "gnome";
-    style = "adwaita-dark";
+    platformTheme = "kde";
+    style = "breeze";
   };
 
   documentation = {
@@ -4134,6 +4375,8 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
+      plasmaManagerFlake.homeModules.plasma-manager
+
       {
         _class = "homeManager";
 
@@ -4150,9 +4393,9 @@ in
           pointerCursor = {
             enable = true;
 
-            name = "Adwaita";
-            package = pkgs.adwaita-icon-theme;
-            size = builtins.floor (design_factor * 1.50); # 24
+            name = "Breeze_cursors";
+            package = pkgs.kdePackages.breeze;
+            size = builtins.floor (designFactor * 1.50); # 24
 
             gtk = {
               enable = true;
@@ -4341,7 +4584,7 @@ in
           enable = true;
 
           font = {
-            name = fontPreferences.name.sans_serif;
+            name = fontPreferences.name.sansSerif;
             package = fontPreferences.package;
             size = fontPreferences.size;
           };
@@ -4353,8 +4596,8 @@ in
           };
 
           iconTheme = {
-            name = "Adwaita";
-            package = pkgs.gnome-themes-extra;
+            name = "Breeze-dark";
+            package = pkgs.kdePackages.breeze;
           };
 
           cursorTheme = {
@@ -4447,37 +4690,28 @@ in
         qt = {
           enable = config.qt.enable;
 
-          platformTheme.name = "adwaita";
+          platformTheme.name = config.qt.platformTheme;
+          style.name = config.qt.style;
 
-          style = {
-            name = config.qt.style;
-            package = with pkgs; [
-              adwaita-qt6
-              adwaita-qt
-            ];
-          };
+          # kde.settings = { };
         };
 
         services = {
-          polkit-gnome = {
-            enable = true;
-            package = pkgs.polkit_gnome;
-          };
-
-          gnome-keyring = {
-            enable = config.services.gnome.gnome-keyring.enable;
-            package = pkgs.gnome-keyring;
-
-            components = [
-              "pkcs11"
-              "secrets"
-            ];
-          };
-
           ssh-agent.enable = !config.programs.gnupg.agent.enable;
+
+          kdeconnect = {
+            enable = config.programs.kdeconnect.enable;
+            package = pkgs.kdePackages.kdeconnect-kde;
+
+            indicator = false; # Redundant
+          };
         };
 
         programs = {
+          plasma = {
+            enable = true;
+          }; # From plasmaManagerFlake
+
           bash = {
             enable = true;
             package = pkgs.bashInteractive;
@@ -4590,72 +4824,6 @@ in
             package = config.programs.television.package;
 
             enableBashIntegration = config.programs.television.enableBashIntegration;
-          };
-
-          gnome-shell = {
-            enable = config.services.desktopManager.gnome.enable;
-
-            extensions = with pkgs.gnomeExtensions; [
-              {
-                package = user-themes;
-              }
-              {
-                package = appindicator;
-              }
-              {
-                package = bluetooth-battery-meter;
-              }
-              {
-                package = blur-my-shell;
-              }
-              {
-                package = clipboard-indicator;
-              }
-              {
-                package = desktop-cube;
-              }
-              {
-                package = display-configuration-switcher;
-              }
-              {
-                package = extra-reboot-options;
-              }
-              {
-                package = frequency-boost-switch;
-              }
-              {
-                package = gamemode-shell-extension;
-              }
-              {
-                package = gjs-osk;
-              }
-              {
-                package = places-status-indicator;
-              }
-              {
-                package = privacy-settings-menu;
-              }
-              {
-                package = sermon;
-              }
-              {
-                package = top-bar-organizer;
-              }
-              {
-                package = touchpad-switcher;
-              }
-              {
-                package = vitals;
-              }
-              {
-                package = wifi-qrcode;
-              }
-            ];
-
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
           };
 
           keychain.enable = !config.programs.gnupg.agent.enable;
@@ -4976,7 +5144,7 @@ in
           };
 
           info = {
-            enable = true;
+            enable = config.documentation.info.enable;
             package = pkgs.texinfoInteractive;
           };
         };
