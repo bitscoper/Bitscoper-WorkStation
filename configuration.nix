@@ -161,7 +161,7 @@ in
       # trusted-public-keys = [ ];
 
       cores = 0; # 0 = All
-      max-jobs = 1;
+      # max-jobs = 1;
     };
 
     gc.automatic = !config.programs.nh.enable;
@@ -192,7 +192,7 @@ in
       allowUnfree = true;
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        "ventoy-gtk3-1.1.12"
+        "ventoy-gtk3-1.1.17"
       ];
 
       android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
@@ -1206,7 +1206,32 @@ in
     ];
   };
 
+  time = {
+    hardwareClockInLocalTime = false;
+
+    timeZone = null;
+  };
+
   i18n = {
+    defaultCharset = "UTF-8";
+
+    localeCharsets = {
+      LC_ADDRESS = config.i18n.defaultCharset;
+      LC_COLLATE = config.i18n.defaultCharset;
+      LC_CTYPE = config.i18n.defaultCharset;
+      LC_IDENTIFICATION = config.i18n.defaultCharset;
+      LC_MEASUREMENT = config.i18n.defaultCharset;
+      LC_MESSAGES = config.i18n.defaultCharset;
+      LC_MONETARY = config.i18n.defaultCharset;
+      LC_NAME = config.i18n.defaultCharset;
+      LC_NUMERIC = config.i18n.defaultCharset;
+      LC_PAPER = config.i18n.defaultCharset;
+      LC_TELEPHONE = config.i18n.defaultCharset;
+      LC_TIME = config.i18n.defaultCharset;
+
+      LC_ALL = config.i18n.defaultCharset;
+    };
+
     defaultLocale = "en_US.UTF-8";
     extraLocales = "all";
 
@@ -1230,23 +1255,19 @@ in
     inputMethod = {
       enable = true;
 
-      type = "ibus";
-      ibus = {
-        engines = with pkgs; [
-          openbangla-keyboard
+      type = "fcitx5";
+      fcitx5 = {
+        addons = with pkgs; [
+          fcitx5-openbangla-keyboard
         ];
         waylandFrontend = true;
+
+        ignoreUserConfig = false;
       };
 
       enableGtk3 = true;
       enableGtk2 = true;
     };
-  };
-
-  time = {
-    hardwareClockInLocalTime = false;
-
-    timeZone = null;
   };
 
   virtualisation = {
@@ -2284,7 +2305,7 @@ in
             };
 
             "org/gnome/desktop/wm/preferences" = {
-              button-layout = "appmenu:maximize,close";
+              button-layout = "appmenu:minimize,maximize,close";
             };
 
             "org/gnome/desktop/privacy" = {
@@ -2507,9 +2528,12 @@ in
     systemPackages =
       with pkgs;
       [
+        # celestia # FIXME: Build Failure
         # dart # flutter adds the compatible version
+        # gearlever # FIXME: Build Failure
         # gnome-nettool # Not Found
         # lyto # FIXME: Build Failure
+        # metadata # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # soundconverter # FIXME: Build Failure
         aapt
@@ -2575,7 +2599,6 @@ in
         cartero
         cavasik
         cdrkit
-        celestia
         celt
         censor
         certbot-full
@@ -2626,7 +2649,6 @@ in
         desktop-file-utils
         diffoci
         dig
-        digikam
         dippi
         dislocker
         disorderfs
@@ -2695,7 +2717,6 @@ in
         gawk
         gcc
         gdb
-        gearlever
         genealogos-cli
         gerbolyze
         gh
@@ -2770,6 +2791,7 @@ in
         kdiff3
         kernel-hardening-checker
         kernelshark
+        kgeotag
         killall
         kind
         kmod
@@ -2802,7 +2824,6 @@ in
         libva-utils
         libvpx
         linux-exploit-suggester
-        linux-wifi-hotspot
         linuxConsoleTools
         livecaptions
         lld_22
@@ -2827,7 +2848,6 @@ in
         mermaid-cli
         mesa-demos
         meshlab
-        metadata
         metadata-cleaner
         metronome
         mfcuk
@@ -2890,7 +2910,6 @@ in
         parallel-full
         parted
         pbzx
-        pcb2gcode
         pciutils
         pdfarranger
         pe-bear
@@ -2915,7 +2934,6 @@ in
         profile-cleaner
         progress
         protocol
-        proton-authenticator
         proton-pass
         proton-pass-cli
         proton-vpn
@@ -2976,7 +2994,6 @@ in
         spectre-meltdown-checker
         speedtest
         spytrap-adb
-        squashfsTools
         squashfuse
         srain
         sshfs
@@ -3322,19 +3339,22 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
+      ++ config.home-manager.users.normal.programs.brave.nativeMessagingHosts
       ++ config.home-manager.users.normal.programs.lutris.extraPackages
+      ++ config.i18n.inputMethod.fcitx5.addons
+      ++ config.networking.networkmanager.plugins
       ++ config.programs.bat.extraPackages
+      ++ config.programs.nix-ld.libraries
       ++ config.programs.obs-studio.plugins
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.printing.drivers
       ++ config.services.udev.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
-      ++ config.virtualisation.podman.extraPackages
       ++ config.virtualisation.podman.extraRuntimes
+      ++ config.xdg.portal.configPackages
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
-        # wasm # Marked as Broken
         findcrypt
         ghidra-delinker-extension
         ghidra-firmware-utils
@@ -3406,6 +3426,8 @@ in
         dolphin-plugins
         drkonqi
         dynamic-workspaces
+        fcitx5-configtool
+        fcitx5-qt
         ffmpegthumbs
         filelight
         frameworkintegration
@@ -3520,7 +3542,6 @@ in
         kubrick
         kunifiedpush
         kunitconversion
-        kwallet
         kwallet-pam
         kwalletmanager
         kwayland
@@ -3554,7 +3575,6 @@ in
         packagekit-qt
         plasma-activities
         plasma-activities-stats
-        plasma-browser-integration
         plasma-disks
         plasma-firewall
         plasma-integration
@@ -3564,7 +3584,6 @@ in
         plasma-thunderbolt
         plasma-vault
         plasma-wayland-protocols
-        plasma-workspace
         plasma-workspace-wallpapers
         plymouth-kcm
         polkit-kde-agent-1
@@ -3619,24 +3638,6 @@ in
         wayland
         wayland-protocols
         wayqt
-      ])
-
-      ++ (with linphonePackages; [
-        # linphone-desktop # FIXME: Build Failure
-        bc-decaf
-        bc-ispell
-        bc-mbedtls
-        bc-soci
-        bctoolbox
-        bcunit
-        belcard
-        belle-sip
-        belr
-        bzrtp
-        lime
-        mediastreamer2
-        msopenh264
-        ortp
       ])
 
       ++ (with unixtools; [
@@ -3738,11 +3739,14 @@ in
 
     portal = {
       enable = true;
-      extraPortals = with pkgs; [
-        kdePackages.xdg-desktop-portal-kde
+      extraPortals = with pkgs.kdePackages; [
+        kwallet
+        xdg-desktop-portal-kde
       ];
 
-      # configPackages = with pkgs; [ ];
+      configPackages = with pkgs; [
+        kdePackages.plasma-workspace
+      ];
 
       xdgOpenUsePortal = true;
     };
@@ -4422,6 +4426,22 @@ in
           stateVersion = config.system.stateVersion;
         };
 
+        i18n = {
+          inputMethod = {
+            enable = config.i18n.inputMethod.enable;
+
+            type = config.i18n.inputMethod.type;
+            fcitx5 = {
+              fcitx5-with-addons = pkgs.kdePackages.fcitx5-with-addons;
+              addons = config.i18n.inputMethod.fcitx5.addons;
+              waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
+
+              systemd.enable = true;
+              ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
+            };
+          };
+        };
+
         xdg = {
           desktopEntries = {
             cpu-x =
@@ -5055,7 +5075,9 @@ in
           };
 
           brave = {
-            # nativeMessagingHosts = with pkgs; [ ];
+            nativeMessagingHosts = with pkgs; [
+              kdePackages.plasma-browser-integration
+            ];
           };
 
           kubecolor = {
@@ -5101,9 +5123,6 @@ in
               ++ [
                 config.home-manager.users.normal.programs.mangohud.package
               ];
-
-            # winePackages = with pkgs; [ ];
-            # protonPackages = with pkgs; [ ];
           };
 
           yt-dlp = {
