@@ -109,8 +109,6 @@ let
   tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
 
-  designFactor = 16;
-
   fontPreferences = {
     package = pkgs.nerd-fonts.noto;
 
@@ -121,7 +119,7 @@ let
       emoji = "Noto Color Emoji";
     };
 
-    size = builtins.floor (designFactor * 0.75); # 12
+    size = 10;
   };
 in
 {
@@ -2295,21 +2293,26 @@ in
 
     dconf = {
       enable = true;
+
       profiles.user.databases = [
         {
-          lockAll = true;
+          lockAll = false;
 
           settings = {
             "org/gnome/desktop/interface" = {
               gtk-enable-primary-paste = true;
             };
 
-            "org/gnome/desktop/wm/preferences" = {
-              button-layout = "appmenu:minimize,maximize,close";
-            };
-
             "org/gnome/desktop/privacy" = {
               remember-recent-files = false;
+            };
+
+            "org/gnome/desktop/sound" = {
+              theme-name = "ocean";
+            };
+
+            "org/gnome/desktop/wm/preferences" = {
+              button-layout = "appmenu:minimize,maximize,close";
             };
 
             "org/gtk/settings/file-chooser" = {
@@ -3420,6 +3423,7 @@ in
         baloo-widgets
         bluedevil
         bluez-qt
+        breeze
         colord-kde
         discover
         dolphin
@@ -3571,6 +3575,7 @@ in
         mlt
         modemmanager-qt
         networkmanager-qt
+        ocean-sound-theme
         okular
         packagekit-qt
         plasma-activities
@@ -4263,7 +4268,7 @@ in
     enable = true;
 
     platformTheme = "kde";
-    style = "breeze";
+    style = null; # Set in KDE Plasma Instead
   };
 
   documentation = {
@@ -4397,9 +4402,9 @@ in
           pointerCursor = {
             enable = true;
 
-            name = "Breeze_cursors";
-            package = pkgs.kdePackages.breeze;
-            size = builtins.floor (designFactor * 1.50); # 24
+            name = "Bibata-Modern-Classic";
+            package = pkgs.bibata-cursors;
+            size = 20;
 
             gtk = {
               enable = true;
@@ -4611,13 +4616,17 @@ in
 
           colorScheme = "dark";
           theme = {
-            name = "Adwaita";
-            package = pkgs.gnome-themes-extra;
+            name = "Breeze-Dark";
+            package = pkgs.kdePackages.breeze-gtk;
           };
 
           iconTheme = {
-            name = "Breeze-dark";
-            package = pkgs.kdePackages.breeze;
+            name = "Papirus-Dark";
+            package = (
+              pkgs.papirus-icon-theme.override {
+                color = "black";
+              }
+            );
           };
 
           cursorTheme = {
@@ -4730,6 +4739,60 @@ in
         programs = {
           plasma = {
             enable = true;
+            overrideConfig = false;
+
+            fonts = {
+              general = {
+                family = fontPreferences.name.sansSerif;
+                pointSize = fontPreferences.size;
+              };
+
+              windowTitle = {
+                family = fontPreferences.name.sansSerif;
+                pointSize = fontPreferences.size;
+              };
+
+              fixedWidth = {
+                family = fontPreferences.name.mono;
+                pointSize = fontPreferences.size;
+              };
+            };
+
+            workspace = {
+              lookAndFeel = "org.kde.breezedark.desktop";
+
+              iconTheme = config.home-manager.users.normal.gtk.iconTheme.name;
+
+              cursor = {
+                theme = config.home-manager.users.normal.home.pointerCursor.name;
+                size = config.home-manager.users.normal.home.pointerCursor.size;
+              };
+            };
+
+            configFile = {
+              systemsettingsrc = {
+                systemsettings_sidebar_mode = {
+                  HighlightNonDefaultSettings = true;
+                };
+              };
+
+              kdeglobals = {
+                Sounds = {
+                  Theme = "ocean";
+                };
+              };
+
+              ksplashrc = {
+                KSplash = {
+                  Engine = "none";
+                  Theme = "None";
+                };
+              };
+            }; # Relative to $XDG_CONFIG_HOME
+
+            # dataFile = { }; # Relative to $XDG_DATA_HOME
+
+            # file = { }; # Relative to $HOME
           }; # From plasmaManagerFlake
 
           bash = {
