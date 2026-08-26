@@ -46,6 +46,7 @@ let
     platformToolsVersion = "latest";
     buildToolsVersions = [
       "35.0.0"
+      "36.0.0"
       "36.1.0"
       "37.0.0"
       "latest"
@@ -2128,6 +2129,7 @@ in
           libsecret
           llvmPackages.stdenv.cc.cc.lib
           sqlite
+          stdenv.cc
           stdenv.cc.cc.lib
         ]);
     };
@@ -2417,19 +2419,19 @@ in
       enableVirtualCamera = true;
 
       plugins = with pkgs.obs-studio-plugins; [
+        # obs-move-transition # FIXME: Build Failure
+        # obs-source-switcher # FIXME: Build Failure
         obs-3d-effect
         obs-backgroundremoval
         obs-composite-blur
         obs-gradient-source
         obs-gstreamer
-        obs-move-transition
         obs-multi-rtmp
         obs-mute-filter
         obs-pipewire-audio-capture
         obs-scale-to-sound
         obs-source-clone
         obs-source-record
-        obs-source-switcher
         obs-text-pthread
         obs-transition-table
         obs-vaapi
@@ -2789,6 +2791,7 @@ in
         iplookup-gtk
         jfsutils
         jmol
+        jq
         jstest-gtk
         jxrlib
         kdiff3
@@ -2964,7 +2967,6 @@ in
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
         runme
-        rustc
         satdump
         satellite
         sbc
@@ -3002,6 +3004,7 @@ in
         sshfs
         sshfs-fuse
         sslscan
+        standardnotes
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
