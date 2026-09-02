@@ -20,7 +20,7 @@ let
 
   grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  plasmaManagerFlake = builtins.getFlake "github:nix-community/plasma-manager/trunk";
+  catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
   androidComposition = pkgs.androidenv.composeAndroidPackages {
@@ -93,6 +93,19 @@ let
     includeSources = false;
   };
 
+  fontPreferences = {
+    package = pkgs.nerd-fonts.noto;
+
+    name = {
+      monospace = "NotoMono Nerd Font Mono";
+      sansSerif = "NotoSans Nerd Font";
+      serif = "NotoSerif Nerd Font";
+      emoji = "Noto Color Emoji";
+    };
+
+    size = 10;
+  };
+
   tlsCertificateFiles =
     pkgs.runCommand "generate_tls_certificate"
       {
@@ -110,24 +123,43 @@ let
   tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
 
-  fontPreferences = {
-    package = pkgs.nerd-fonts.noto;
-
-    name = {
-      mono = "NotoMono Nerd Font Mono";
-      sansSerif = "NotoSans Nerd Font";
-      serif = "NotoSerif Nerd Font";
-      emoji = "Noto Color Emoji";
-    };
-
-    size = 10;
+  bgrtBmp = builtins.path {
+    path = "/sys/firmware/acpi/bgrt/image";
+    name = "bgrt.bmp";
   };
+
+  bgrtPng =
+    pkgs.runCommand "BGRT.png"
+      {
+        nativeBuildInputs = [
+          pkgs.imagemagick
+        ];
+      }
+      ''
+        magick BMP:${bgrtBmp} \
+          -fuzz 16% \
+          -transparent black \
+          -background "#1e1e2e" \
+          -resize 1920x1080\> \
+          -gravity center \
+          -extent 1920x1080 \
+          $out
+      '';
+  # It assumes that the background of BGRT is black and that 16% fuzz is sufficient.
+  # Catppuccin Mocha: "Base" #1e1e2e
+
+  transparent_1x1_png_file = builtins.fetchurl {
+    url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
+  };
+
+  designFactor = 16;
 in
 {
   _class = "nixos";
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
+    catppuccinThemeFlake.nixosModules.catppuccin
 
     ./hardware-and-user-configuration.nix
   ];
@@ -198,6 +230,39 @@ in
     };
 
     overlays = [
+      (final: previous: {
+        catppuccin-grub =
+          (previous.catppuccin-grub.override {
+            flavor = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                cp ${bgrtPng} $out/background.png
+
+                rm -f $out/logo.png
+                sed -i '/# Logo image/,+5d' $out/theme.txt
+              ''; # installPhase Runs postInstall
+            });
+      })
+
+      (final: previous: {
+        catppuccin-plymouth =
+          (previous.catppuccin-plymouth.override {
+            variant = config.catppuccin.flavor;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
+                mkdir -p $THEME_DIRECTORY
+
+                cp ${bgrtPng} $THEME_DIRECTORY/background.png
+
+                sed -i 's/VerticalAlignment=.*/VerticalAlignment=.80/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
+                sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.80/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
+              ''; # installPhase Runs postInstall
+            });
+      })
+
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
@@ -289,8 +354,8 @@ in
           fonts = config.fonts.packages;
         in
         ''
-          FONTDIR="/var/lib/onlyoffice-fonts/"
-          mkdir -p "$FONTDIR"
+          DIRECTORY="/var/lib/onlyoffice-fonts/"
+          mkdir -p "$DIRECTORY"
 
           ${pkgs.lib.concatMapStrings (package: ''
             if [ -d "${package}/share/fonts" ]; then
@@ -302,11 +367,11 @@ in
                 -name "*.pfb" -o \
                 -name "*.ttc" -o \
                 -name "*.ttf" \
-              \) -exec cp -f {} "$FONTDIR" \;
+              \) -exec cp -f {} "$DIRECTORY" \;
             fi
           '') fonts}
 
-          chmod -R 777 "$FONTDIR"
+          chmod -R 777 "$DIRECTORY"
         '';
     };
 
@@ -321,62 +386,39 @@ in
     loader = {
       efi.canTouchEfiVariables = true;
 
-      grub =
-        let
-          bgrtBmp = builtins.path {
-            path = "/sys/firmware/acpi/bgrt/image";
-            name = "bgrt.bmp";
-          };
+      grub = {
+        enable = true;
 
-          bgrtPng =
-            pkgs.runCommand "bgrtSplash.png"
-              {
-                nativeBuildInputs = [
-                  pkgs.imagemagick
-                ];
-              }
-              ''
-                magick BMP:${bgrtBmp} \
-                  -resize 1920x1080\> \
-                  -background "#000000" \
-                  -gravity center \
-                  -extent 1920x1080 \
-                  $out
-              '';
-        in
-        {
+        copyKernels = true;
+
+        efiSupport = true;
+        zfsSupport = true;
+        enableCryptodisk = true;
+        useOSProber = true;
+
+        fsIdentifier = "uuid";
+        device = "nodev";
+
+        gfxmodeEfi = "1920x1080,auto";
+        gfxpayloadEfi = "keep";
+        splashMode = "normal";
+
+        theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
+        splashImage = pkgs.lib.mkForce "${bgrtPng}";
+
+        configurationLimit = 100;
+        extraEntriesBeforeNixOS = false;
+
+        memtest86 = {
           enable = true;
 
-          copyKernels = true;
-
-          efiSupport = true;
-          zfsSupport = true;
-          enableCryptodisk = true;
-          useOSProber = true;
-
-          fsIdentifier = "uuid";
-          device = "nodev";
-
-          gfxmodeEfi = "1920x1080,auto";
-          gfxpayloadEfi = "keep";
-
-          theme = grubThemeFlake.packages.${config.nixpkgs.hostPlatform.system}.nixos;
-          splashImage = bgrtPng;
-          splashMode = "normal";
-
-          configurationLimit = 100;
-          extraEntriesBeforeNixOS = false;
-
-          memtest86 = {
-            enable = true;
-
-            params = [
-              "btrace"
-            ];
-          };
-
-          forceInstall = false;
+          params = [
+            "btrace"
+          ];
         };
+
+        forceInstall = false;
+      };
 
       timeout = 1; # 1 Second
     };
@@ -439,7 +481,6 @@ in
     kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
 
     extraModulePackages = with config.boot.kernelPackages; [
-      # zfs_2_4 # FIXME: Build Failure
       apfs
       bcachefs
       cpupower
@@ -449,6 +490,7 @@ in
       turbostat
       usbip
       v4l2loopback
+      zfs_2_4
     ];
 
     hardwareScan = true;
@@ -525,15 +567,20 @@ in
     plymouth = {
       enable = true;
 
-      theme = "bgrt";
+      themePackages = with pkgs; [
+        catppuccin-plymouth # From config.nixpkgs.overlays
+      ];
+      theme = "catppuccin-${config.catppuccin.flavor}";
+
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
-      logo = "${pkgs.nixos-icons}/share/icons/hicolor/48x48/apps/nix-snowflake-white.png";
+
+      logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
 
       showDelay = 0;
 
       extraConfig = ''
-        UseFirmwareBackground=true
-      '';
+        UseFirmwareBackground=false
+      ''; # Done Manually Instead
     };
   };
 
@@ -693,7 +740,8 @@ in
           withSystemd = true;
         }
       );
-      # extraBackends = with pkgs; [ ];
+      # extraBackends = with pkgs; [
+      # ];
       snapshot = false;
 
       openFirewall = true;
@@ -813,6 +861,11 @@ in
       ];
     };
 
+    soteria = {
+      enable = true;
+      package = pkgs.soteria;
+    };
+
     pam = {
       mount = {
         enable = true;
@@ -828,91 +881,17 @@ in
       };
 
       services = {
-        kde = {
-          unixAuth = true;
-          fprintAuth =
-            if config.services.fprintd.enable then
-              !config.security.pam.services.kde-fingerprint.fprintAuth
-            else
-              false;
-
-          logFailures = true;
-          nodelay = false;
-
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        plasmalogin = {
+        ly = {
           unixAuth = true;
           fprintAuth = config.services.fprintd.enable;
 
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        plasmalogin-greeter = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
-
-          gnupg = {
-            enable = true;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        kde-fingerprint = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
-
-          gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -927,14 +906,28 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
+            storeOnly = false;
+            noAutostart = false;
+          };
+
+          showMotd = true;
+        };
+
+        hyprlock = {
+          unixAuth = true;
+          fprintAuth = config.services.fprintd.enable;
+
+          logFailures = true;
+          nodelay = false;
+
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
+
+          gnupg = {
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -949,14 +942,10 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -971,14 +960,10 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -993,14 +978,10 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -1015,14 +996,10 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -1037,14 +1014,10 @@ in
           logFailures = true;
           nodelay = false;
 
-          kwallet = {
-            enable = true;
-
-            forceRun = false;
-          };
+          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
           gnupg = {
-            enable = true;
+            enable = config.home-manager.users.normal.programs.gpg.enable;
             storeOnly = false;
             noAutostart = false;
           };
@@ -1118,7 +1091,7 @@ in
       );
 
       failureMode = "printk";
-      rateLimit = 0; # 0 = No Limit
+      rateLimit = 0; # 0 = Unlimited
     };
 
     auditd = {
@@ -1180,8 +1153,7 @@ in
       allowPing = true;
 
       allowedTCPPorts = [
-        3389 # RDP
-        5900 # VNC
+        config.home-manager.users.normal.services.wayvnc.settings.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
@@ -1257,6 +1229,7 @@ in
       type = "fcitx5";
       fcitx5 = {
         addons = with pkgs; [
+          fcitx5-gtk
           fcitx5-openbangla-keyboard
         ];
         waylandFrontend = true;
@@ -1516,7 +1489,8 @@ in
         KERNEL=="rtc0", GROUP="audio"
         KERNEL=="hpet", GROUP="audio"
         DEVPATH=="/devices/virtual/misc/cpu_dma_latency", OWNER="root", GROUP="audio", MODE="0660"
-      ''
+        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
+      '' # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
       + config.specificHardwareConfiguration.services.udev.extraRules;
     };
 
@@ -1545,35 +1519,28 @@ in
       package = pkgs.zram-generator;
     };
 
+    xserver.enable = false;
+
     displayManager = {
       enable = true;
 
-      plasma-login-manager = {
+      ly = {
         enable = true;
-        package = pkgs.kdePackages.plasma-login-manager;
+        package = pkgs.ly;
 
-        settings = {
-          Users = {
-            ReuseSession = false;
-          };
-        };
+        x11Support = config.programs.hyprland.xwayland.enable;
       };
 
-      defaultSession = "plasma"; # Wayland
+      defaultSession = "hyprland-uwsm";
 
       autoLogin.enable = false;
 
       logToJournal = true;
     };
 
-    desktopManager.plasma6 = {
-      enable = true;
-
-      enableQt5Integration = true;
-      notoPackage = pkgs.noto-fonts;
-    };
-
     accounts-daemon.enable = true;
+
+    gnome.gnome-keyring.enable = true;
 
     fprintd = {
       enable = true;
@@ -1598,7 +1565,8 @@ in
         }
       );
 
-      # extraLv2Packages = with pkgs; [ ];
+      # extraLv2Packages = with pkgs; [
+      # ];
 
       systemWide = false;
 
@@ -1740,7 +1708,7 @@ in
       listenany = true;
       port = 2947;
 
-      debugLevel = 0; # 0 = No Debugging
+      debugLevel = 0; # 0 = Disabled
     };
 
     phpfpm = {
@@ -1907,7 +1875,7 @@ in
           PermitRootLogin = "yes";
           StrictModes = true;
           UseDns = true;
-          X11Forwarding = false;
+          X11Forwarding = config.programs.hyprland.xwayland.enable;
         };
 
       openFirewall = true;
@@ -2065,7 +2033,34 @@ in
   };
 
   programs = {
-    xwayland.enable = true;
+    uwsm = {
+      enable = true;
+      package = (
+        pkgs.uwsm.override {
+          fumonSupport = true;
+          uuctlSupport = false;
+          uwsmAppSupport = true;
+        }
+      );
+    };
+
+    hyprland = {
+      enable = true;
+      package = (
+        pkgs.hyprland.override {
+          debug = config.environment.enableDebugInfo;
+          enableXWayland = config.programs.hyprland.xwayland.enable;
+          withSystemd = true;
+          wrapRuntimeDeps = true;
+        }
+      );
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+
+      withUWSM = true;
+      xwayland.enable = false;
+    };
+
+    xwayland.enable = config.programs.hyprland.xwayland.enable;
 
     gamemode = {
       enable = true;
@@ -2084,7 +2079,7 @@ in
 
       enableLsColors = true;
 
-      undistractMe.enable = false; # FIXME: Disabled due to Misbehavior
+      undistractMe.enable = false; # Disabled due to Misbehavior
 
       # shellAliases = { };
 
@@ -2303,6 +2298,7 @@ in
           settings = {
             "org/gnome/desktop/interface" = {
               gtk-enable-primary-paste = true;
+              monospace-font-name = "${fontPreferences.name.monospace} ${toString fontPreferences.size}";
             };
 
             "org/gnome/desktop/privacy" = {
@@ -2395,14 +2391,6 @@ in
       gdb = true;
     };
 
-    kde-pim = {
-      enable = false;
-
-      kontact = false;
-      kmail = false;
-      merkuro = false;
-    };
-
     obs-studio = {
       enable = true;
       package = (
@@ -2419,8 +2407,6 @@ in
       enableVirtualCamera = true;
 
       plugins = with pkgs.obs-studio-plugins; [
-        # obs-move-transition # FIXME: Build Failure
-        # obs-source-switcher # FIXME: Build Failure
         obs-3d-effect
         obs-backgroundremoval
         obs-composite-blur
@@ -2439,8 +2425,16 @@ in
       ];
     };
 
-    kdeconnect = {
+    wayvnc = {
       enable = true;
+      package = pkgs.wayvnc;
+    };
+
+    localsend = {
+      enable = true;
+      package = pkgs.localsend;
+
+      openFirewall = true;
     };
 
     ssh = {
@@ -2472,6 +2466,7 @@ in
 
   fonts = {
     enableDefaultPackages = false;
+    enableGhostscriptFonts = false;
     packages =
       with pkgs;
       [
@@ -2498,7 +2493,7 @@ in
 
       defaultFonts = {
         monospace = [
-          fontPreferences.name.mono
+          fontPreferences.name.monospace
         ];
 
         sansSerif = [
@@ -2512,6 +2507,21 @@ in
         emoji = [
           fontPreferences.name.emoji
         ];
+      };
+
+      useEmbeddedBitmaps = false;
+      antialias = true;
+
+      hinting = {
+        enable = true;
+
+        autohint = false;
+        style = "full";
+      };
+
+      subpixel = {
+        rgba = "rgb";
+        lcdfilter = "default";
       };
 
       includeUserConf = true;
@@ -2533,10 +2543,8 @@ in
     systemPackages =
       with pkgs;
       [
-        # celestia # FIXME: Build Failure
         # dart # flutter adds the compatible version
-        # gearlever # FIXME: Build Failure
-        # gnome-nettool # Not Found
+        # gnome-nettool # TODO: Find Alternative
         # lyto # FIXME: Build Failure
         # metadata # FIXME: Build Failure
         # reiser4progs # Marked as Broken
@@ -2548,6 +2556,7 @@ in
         act
         actionlint
         addlicense
+        aegisub
         aeskeyfind
         aide
         aircrack-ng
@@ -2591,6 +2600,7 @@ in
         bluez-alsa
         bluez-tools
         brave
+        brightnessctl
         btfs
         btrfs-assistant
         btrfs-heatmap
@@ -2635,6 +2645,7 @@ in
         ctagsWrapped
         cups-pk-helper
         cups-printers
+        cursor-clip
         curtail
         cve-bin-tool
         cyclonedx-cli
@@ -2721,7 +2732,9 @@ in
         gawd
         gawk
         gcc
+        gcr_4
         gdb
+        gearlever
         genealogos-cli
         gerbolyze
         gh
@@ -2777,6 +2790,17 @@ in
         httpdirfs
         hw-probe
         hydra-check
+        hyprgraphics
+        hyprland-protocols
+        hyprland-qt-support
+        hyprland-qtutils
+        hyprmag
+        hyprpicker
+        hyprshutdown
+        hyprtoolkit
+        hyprutils
+        hyprwayland-scanner
+        hyprwire
         i2c-tools
         iaito
         iconic
@@ -2794,6 +2818,7 @@ in
         jq
         jstest-gtk
         jxrlib
+        karlender
         kdiff3
         kernel-hardening-checker
         kernelshark
@@ -2841,6 +2866,7 @@ in
         lshw
         lsof
         lsscsi
+        luminance
         lvm2
         lynis
         lyx
@@ -2895,6 +2921,8 @@ in
         numatop
         nurl
         nvme-cli
+        nwg-bar
+        nwg-drawer
         obexftp
         oha
         onionshare-gui
@@ -2909,6 +2937,7 @@ in
         openssl
         orbvis
         otree
+        overskride
         packet
         paleta
         pana
@@ -2927,9 +2956,9 @@ in
         picard
         picard-tools
         pkg-config
-        plasmaManagerFlake.packages.${pkgs.stdenv.hostPlatform.system}.rc2nix # From plasmaManagerFlake
         platformio
         play
+        playerctl
         podman-compose
         pods
         poop # POOP = Performance Optimizer Observation Platform
@@ -2948,6 +2977,7 @@ in
         protonup-qt
         ps
         psmisc
+        pwvucontrol
         qalculate-gtk
         qemu-user
         qemu-utils
@@ -2959,6 +2989,7 @@ in
         radare2
         raider
         raindropio # From config.nixpkgs.overlays
+        resources
         rp-pppoe
         rpi-imager
         rpmextract
@@ -3004,6 +3035,7 @@ in
         sshfs
         sshfs-fuse
         sslscan
+        hyprshot
         standardnotes
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
@@ -3013,13 +3045,12 @@ in
         strace-analyzer
         streamlit
         subfinder
-        subtitleedit # Waiting for Version 5
         svt-av1
         switcheroo
         syft
         symlinks
-        systemdgenie
         tauno-monitor
+        telegram-desktop
         telegraph
         teleprompter
         terminaltexteffects
@@ -3080,6 +3111,7 @@ in
         whosthere
         wildcard
         wl-clipboard
+        wvkbd # wvkbd-mobintl
         xar
         xdg-user-dirs
         xdg-user-dirs-gtk
@@ -3240,6 +3272,10 @@ in
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
         '') # With config.security.sudo.extraRules
 
+        (nwg-displays.override {
+          hyprlandSupport = true;
+        })
+
         (orca-slicer.override {
           withSystemd = true;
         })
@@ -3322,12 +3358,14 @@ in
 
         config.hardware.firmware
         config.home-manager.users.normal.programs.dircolors.package # Overriden coreutils-full
+        config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
+        config.programs.nm-applet.package # Also Provides nm-connection-editor
         config.services.phpfpm.phpPackage
       ]
 
-      ++ lib.optionals config.nixpkgs.config.allowUnfree [
+      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
         androidComposition.androidsdk # Custom Composition
         megasync # OSS
         rar
@@ -3416,236 +3454,44 @@ in
       ])
 
       ++ (with kdePackages; [
-        accounts-qml-module
-        accounts-qt
-        applet-window-buttons6
-        appstream-qt
         ark
         audiocd-kio
-        baloo
-        baloo-widgets
-        bluedevil
-        bluez-qt
-        breeze
-        colord-kde
-        discover
         dolphin
         dolphin-plugins
-        drkonqi
-        dynamic-workspaces
-        fcitx5-configtool
-        fcitx5-qt
         ffmpegthumbs
         filelight
-        frameworkintegration
         gwenview
-        kaccounts-integration
-        kaccounts-providers
-        kactivitymanagerd
         kalgebra
         kalzium
-        kamera
-        karchive
-        kauth
-        kbookmarks
         kcachegrind
         kcharselect
         kclock
-        kcmutils
-        kcodecs
         kcolorchooser
-        kcolorpicker
-        kcolorscheme
-        kcompletion
-        kconfig
-        kconfigwidgets
-        kcoreaddons
-        kcrash
-        kcron
-        kdav
-        kdbusaddons
-        kde-cli-tools
-        kde-gtk-config
-        kde-inotify-survey
-        kdebugsettings
-        kdecoration
-        kded
-        kdegraphics-mobipocket
-        kdegraphics-thumbnailers
-        kdenetwork-filesharing
         kdenlive
-        kdeplasma-addons
-        kdesu
-        kdiagram
-        kdialog
-        kdnssd
-        kdsoap
-        kdsoap-ws-discovery-client
-        keditbookmarks
-        kfilemetadata
         kfind
-        kgamma
         kget
-        kglobalaccel
-        kglobalacceld
-        kguiaddons
-        khelpcenter
-        kholidays
-        ki18n
-        kiconthemes
-        kidentitymanagement
-        kidletime
-        kimageannotator
-        kimageformats
-        kimagemapeditor
-        kinfocenter
         kio
         kio-admin
         kio-extras
-        kio-extras-kf5
         kio-fuse
-        kio-gdrive
         kio-zeroconf
-        kirigami
-        kirigami-addons
-        kitemmodels
-        kitemviews
-        kjobwidgets
         kjournald
         kleopatra
-        kmag
         kmahjongg
-        kmenuedit
-        kmime
         kmousetool
         kmouth
-        knewstuff
-        knighttime
-        knotifications
-        knotifyconfig
         kontrast
-        kpackage
-        kparts
-        kpipewire
-        kpkpass
-        kplotting
-        kpmcore
-        kpty
         krdp
         krfb
-        krohnkite
         kruler
-        krunner
-        ksanecore
-        kscreen
-        kscreenlocker
-        kservice
         kshisen
-        ksshaskpass
-        kstatusnotifieritem
-        ksvg
-        ksystemlog
-        ksystemstats
         kubrick
-        kunifiedpush
-        kunitconversion
-        kwallet-pam
-        kwalletmanager
-        kwayland
-        kwayland-integration
-        kwidgetsaddons
-        kwin
-        kwindowsystem
-        kxmlgui
-        kzones
-        layer-shell-qt
-        libgravatar
-        libiodata
-        libkcddb
-        libkdcraw
-        libkexiv2
-        libkgapi
-        libkleo
-        libkmahjongg
-        libksane
-        libkscreen
-        libksysguard
-        libktorrent
-        libplasma
-        libqaccessibilityclient
         marble
-        mimetreeparser
-        mlt
-        modemmanager-qt
-        networkmanager-qt
         ocean-sound-theme
         okular
-        packagekit-qt
-        plasma-activities
-        plasma-activities-stats
-        plasma-disks
-        plasma-firewall
-        plasma-integration
-        plasma-keyboard
-        plasma-nm
-        plasma-systemmonitor
-        plasma-thunderbolt
-        plasma-vault
-        plasma-wayland-protocols
-        plasma-workspace-wallpapers
-        plymouth-kcm
-        polkit-kde-agent-1
-        polkit-qt-1
-        poppler
-        powerdevil
-        print-manager
-        qca
-        qhotkey
         qrca
-        qt-color-widgets
-        qt6gtk2
-        qtbase
-        qtconnectivity
-        qtgraphs
-        qtimageformats
-        qtkeychain
-        qtlocation
-        qtmultimedia
-        qtnetworkauth
-        qtpositioning
-        qtremoteobjects
-        qtsensors
-        qtserialbus
-        qtserialport
-        qtshadertools
-        qtsvg
-        qttools
-        qttranslations
-        qtutilities
-        qtvirtualkeyboard
-        qtwayland
-        qtwebengine
-        qtwebsockets
-        qtwebview
-        quazip
-        qxlsx
-        signon-kwallet-extension
-        signond
         skanpage
-        solid
-        sonnet
-        spectacle
         step
-        svgpart
-        syntax-highlighting
-        systemsettings
-        taglib
-        threadweaver
-        timed
-        wallpaper-engine-plugin
-        wayland
-        wayland-protocols
-        wayqt
       ])
 
       ++ (with unixtools; [
@@ -3667,11 +3513,6 @@ in
         xxd
       ]);
 
-    plasma6.excludePackages = with pkgs.kdePackages; [
-      elisa
-      kate
-    ];
-
     wordlist.enable = false;
 
     pathsToLink = [
@@ -3688,6 +3529,8 @@ in
       # );
 
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
+
+      CHROME_EXECUTABLE = "brave";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
@@ -3699,8 +3542,7 @@ in
       ADW_DISABLE_PORTAL = 1;
 
       NIXOS_OZONE_WL = 1;
-
-      CHROME_EXECUTABLE = "brave";
+      ELECTRON_OZONE_PLATFORM_HINT = "auto";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
@@ -3710,7 +3552,7 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "xdg-terminal-exec bash -c 'bash -ic \"$(compgen -c | sort -u | tv)\"; exec bash'";
+      commands = "uwsm-app -- wezterm start --always-new-process -- bash -ic 'cmd=\$(compgen -c | sort -u | tv); [ -n \"\\$cmd\" ] && eval \"\\$cmd\"; exec bash -i'";
 
       clean_optimise_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
       clean_repair_optimise_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
@@ -3740,21 +3582,17 @@ in
 
       settings = {
         default = [
-          "org.kde.konsole.desktop"
+          "org.wezfurlong.wezterm.desktop"
         ];
       };
     };
 
     portal = {
       enable = true;
-      extraPortals = with pkgs.kdePackages; [
-        kwallet
-        xdg-desktop-portal-kde
-      ];
-
-      configPackages = with pkgs; [
-        kdePackages.plasma-workspace
-      ];
+      extraPortals = [
+        config.home-manager.users.normal.services.gnome-keyring.package
+        pkgs.xdg-desktop-portal-gtk
+      ]; # config.programs.hyprland.portalPackage adds xdg-desktop-portal-hyprland to it.
 
       xdgOpenUsePortal = true;
     };
@@ -4270,9 +4108,48 @@ in
   qt = {
     enable = true;
 
-    platformTheme = "kde";
-    style = null; # Set in KDE Plasma Instead
+    platformTheme = "qt5ct"; # Both qt6ct and qt5ct
+    style = "kvantum";
   };
+
+  catppuccin = {
+    enable = true;
+
+    enableReleaseCheck = true;
+    cache.enable = true;
+
+    autoEnable = true;
+    flavor = "mocha";
+    accent = "lavender";
+
+    grub.enable = false; # Done Manually Instead
+
+    tty = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+    };
+
+    plymouth.enable = false; # Done Manually Instead
+
+    cursors = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+    };
+
+    gtk.icon.enable = false; # Done Manually Instead
+
+    fcitx5 = {
+      enable = config.catppuccin.enable;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      enableRounded = true;
+    };
+  }; # From catppuccinThemeFlake
 
   documentation = {
     enable = true;
@@ -4387,7 +4264,7 @@ in
     backupFileExtension = "old";
 
     sharedModules = [
-      plasmaManagerFlake.homeModules.plasma-manager
+      catppuccinThemeFlake.homeModules.catppuccin
 
       {
         _class = "homeManager";
@@ -4405,8 +4282,8 @@ in
           pointerCursor = {
             enable = true;
 
-            name = "Bibata-Modern-Classic";
-            package = pkgs.bibata-cursors;
+            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";z
+            package = config.catppuccin.sources.cursors."${config.catppuccin.flavor}${pkgs.lib.toSentenceCase config.catppuccin.accent}";
             size = 20;
 
             gtk = {
@@ -4414,7 +4291,7 @@ in
               size = config.home-manager.users.normal.home.pointerCursor.size;
             };
 
-            x11.enable = false;
+            x11.enable = config.programs.hyprland.xwayland.enable;
 
             dotIcons.enable = true;
           };
@@ -4440,7 +4317,6 @@ in
 
             type = config.i18n.inputMethod.type;
             fcitx5 = {
-              fcitx5-with-addons = pkgs.kdePackages.fcitx5-with-addons;
               addons = config.i18n.inputMethod.fcitx5.addons;
               waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
 
@@ -4448,6 +4324,856 @@ in
               ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
             };
           };
+        };
+
+        fonts.fontconfig = {
+          enable = config.fonts.fontconfig.enable;
+
+          defaultFonts = config.fonts.fontconfig.defaultFonts;
+
+          antialiasing = config.fonts.fontconfig.antialias;
+          hinting = pkgs.lib.optionals config.fonts.fontconfig.hinting.enable config.fonts.fontconfig.hinting.style;
+          subpixelRendering = config.fonts.fontconfig.subpixel.rgba;
+        };
+
+        xsession.enable = config.services.xserver.enable;
+
+        wayland.windowManager.hyprland = {
+          enable = config.programs.hyprland.enable;
+          package = config.programs.hyprland.package;
+
+          systemd = {
+            enable = false;
+
+            enableXdgAutostart = true;
+
+            variables = [
+              "--all"
+            ];
+          };
+
+          xwayland.enable = config.programs.hyprland.xwayland.enable;
+
+          configType = "lua";
+          sourceFirst = true;
+
+          settings = {
+            monitor = [
+              {
+                output = ""; # "" = All
+                mode = "highres";
+                position = "auto";
+                transform = 0;
+                scale = 1;
+              } # Default
+            ];
+
+            on = {
+              _args = [
+                "hyprland.start"
+                (pkgs.lib.generators.mkLuaInline ''
+                  function()
+                    hl.exec_cmd("dbus-update-activation-environment --systemd --all") -- Fixes the Soteria Service Not Starting
+
+                    hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
+                  end
+                '')
+              ];
+            };
+
+            bind = [
+              {
+                _args = [
+                  "XF86MonBrightnessUp"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86MonBrightnessDown"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+
+              {
+                _args = [
+                  "XF86AudioRaiseVolume"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioLowerVolume"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
+                  {
+                    repeating = true;
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMute"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioMicMute"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+
+              {
+                _args = [
+                  "XF86AudioPlay"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPause"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioStop"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioPrev"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+              {
+                _args = [
+                  "XF86AudioNext"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
+                  {
+                    locked = true;
+                  }
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + 1"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 2"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 3"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 4"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 5"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 6"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 7"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 8"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 9"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + 0"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse_down"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + mouse_up"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + S"
+                  (pkgs.lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + up"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + right"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + down"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + left"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + SHIFT + 1"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 2"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 3"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 4"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 5"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 6"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 7"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 8"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 9"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + 0"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + S"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 1"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 2"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 3"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 4"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 5"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 6"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 7"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 8"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 9"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + 0"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + SHIFT + ALT + S"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\", follow=false})")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + mouse:272"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              } # Left Button
+              {
+                _args = [
+                  "SUPER + mouse:273"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
+                  {
+                    mouse = true;
+                  }
+                ];
+              } # Right Button
+              {
+                _args = [
+                  "ALT + F11"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
+                ];
+              }
+              {
+                _args = [
+                  "F11"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + Q"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.close()")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + Q"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + L"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + A"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
+                ];
+              }
+              {
+                _args = [
+                  "Print"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=region --clipboard-only\")")
+                ];
+              }
+              {
+                _args = [
+                  "SHIFT + Print"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=window --clipboard-only\")")
+                ];
+              }
+              {
+                _args = [
+                  "ALT + Print"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=region\")")
+                ];
+              }
+              {
+                _args = [
+                  "SHIFT + ALT + Print"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=window\")")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + SPACE"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + RETURN"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm dolphin\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + RETURN"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
+                ];
+              }
+
+              {
+                _args = [
+                  "SUPER + T"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- wezterm start --always-new-process\")")
+                ];
+              }
+              {
+                _args = [
+                  "XF86Explorer"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- dolphin\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + F"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- dolphin\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + W"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + W"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave --incognito\")")
+                ];
+              }
+              {
+                _args = [
+                  "XF86Mail"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- electron-mail\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + E"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- codium\")")
+                ];
+              }
+            ];
+
+            config = {
+              general = {
+                allow_tearing = true;
+
+                gaps_workspaces = 0;
+
+                layout = "dwindle";
+
+                gaps_in = builtins.floor (designFactor / 4); # 4
+                gaps_out = {
+                  top = builtins.floor (designFactor / 4); # 4
+                  right = builtins.floor (designFactor / 4); # 4
+                  bottom = builtins.floor (designFactor / 4); # 4
+                  left = builtins.floor (designFactor / 4); # 4
+                };
+
+                float_gaps = builtins.floor (designFactor / 4); # 4
+
+                border_size = 1;
+                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
+                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
+
+                resize_on_border = true;
+                hover_icon_on_border = true;
+
+                no_focus_fallback = false;
+
+                snap = {
+                  enabled = true;
+
+                  respect_gaps = true;
+                  monitor_gap = builtins.floor (designFactor / 4); # 4
+                  window_gap = builtins.floor (designFactor / 4); # 4
+
+                  border_overlap = false;
+                };
+
+                modal_parent_blocking = true;
+
+                locale = "en_US";
+              };
+
+              decoration = {
+                shadow = {
+                  enabled = true;
+
+                  sharp = false;
+                };
+
+                border_part_of_window = true;
+                rounding = builtins.floor (designFactor / 2); # 8
+                rounding_power = 4.0; # 4.0 = Squircle
+
+                active_opacity = 1.0;
+                fullscreen_opacity = 1.0;
+                inactive_opacity = 1.0;
+
+                dim_special = 0.25;
+                dim_modal = true;
+                dim_inactive = false;
+                dim_strength = 0.0;
+
+                blur = {
+                  enabled = true;
+                  new_optimizations = true;
+
+                  special = true;
+                  popups = true;
+                  input_methods = true;
+
+                  ignore_opacity = false;
+                  xray = true;
+                };
+
+                glow = {
+                  enabled = false;
+                };
+              };
+
+              animations = {
+                enabled = true;
+
+                workspace_wraparound = false;
+              };
+
+              input = {
+                numlock_by_default = false;
+                kb_layout = "us";
+
+                force_no_accel = false;
+                scroll_button_lock = true;
+                natural_scroll = false;
+                left_handed = false;
+
+                special_fallthrough = false;
+
+                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
+                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
+                mouse_refocus = true;
+
+                touchpad = {
+                  disable_while_typing = true;
+
+                  flip_x = false;
+                  flip_y = false;
+
+                  middle_button_emulation = false;
+                  clickfinger_behavior = false;
+
+                  tap_to_click = true;
+
+                  tap_and_drag = true;
+                  drag_3fg = 1; # 1 = 3 Fingers # 2 = 4 Fingers
+                  drag_lock = 2; # 2 = Enabled Sticky
+
+                  natural_scroll = true;
+                };
+
+                touchdevice = {
+                  enabled = true;
+                };
+
+                tablet = {
+                  left_handed = false;
+                };
+
+                virtualkeyboard = {
+                  release_pressed_on_close = true;
+                };
+              };
+
+              gestures = {
+                workspace_swipe_create_new = true;
+                workspace_swipe_forever = true;
+
+                # Touchpad
+                workspace_swipe_invert = false;
+
+                # Touchscreen
+                workspace_swipe_touch = true;
+                workspace_swipe_touch_invert = false;
+              };
+
+              group = {
+                auto_group = false;
+
+                merge_groups_on_drag = true;
+                merge_groups_on_groupbar = true;
+
+                group_on_movetoworkspace = false;
+                merge_floated_into_tiled_on_groupbar = false;
+                insert_after_current = true;
+                focus_removed_window = true;
+
+                groupbar = {
+                  enabled = true;
+                  stacked = false;
+
+                  render_titles = true;
+                  scrolling = true;
+                  middle_click_close = false;
+
+                  keep_upper_gap = true;
+                  gradients = true;
+                  blur = true;
+                  round_only_edges = false;
+                  gradient_round_only_edges = false;
+                };
+              };
+
+              misc = {
+                disable_watchdog_warning = false;
+                disable_xdg_env_checks = false;
+                disable_autoreload = false;
+                disable_scale_notification = false;
+
+                allow_session_lock_restore = true;
+                session_lock_xray = false;
+
+                key_press_enables_dpms = true;
+                mouse_move_enables_dpms = true;
+                vrr = 1; # 1 = On
+                mouse_move_focuses_monitor = true;
+
+                disable_splash_rendering = true;
+                disable_hyprland_logo = true;
+
+                close_special_on_empty = true;
+
+                enable_swallow = true;
+
+                name_vk_after_proc = true;
+                enable_anr_dialog = true;
+
+                exit_window_retains_fullscreen = false;
+
+                focus_on_activate = true;
+                layers_hog_keyboard_focus = true;
+
+                always_follow_on_dnd = true;
+
+                animate_mouse_windowdragging = true;
+                animate_manual_resizes = true;
+
+                middle_click_paste = true;
+
+                font_family = fontPreferences.name.sansSerif;
+              };
+
+              binds = {
+                allow_workspace_cycles = false;
+                workspace_back_and_forth = false;
+                hide_special_on_workspace_change = false;
+
+                window_direction_monitor_fallback = true;
+                ignore_group_lock = false;
+                movefocus_cycles_groupfirst = true;
+                movefocus_cycles_fullscreen = false;
+                allow_pin_fullscreen = true;
+
+                disable_keybind_grabbing = true;
+                pass_mouse_when_bound = false;
+              };
+
+              xwayland = {
+                enabled = config.programs.hyprland.xwayland.enable;
+                create_abstract_socket = true;
+
+                force_zero_scaling = true; # Sacle = 1
+                use_nearest_neighbor = true;
+              };
+
+              render = {
+                cm_enabled = true;
+                cm_auto_hdr = 1; # 1 = Automatically switch to "cm, hdr" in fullscreen when needed.
+                send_content_type = true;
+                new_render_scheduling = true;
+                xp_mode = false;
+                commit_timing_enabled = true;
+              };
+
+              cursor = {
+                invisible = false;
+                hide_on_key_press = false;
+                hide_on_tablet = false;
+                hide_on_touch = true;
+
+                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
+                enable_hyprcursor = true;
+                sync_gsettings_theme = true;
+
+                no_warps = false;
+                persistent_warps = true;
+                warp_back_after_non_mouse_input = true;
+
+                zoom_rigid = true;
+                zoom_detached_camera = false;
+                zoom_disable_aa = false;
+              };
+
+              ecosystem = {
+                enforce_permissions = false;
+
+                no_update_news = false;
+                no_donation_nag = false;
+              };
+
+              quirks = {
+                prefer_hdr = 2; # 2 = Gamescope Only
+              };
+
+              dwindle = {
+                force_split = 0; # 0 = Split Follows Mouse
+                use_active_for_splits = true;
+                smart_split = false;
+                preserve_split = true;
+
+                smart_resizing = true;
+
+                precise_mouse_move = true;
+              };
+            }; # Sorted from "General" to "Quirks" according to Wiki/Configuring/Basics/Variables.
+
+          };
+
+          extraConfig = ''
+            pcall(require, "monitors") -- Import if available.
+          ''; # nwg-displays
+
+          xdph.settings = {
+            general = {
+              toplevel_dynamic_bind = true;
+            };
+
+            screencopy = {
+              allow_token_by_default = true;
+
+              force_shm = false;
+              cursor_mode = 2; # 2 = Embedded Mode # Lacks Support for 4 (Metadata Mode)
+              max_fps = 0; # 0 = Unlimited
+            };
+          }; # xdg-desktop-portal-hyprland
         };
 
         xdg = {
@@ -4575,8 +5301,6 @@ in
             enable = config.xdg.portal.enable;
             extraPortals = config.xdg.portal.extraPortals;
 
-            configPackages = config.xdg.portal.configPackages;
-
             xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
           };
 
@@ -4601,10 +5325,135 @@ in
             "mimeapps.list" = {
               force = true;
             };
+
+            # "qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf" = {
+            #   enable = true;
+
+            #   source = "${pkgs.catppuccin-qt5ct}/share/qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+
+            #   target = "qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+            #   executable = null;
+            # };
+
+            # "qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf" = {
+            #   enable = true;
+
+            #   source = "${pkgs.catppuccin-qt5ct}/share/qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+
+            #   target = "qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+            #   executable = null;
+            # };
+
+            "nwg-bar/bar.json" = {
+              enable = true;
+
+              source = pkgs.writeText "nwg-bar.json" ''
+                [
+                  {
+                    "label": "_Lock",
+                    "exec": "loginctl lock-session",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-lock-screen.svg"
+                  },
+                  {
+                    "label": "_Exit",
+                    "exec": "uwsm stop",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-log-out.svg"
+                  },
+                  {
+                    "label": "_Shutdown",
+                    "exec": "systemctl -i poweroff",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-shutdown.svg"
+                  },
+                  {
+                    "label": "_Reboot",
+                    "exec": "systemctl reboot",
+                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-reboot.svg"
+                  }
+                ]''; # FIXME: hyprshutdown Does Not Work
+
+              target = "nwg-bar/bar.json";
+              executable = null;
+            };
+
+            "nwg-bar/style.css" = {
+              enable = true;
+
+              source = pkgs.writeText "nwg-bar.css" ''
+                window {
+                  border: 1px solid rgb(88, 91, 112);
+                  border-radius: ${toString (builtins.floor (designFactor / 2))}px;
+                }
+
+                #bar {
+                  margin: ${toString (builtins.floor (designFactor * 2))}px;
+                  font-size: ${toString (builtins.floor designFactor)}px;
+                  font-family: ${fontPreferences.name.sansSerif};
+                }
+
+                button,
+                image {
+                  box-shadow: none;
+                  border-style: none;
+                  background: none;
+                  color: rgb(205, 214, 244);
+                }
+
+                button {
+                  margin: ${toString (builtins.floor (designFactor / 4))}px;
+                  padding-top: ${toString (builtins.floor (designFactor / 2))}px;
+                }
+
+                button:hover {
+                  background-color: rgb(49, 50, 68);
+                }
+
+                button:focus {
+                  background-color: rgb(49, 50, 68);
+                }
+
+                grid {
+                  box-shadow: 0 0 ${toString (builtins.floor (designFactor * 3))}px rgb(49, 50, 68);
+                  border-radius: ${toString (builtins.floor (designFactor / 2))}px;
+                  background-color: rgb(17, 17, 27);
+                  padding: ${toString (builtins.floor (designFactor / 2))}px;
+                }''; # Catppuccin Mocha: "Surface 2" rgb(88, 91, 112), "Text" rgb(205, 214, 244), "Surface 0" rgb(49, 50, 68), "Crust" rgb(17, 17, 27)
+
+              target = "nwg-bar/style.css";
+              executable = null;
+            };
           };
 
-          # dataFile = { };
+          dataFile = {
+            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
+              enable = true;
+
+              source = builtins.fetchurl {
+                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
+              };
+
+              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
+              executable = null;
+            };
+
+            "SourceGit/Catppuccin_${
+              pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
+            }${builtins.substring 1 255 config.catppuccin.flavor}.json" =
+              {
+                enable = true;
+
+                source = builtins.fetchurl {
+                  url = "https://raw.githubusercontent.com/sourcegit-scm/sourcegit-theme/refs/heads/main/themes/Catpuccin_Mocha.json";
+                };
+
+                target = "SourceGit/Catppuccin_${
+                  pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
+                }${builtins.substring 1 255 config.catppuccin.flavor}.json";
+                executable = null;
+              }; # Non-Standard Path
+          };
+
           # stateFile = { };
+
           # cacheFile = { };
         };
 
@@ -4619,8 +5468,19 @@ in
 
           colorScheme = "dark";
           theme = {
-            name = "Breeze-Dark";
-            package = pkgs.kdePackages.breeze-gtk;
+            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard+normal";
+            package = (
+              pkgs.catppuccin-gtk.override {
+                accents = [
+                  config.catppuccin.accent
+                ];
+                size = "standard";
+                tweaks = [
+                  "normal"
+                ];
+                variant = config.catppuccin.flavor;
+              }
+            );
           };
 
           iconTheme = {
@@ -4720,83 +5580,905 @@ in
         };
 
         qt = {
-          enable = config.qt.enable;
+          enable = true;
 
-          platformTheme.name = config.qt.platformTheme;
+          platformTheme.name = "qtct";
           style.name = config.qt.style;
 
-          # kde.settings = { };
+          qt6ctSettings = {
+            Appearance = {
+              custom_palette = true;
+              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+              # color_scheme_path = "${pkgs.catppuccin-qt5ct}/share/qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+              style = "kvantum-dark";
+
+              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
+
+              standard_dialogs = "xdgdesktopportal";
+            };
+
+            Interface = {
+              activate_item_on_single_click = 0; # 0 = Disabled
+              buttonbox_layout = 2; # 2 = KDE
+              dialog_buttons_have_icons = 0; # 0 = Disabled
+              gui_effects = "General, AnimateMenu, AnimateCombo, AnimateTooltip, AnimateToolBox";
+              keyboard_scheme = 3; # 3 = KDE
+              menus_have_icons = true;
+              show_shortcuts_in_context_menus = true;
+              toolbutton_style = 4; # 4 = Follow Application Style
+              underline_shortcut = 2; # 2 = Enabled
+            };
+          };
+
+          qt5ctSettings = {
+            Appearance = {
+              custom_palette = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.custom_palette;
+              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+              # color_scheme_path = "${pkgs.catppuccin-qt5ct}/share/qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
+              style = "kvantum-dark";
+
+              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
+
+              standard_dialogs = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.standard_dialogs;
+            };
+
+            Interface = {
+              activate_item_on_single_click =
+                config.home-manager.users.normal.qt.qt6ctSettings.Interface.activate_item_on_single_click;
+              buttonbox_layout = config.home-manager.users.normal.qt.qt6ctSettings.Interface.buttonbox_layout;
+              dialog_buttons_have_icons =
+                config.home-manager.users.normal.qt.qt6ctSettings.Interface.dialog_buttons_have_icons;
+              gui_effects = config.home-manager.users.normal.qt.qt6ctSettings.Interface.gui_effects;
+              keyboard_scheme = config.home-manager.users.normal.qt.qt6ctSettings.Interface.keyboard_scheme;
+              menus_have_icons = config.home-manager.users.normal.qt.qt6ctSettings.Interface.menus_have_icons;
+              show_shortcuts_in_context_menus =
+                config.home-manager.users.normal.qt.qt6ctSettings.Interface.show_shortcuts_in_context_menus;
+              toolbutton_style = config.home-manager.users.normal.qt.qt6ctSettings.Interface.toolbutton_style;
+              underline_shortcut = config.home-manager.users.normal.qt.qt6ctSettings.Interface.underline_shortcut;
+            };
+          };
+
+          kvantum = {
+            enable = true;
+
+            settings = {
+              General = {
+                theme = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}";
+              };
+            };
+          };
         };
 
         services = {
+          hypridle = {
+            enable = true;
+            package = pkgs.hypridle;
+
+            settings = {
+              general = {
+                ignore_systemd_inhibit = false;
+                ignore_wayland_inhibit = false;
+                ignore_dbus_inhibit = false;
+
+                lock_cmd = "pidof hyprlock || uwsm-app -- hyprlock";
+              };
+
+              listener = [
+                {
+                  ignore_inhibit = false;
+
+                  timeout = 300; # 5 Minutes
+                  on-timeout = "loginctl lock-session";
+                }
+              ];
+            };
+          };
+
+          swaync = {
+            enable = true;
+            package = pkgs.swaynotificationcenter;
+          };
+
+          gnome-keyring = {
+            enable = config.services.gnome.gnome-keyring.enable;
+            package = pkgs.gnome-keyring;
+
+            components = [
+              "pkcs11"
+              "secrets"
+            ];
+          };
+
+          gpg-agent = {
+            enable = config.programs.gnupg.agent.enable;
+
+            enableExtraSocket = config.programs.gnupg.agent.enableExtraSocket;
+            enableScDaemon = true;
+
+            enableSshSupport = config.programs.gnupg.agent.enableSSHSupport;
+            enableBashIntegration = true;
+
+            pinentry.package = config.programs.gnupg.agent.pinentryPackage;
+            noAllowExternalCache = false;
+            grabKeyboardAndMouse = true;
+          };
+
           ssh-agent.enable = !config.programs.gnupg.agent.enable;
 
-          kdeconnect = {
-            enable = config.programs.kdeconnect.enable;
-            package = pkgs.kdePackages.kdeconnect-kde;
+          udiskie = {
+            enable = true;
+            package = pkgs.udiskie;
 
-            indicator = false; # Redundant
+            tray = "always";
+
+            automount = true;
+            notify = true;
+
+            settings = {
+              program_options = {
+                menu = "nested";
+
+                terminal = "uwsm-app -- wezterm start --always-new-process --cwd";
+                file_manager = "uwsm-app -- xdg-open";
+
+                password_cache = 5; # 5 Minutes
+
+              };
+
+              quickmenu_actions = "all";
+            };
+          };
+
+          poweralertd.enable = true;
+
+          syshud = {
+            enable = true;
+            package = pkgs.syshud;
+
+            settings = {
+              listeners = "keyboard,backlight,audio_in,audio_out";
+              position = "bottom";
+              orientation = "h";
+              show-percentage = true;
+              transition-time = 250;
+              timeout = 2; # 2 Seconds
+            };
+          };
+
+          hyprpaper = {
+            enable = true;
+            package = pkgs.hyprpaper;
+
+            settings = {
+              ipc = "on";
+
+              splash = false;
+
+              wallpaper = {
+                monitor = "";
+                recursive = true;
+                path = "${bgrtPng}";
+                fit_mode = "cover";
+              };
+            };
+          };
+
+          wayvnc = {
+            enable = config.programs.wayvnc.enable;
+            package = config.programs.wayvnc.package;
+
+            settings = {
+              address = "127.0.0.1";
+              port = 5901;
+            };
+
+            autoStart = true;
           };
         };
 
         programs = {
-          plasma = {
+          hyprlock = {
             enable = true;
-            overrideConfig = false;
+            package = pkgs.hyprlock;
 
-            fonts = {
+            sourceFirst = true;
+
+            settings = {
               general = {
-                family = fontPreferences.name.sansSerif;
-                pointSize = fontPreferences.size;
+                immediate_render = true;
+                fractional_scaling = 2; # 2 = Automatic
+
+                text_trim = false;
+                hide_cursor = false;
+
+                ignore_empty_input = true;
               };
 
-              windowTitle = {
-                family = fontPreferences.name.sansSerif;
-                pointSize = fontPreferences.size;
+              auth = {
+                pam = {
+                  enabled = true;
+                  module = "hyprlock";
+                };
+
+                fingerprint = {
+                  enabled = true;
+                };
               };
 
-              fixedWidth = {
-                family = fontPreferences.name.mono;
-                pointSize = fontPreferences.size;
+              background = [
+                {
+                  monitor = ""; # "" = All
+                  path = "${bgrtPng}";
+                }
+              ];
+            }; # Addition
+          }; # TODO: Design
+
+          waybar = {
+            enable = true;
+            package = config.programs.waybar.package;
+
+            systemd = {
+              enable = true;
+
+              enableInspect = false;
+              enableDebug = config.environment.enableDebugInfo;
+            };
+
+            settings = {
+              top_bar = {
+                start_hidden = false;
+                reload_style_on_change = true;
+                position = "top";
+                exclusive = true;
+                layer = "top";
+                passthrough = false;
+                fixed-center = true;
+                spacing = builtins.floor (designFactor / 4); # 4
+
+                modules-left = [
+                  "group/backlight-and-idle-inhibitor"
+                  "group/wireplumber-and-bluetooth"
+                  "battery"
+                  "group/cpu-and-load-and-temperature"
+                  "group/memory-and-disk"
+                  "network"
+                ];
+
+                modules-center = [
+                  "group/clock-and-user"
+                ];
+
+                modules-right = [
+                  "systemd-failed-units"
+                  "custom/swaynotificationcenter"
+                  "tray"
+                  "gamemode"
+                  "group/taskbar-and-workspaces"
+                ];
+
+                "group/backlight-and-idle-inhibitor" = {
+                  modules = [
+                    "backlight"
+                    "idle_inhibitor"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                backlight = {
+                  interval = 1; # 1 Second
+
+                  format = "{percent}% {icon}";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ]; # Only 9 icons are available.
+
+                  tooltip = true;
+                  tooltip-format = "{percent}% {icon}";
+
+                  scroll-step = 1.0;
+                  reverse-scrolling = false;
+                  reverse-mouse-scrolling = false;
+                  on-scroll-up = "brightnessctl set +1%";
+                  on-scroll-down = "brightnessctl set 1%-";
+
+                  on-click = "uwsm-app -- nwg-displays & uwsm-app -- com.sidevesh.Luminance";
+                };
+
+                idle_inhibitor = {
+                  start-activated = false;
+
+                  format = "{icon}";
+                  format-icons = {
+                    activated = "";
+                    deactivated = "";
+                  };
+
+                  tooltip = true;
+                  tooltip-format-activated = "{status}";
+                  tooltip-format-deactivated = "{status}";
+                };
+
+                "group/wireplumber-and-bluetooth" = {
+                  modules = [
+                    "wireplumber"
+                    "bluetooth"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                wireplumber = {
+                  only-physical = false;
+                  max-volume = 150.0; # According to Maximum Volume in pwvucontrol under Over-Amplification
+
+                  format = "{volume}% {icon} {format_source}";
+                  format-muted = "{icon} {format_source}";
+
+                  format-source = " {volume}% ";
+                  format-source-muted = "";
+
+                  format-icons = {
+                    default = [
+                      ""
+                      ""
+                      ""
+                    ]; # Only 3 icons are available.
+                    default-muted = "";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "Node Nickname: {node_name}\nSource Description: {source_desc}";
+
+                  scroll-step = 1.0;
+                  reverse-scrolling = false;
+                  reverse-mouse-scrolling = false;
+                  on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
+                  on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
+
+                  on-click = "uwsm-app -- pwvucontrol & uwsm-app -- helvum";
+                  on-click-middle = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+                  on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+                };
+
+                bluetooth = {
+                  format = "{status} {icon}";
+                  format-disabled = "Disabled {icon}";
+                  format-off = "Off {icon}";
+                  format-on = "On {icon}";
+                  format-connected = "{device_alias} {icon}";
+                  format-connected-battery = "{device_alias} 󰂱 ({device_battery_percentage}%)";
+                  format-icons = {
+                    no-controller = "󰂲";
+                    disabled = "󰂲";
+                    off = "󰂲";
+                    on = "󰂯";
+                    connected = "󰂱";
+                  };
+
+                  tooltip = true;
+                  tooltip-format = "Status: {status}\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
+                  tooltip-format-disabled = "Status: Disabled";
+                  tooltip-format-off = "Status: Off";
+                  tooltip-format-on = "Status: On\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}";
+                  tooltip-format-connected = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
+                  tooltip-format-connected-battery = "Status: Connected\nController Address: {controller_address} ({controller_address_type})\nController Alias: {controller_alias}\nConnected Devices ({num_connections}): {device_enumerate}";
+                  tooltip-format-enumerate-connected = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}";
+                  tooltip-format-enumerate-connected-battery = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}\n\tBattery: {device_battery_percentage}%";
+
+                  on-click = "uwsm-app -- overskride";
+                };
+
+                battery = {
+                  design-capacity = false;
+                  weighted-average = true;
+                  interval = 1; # 1 Second
+
+                  full-at = 100;
+                  states = {
+                    warning = 25;
+                    critical = 10;
+                  };
+
+                  format = "{capacity}% {icon}";
+                  format-plugged = "{capacity}% ";
+                  format-charging = "{capacity}% ";
+                  format-full = "{capacity}% {icon}";
+                  format-alt = "{time} {icon}";
+                  format-time = "{H} h {m} min";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ]; # Only 5 icons are available.
+
+                  tooltip = true;
+                  tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                "group/cpu-and-load-and-temperature" = {
+                  modules = [
+                    "cpu"
+                    "load"
+                    "temperature"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                cpu = {
+                  interval = 1; # 1 Second
+
+                  format = "{usage}% ";
+
+                  tooltip = true;
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                load = {
+                  interval = 1; # 1 Second
+
+                  format = "{} "; # {} = {load1}
+
+                  tooltip = true;
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                temperature = {
+                  interval = 1; # 1 Second
+
+                  format = "{temperatureC}°C {icon}";
+                  format-critical = "{temperatureC}°C {icon}";
+                  format-icons = [
+                    ""
+                    ""
+                    ""
+                    ""
+                    ""
+                  ]; # Only 5 icons are available.
+
+                  tooltip = true;
+                  tooltip-format = "{temperatureF}°F\n{temperatureK}K";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                "group/memory-and-disk" = {
+                  modules = [
+                    "memory"
+                    "disk"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                memory = {
+                  interval = 1; # 1 Second
+
+                  format = "{percentage}% ";
+
+                  tooltip = true;
+                  tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                disk = {
+                  path = "/";
+                  unit = "GB";
+                  interval = 1; # 1 Second
+
+                  format = "{percentage_used}% 󰋊";
+
+                  tooltip = true;
+                  tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                network = {
+                  interval = 1; # 1 Second
+
+                  format = "{bandwidthUpBytes} {bandwidthDownBytes}";
+                  format-disconnected = "Disconnected 󱘖";
+                  format-linked = "No IP 󰀦";
+                  format-ethernet = "{bandwidthUpBytes}   {bandwidthDownBytes}";
+                  format-wifi = "{bandwidthUpBytes}   {bandwidthDownBytes}";
+
+                  tooltip = true;
+                  tooltip-format = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+                  tooltip-format-disconnected = "Disconnected";
+                  tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+                  tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
+
+                  on-click = "uwsm-app -- resources";
+                };
+
+                "group/clock-and-user" = {
+                  modules = [
+                    "clock"
+                    "user"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = true;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                clock = {
+                  timezone = config.time.timeZone;
+                  locale = "en_US";
+                  interval = 1;
+
+                  format = "{:%I:%M %p}";
+                  format-alt = "{:%A, %B %d, %Y}";
+
+                  tooltip = true;
+                  tooltip-format = "<tt><small>{calendar}</small></tt>";
+
+                  calendar = {
+                    mode = "year";
+                    mode-mon-col = 3;
+                    weeks-pos = "right";
+
+                    format = {
+                      months = "<b>{}</b>";
+                      days = "{}";
+                      weekdays = "<b>{}</b>";
+                      weeks = "<i>{:%U}</i>";
+                      today = "<u>{}</u>";
+                    };
+                  };
+                };
+
+                user = {
+                  interval = 1; # 1 Second
+
+                  format = "{work_d}:{work_H}:{work_M}:{work_S} ";
+
+                  icon = false;
+
+                  open-on-click = false;
+                };
+
+                systemd-failed-units = {
+                  system = true;
+                  user = true;
+
+                  hide-on-ok = false;
+
+                  format = "{nr_failed_system}, {nr_failed_user} ";
+                  format-ok = "";
+
+                  on-click = "uwsm-app -- kjournaldbrowser";
+                };
+
+                "custom/swaynotificationcenter" = {
+                  exec-if = "which swaync-client";
+                  exec = "swaync-client --subscribe-waybar";
+                  return-type = "json";
+                  escape = true;
+
+                  format = "{} {icon}";
+                  format-icons = {
+                    notification = "<sup></sup>";
+                    none = "";
+
+                    inhibited-notification = "<sup></sup>";
+                    inhibited-none = "";
+
+                    dnd-notification = "<sup></sup>";
+                    dnd-none = "";
+
+                    dnd-inhibited-notification = "<sup></sup>";
+                    dnd-inhibited-none = "";
+                  };
+
+                  tooltip = true;
+
+                  on-click = "swaync-client --toggle-panel --skip-wait";
+                  on-click-middle = "swaync-client --close-all --skip-wait";
+                  on-click-right = "swaync-client --toggle-dnd --skip-wait";
+                };
+
+                tray = {
+                  show-passive-items = true;
+                  reverse-direction = false;
+                  icon-size = fontPreferences.size;
+                  spacing = builtins.floor (designFactor / 4); # 4
+                };
+
+                gamemode = {
+                  hide-not-running = true;
+
+                  use-icon = false;
+                  glyph = "󰊗";
+                  format = "{glyph} {count}";
+                  format-alt = "Games: {count}";
+
+                  tooltip = true;
+                  tooltip-format = "Games Running: {count}";
+                };
+
+                "group/taskbar-and-workspaces" = {
+                  modules = [
+                    "hyprland/workspaces"
+                    "wlr/taskbar"
+                  ];
+                  drawer = {
+                    click-to-reveal = false;
+                    transition-left-to-right = false;
+                    transition-duration = 500;
+                  };
+                  orientation = "inherit";
+                };
+
+                "wlr/taskbar" = {
+                  all-outputs = false;
+                  active-first = false;
+                  sort-by-app-id = false;
+                  format = "{icon}";
+                  icon-size = fontPreferences.size;
+                  markup = true;
+
+                  tooltip = true;
+                  tooltip-format = "Title: {title}\nName: {name}\nID: {app_id}\nState: {state}";
+
+                  on-click = "activate";
+                };
+
+                "hyprland/workspaces" = {
+                  all-outputs = false;
+                  show-special = true;
+                  special-visible-only = false;
+                  active-only = false;
+                  format = "{name}";
+                  move-to-monitor = false;
+
+                  on-scroll-up = "hyprctl dispatch \"hl.dsp.focus({workspace = 'e-1'})\"";
+                  on-scroll-down = "hyprctl dispatch \"hl.dsp.focus({workspace = 'e+1'})\"";
+
+                  on-click = "hyprctl dispatch \"hl.dsp.focus({ workspace = <id> })\""; # FIXME: Does Not Work
+                };
               };
             };
 
-            workspace = {
-              lookAndFeel = "org.kde.breezedark.desktop";
+            style = ''
+              * {
+                font-family: ${fontPreferences.name.sansSerif};
+                font-size: ${toString fontPreferences.size}px;
+              }
 
-              iconTheme = config.home-manager.users.normal.gtk.iconTheme.name;
+              window#waybar {
+                border: none;
+                background-color: transparent;
+              }
 
-              cursor = {
-                theme = config.home-manager.users.normal.home.pointerCursor.name;
-                size = config.home-manager.users.normal.home.pointerCursor.size;
-              };
+              .modules-right > widget:last-child > #workspaces {
+                margin-right: 0px;
+              }
+
+              .modules-left > widget:first-child > #workspaces {
+                margin-left: 0px;
+              }
+
+              #backlight,
+              #idle_inhibitor,
+              #wireplumber,
+              #bluetooth,
+              #battery,
+              #cpu,
+              #load,
+              #temperature,
+              #memory,
+              #disk,
+              #network,
+              #clock,
+              #user,
+              #systemd-failed-units,
+              #custom-swaynotificationcenter,
+              #gamemode,
+              #window {
+                border-radius: ${toString designFactor}px;
+                background-color: @crust;
+                padding: ${toString (builtins.floor (designFactor / 8))}px ${
+                  toString (builtins.floor (designFactor / 2))
+                }px;
+                color: @text;
+              }
+
+              #idle_inhibitor,
+              #bluetooth,
+              #load,
+              #temperature,
+              #disk,
+              #user {
+                margin-left: ${toString (builtins.floor (designFactor / 4))}px;
+              }
+
+              #idle_inhibitor.deactivated {
+                color: @text;
+              }
+
+              #idle_inhibitor.activated {
+                color: @green;
+              }
+
+              #wireplumber.muted,
+              #wireplumber.sink-muted,
+              #wireplumber.source-muted {
+                color: @red;
+              }
+
+              #bluetooth.no-controller,
+              #bluetooth.disabled,
+              #bluetooth.off {
+                color: @red;
+              }
+
+              #bluetooth.on,
+              #bluetooth.discoverable,
+              #bluetooth.pairable {
+                color: @text;
+              }
+
+              #bluetooth.discovering,
+              #bluetooth.connected {
+                color: @green;
+              }
+
+              #battery.plugged,
+              #battery.full {
+                color: @text;
+              }
+
+              #battery.charging {
+                color: @green;
+              }
+
+              #battery.warning,
+              #temperature.warning {
+                color: @peach;
+              }
+
+              #battery.critical,
+              #temperature.critical {
+                color: @red;
+              }
+
+              #network.disabled,
+              #network.disconnected,
+              #network.linked {
+                color: @red;
+              }
+
+              #network.etherenet,
+              #network.wifi {
+                color: @text;
+              }
+
+              #systemd-failed-units.ok {
+                color: @text;
+              }
+
+              #systemd-failed-units.degraded {
+                color: @red;
+              }
+
+              #custom-swaynotificationcenter {
+                font-family: ${fontPreferences.name.monospace};
+              }
+
+              #gamemode.running {
+                color: @green;
+              }
+
+              #workspaces,
+              #taskbar,
+              #tray {
+                background-color: transparent;
+              }
+
+              button {
+                margin: 0px ${toString (builtins.floor (designFactor / 8))}px;
+                border-radius: ${toString designFactor}px;
+                background-color: @crust;
+                padding: 0px;
+                color: @text;
+              }
+
+              button * {
+                padding: 0px ${toString (builtins.floor (designFactor / 4))}px;
+              }
+
+              button.active {
+                background-color: @mantle;
+              }
+
+              button:hover {
+                background-color: @surface0;
+              }
+
+              #window label {
+                padding: 0px ${toString (builtins.floor (designFactor / 4))}px;
+                font-size: ${toString fontPreferences.size}px;
+              }
+
+              #tray > widget {
+                border-radius: ${toString designFactor}px;
+                background-color: @crust;
+                color: @text;
+              }
+
+              #tray image {
+                padding: 0px ${toString (builtins.floor (designFactor / 2))}px;
+              }
+
+              #tray > .passive {
+                -gtk-icon-effect: dim;
+              }
+
+              #tray > .active {
+                background-color: @mantle;
+              }
+
+              #tray > .needs-attention {
+                background-color: @green;
+                -gtk-icon-effect: highlight;
+              }
+
+              #tray > widget:hover {
+                background-color: @surface0;
+              }
+            '';
+          };
+
+          wezterm = {
+            enable = true;
+            package = pkgs.wezterm;
+
+            enableBashIntegration = true;
+
+            settings = {
+              hide_tab_bar_if_only_one_tab = true;
+
+              font = pkgs.lib.generators.mkLuaInline ''wezterm.font("${fontPreferences.name.monospace}")'';
+              font_size = fontPreferences.size;
             };
-
-            configFile = {
-              systemsettingsrc = {
-                systemsettings_sidebar_mode = {
-                  HighlightNonDefaultSettings = true;
-                };
-              };
-
-              kdeglobals = {
-                Sounds = {
-                  Theme = "ocean";
-                };
-              };
-
-              ksplashrc = {
-                KSplash = {
-                  Engine = "none";
-                  Theme = "None";
-                };
-              };
-            }; # Relative to $XDG_CONFIG_HOME
-
-            # dataFile = { }; # Relative to $XDG_DATA_HOME
-
-            # file = { }; # Relative to $HOME
-          }; # From plasmaManagerFlake
+          };
 
           bash = {
             enable = true;
@@ -4898,7 +6580,7 @@ in
                 terminalSupport = true;
                 vulkanSupport = true;
                 waylandSupport = true;
-                x11Support = false;
+                x11Support = config.programs.hyprland.xwayland.enable;
                 xfceSupport = false;
                 zfsSupport = true;
               }
@@ -5140,11 +6822,8 @@ in
             extraPackages = config.programs.bat.extraPackages;
           };
 
-          brave = {
-            nativeMessagingHosts = with pkgs; [
-              kdePackages.plasma-browser-integration
-            ];
-          };
+          # brave.nativeMessagingHosts = with pkgs; [
+          # ];
 
           kubecolor = {
             enable = true;
@@ -5233,6 +6912,132 @@ in
             package = pkgs.texinfoInteractive;
           };
         };
+
+        catppuccin = {
+          enable = config.catppuccin.enable;
+
+          enableReleaseCheck = config.catppuccin.enableReleaseCheck;
+          cache.enable = config.catppuccin.cache.enable;
+
+          autoEnable = config.catppuccin.autoEnable;
+          flavor = config.catppuccin.flavor;
+          accent = config.catppuccin.accent;
+
+          hyprland = {
+            enable = config.programs.hyprland.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          hyprlock = {
+            enable = config.home-manager.users.normal.programs.hyprlock.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            useDefaultConfig = false;
+          };
+
+          cursors = {
+            enable = config.catppuccin.cursors.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          gtk.icon.enable = config.catppuccin.gtk.icon.enable;
+
+          qt5ct = {
+            enable = config.catppuccin.enable;
+            assertPlatformTheme = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          kvantum = {
+            enable = config.catppuccin.enable;
+            assertStyle = true;
+            apply = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          hyprtoolkit = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          waybar = {
+            enable = config.home-manager.users.normal.programs.waybar.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            mode = "prependImport";
+          };
+
+          swaync = {
+            enable = config.home-manager.users.normal.services.swaync.enable;
+
+            flavor = config.catppuccin.flavor;
+
+            font = fontPreferences.name.sansSerif;
+            fontSize = toString fontPreferences.size;
+          };
+
+          wezterm = {
+            enable = config.home-manager.users.normal.programs.wezterm.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          starship = {
+            enable = config.programs.starship.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          fcitx5 = {
+            enable = config.catppuccin.fcitx5.enable;
+            apply = true;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            enableRounded = true;
+          };
+
+          television = {
+            enable = config.programs.television.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+          };
+
+          bat = {
+            enable = config.programs.bat.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          mangohud = {
+            enable = config.home-manager.users.normal.programs.mangohud.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          obs = {
+            enable = config.programs.obs-studio.enable;
+
+            flavor = config.catppuccin.flavor;
+          }; # Settings > Appearance > Theme, Style
+        }; # From catppuccinThemeFlake
 
         manual = {
           manpages.enable = true;
