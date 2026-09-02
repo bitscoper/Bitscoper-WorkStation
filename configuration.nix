@@ -103,7 +103,7 @@ let
       emoji = "Noto Color Emoji";
     };
 
-    size = 10;
+    size = 12;
   };
 
   tlsCertificateFiles =
@@ -131,8 +131,8 @@ let
   bgrtPng =
     pkgs.runCommand "BGRT.png"
       {
-        nativeBuildInputs = [
-          pkgs.imagemagick
+        nativeBuildInputs = with pkgs; [
+          imagemagick
         ];
       }
       ''
@@ -153,6 +153,7 @@ let
   };
 
   designFactor = 16;
+  transitionDuration = 500; # 500 Milliseconds
 in
 {
   _class = "nixos";
@@ -1869,7 +1870,7 @@ in
           banner = pkgs.writeText "opesshBanner.txt" "${config.networking.fqdn}";
         in
         {
-          Banner = toString banner;
+          Banner = pkgs.lib.toString banner;
           LogLevel = "ERROR";
           PasswordAuthentication = true;
           PermitRootLogin = "yes";
@@ -1982,7 +1983,6 @@ in
           <relay-password>${config.secrets.password_2}</relay-password>
         </authentication>
         <directory>
-          <yp-url-timeout>15</yp-url-timeout>
           <yp-url>http://dir.xiph.org/cgi-bin/yp-cgi</yp-url>
         </directory>
         <paths>
@@ -2298,7 +2298,7 @@ in
           settings = {
             "org/gnome/desktop/interface" = {
               gtk-enable-primary-paste = true;
-              monospace-font-name = "${fontPreferences.name.monospace} ${toString fontPreferences.size}";
+              monospace-font-name = "${fontPreferences.name.monospace} ${pkgs.lib.toString fontPreferences.size}";
             };
 
             "org/gnome/desktop/privacy" = {
@@ -2368,11 +2368,51 @@ in
       ];
     };
 
+    waybar = {
+      enable = !config.home-manager.users.normal.programs.waybar.enable;
+      package = (
+        pkgs.waybar.override {
+          cavaSupport = true;
+          enableManpages = true;
+          evdevSupport = true;
+          experimentalPatches = true;
+          gpsSupport = true;
+          inputSupport = true;
+          jackSupport = true;
+          mpdSupport = false;
+          mprisSupport = true;
+          niriSupport = false;
+          nlSupport = true;
+          pipewireSupport = true;
+          pulseSupport = true;
+          rfkillSupport = true;
+          sndioSupport = true;
+          systemdSupport = true;
+          traySupport = true;
+          udevSupport = true;
+          upowerSupport = true;
+          wireplumberSupport = true;
+          withMediaPlayer = true;
+
+          runTests = false;
+        }
+      );
+    };
+
+    seahorse.enable = true;
+
     partition-manager = {
       enable = true;
     };
 
     k3b.enable = true;
+
+    nm-applet = {
+      enable = true;
+      package = pkgs.networkmanagerapplet;
+
+      indicator = true;
+    };
 
     system-config-printer.enable = true;
 
@@ -2576,6 +2616,7 @@ in
         arduino-core
         arduino-ide
         arduino-ota
+        arj
         ascii
         ascii-draw
         asciinema
@@ -2609,6 +2650,7 @@ in
         bustle
         butt
         bytecode-viewer
+        bzip3
         calligraphy
         carburetor
         cartero
@@ -2636,6 +2678,7 @@ in
         concessio
         constrict
         coulomb
+        cpio
         cramfsprogs
         crlfuzz
         cron
@@ -2669,12 +2712,14 @@ in
         dislocker
         disorderfs
         dive
+        djvulibre
         dmg2img
         dmidecode
         dnsrecon
         door-knocker
         dosfstools
         dot2tex
+        dpkg
         dtui
         dvb-apps
         e2fsprogs
@@ -2796,6 +2841,7 @@ in
         hyprland-qtutils
         hyprmag
         hyprpicker
+        hyprshot
         hyprshutdown
         hyprtoolkit
         hyprutils
@@ -2806,7 +2852,6 @@ in
         iconic
         iftop
         ifuse
-        imhex
         inetutils
         inkcut
         inkscape-with-extensions
@@ -2838,6 +2883,7 @@ in
         labplot
         lenspect
         letterpress
+        lha
         libaom
         libarchive
         libde265
@@ -2887,6 +2933,7 @@ in
         millisecond
         minikube
         mixxx
+        mlocate
         monkeys-audio
         morphosis
         mousam
@@ -2925,6 +2972,7 @@ in
         nwg-drawer
         obexftp
         oha
+        okteta
         onionshare-gui
         openafs
         openai-whisper
@@ -3035,7 +3083,6 @@ in
         sshfs
         sshfs-fuse
         sslscan
-        hyprshot
         standardnotes
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
@@ -3071,6 +3118,8 @@ in
         udftools
         uefi-firmware-parser
         ugit
+        unar
+        unarc
         undollar
         unhide
         unhide-gui
@@ -3110,6 +3159,7 @@ in
         whois
         whosthere
         wildcard
+        windowtolayer
         wl-clipboard
         wvkbd # wvkbd-mobintl
         xar
@@ -3123,6 +3173,7 @@ in
         xhost
         xoscope
         xvidcore
+        xz
         yara-x
         yuview
         zenity
@@ -3271,6 +3322,25 @@ in
         (writeShellScriptBin "hardinfo2" ''
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
         '') # With config.security.sudo.extraRules
+
+        (pkgs.symlinkJoin {
+          name = "krusader-with-konsole";
+          paths = with pkgs; [
+            krusader
+          ];
+
+          buildInputs = with pkgs; [
+            makeWrapper
+          ];
+          postBuild = ''
+            wrapProgram $out/bin/krusader \
+              --prefix PATH : ${
+                pkgs.lib.makeBinPath [
+                  pkgs.kdePackages.konsole
+                ]
+              }
+          '';
+        })
 
         (nwg-displays.override {
           hyprlandSupport = true;
@@ -3456,8 +3526,6 @@ in
       ++ (with kdePackages; [
         ark
         audiocd-kio
-        dolphin
-        dolphin-plugins
         ffmpegthumbs
         filelight
         gwenview
@@ -3467,12 +3535,16 @@ in
         kcharselect
         kclock
         kcolorchooser
+        kdegraphics-mobipocket
+        kdegraphics-thumbnailers
         kdenlive
         kfind
         kget
+        kimageformats
         kio
         kio-admin
         kio-extras
+        kio-extras-kf5
         kio-fuse
         kio-zeroconf
         kjournald
@@ -3489,6 +3561,7 @@ in
         marble
         ocean-sound-theme
         okular
+        poppler
         qrca
         skanpage
         step
@@ -3604,7 +3677,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "org.kde.dolphin.desktop";
+        "inode/directory" = "org.kde.krusader.desktop";
 
         "text/1d-interleaved-parityfec" = "codium.desktop";
         "text/cache-manifest" = "codium.desktop";
@@ -4282,8 +4355,8 @@ in
           pointerCursor = {
             enable = true;
 
-            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";z
-            package = config.catppuccin.sources.cursors."${config.catppuccin.flavor}${pkgs.lib.toSentenceCase config.catppuccin.accent}";
+            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
+            # package = config.catppuccin.sources.cursors."${config.catppuccin.flavor}${pkgs.lib.toSentenceCase config.catppuccin.accent}"; # Already Defined by Catppuccin
             size = 20;
 
             gtk = {
@@ -4816,7 +4889,7 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm dolphin\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm krusader\")")
                 ];
               }
               {
@@ -4835,13 +4908,13 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- dolphin\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- krusader\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- dolphin\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- krusader\")")
                 ];
               }
               {
@@ -5381,12 +5454,12 @@ in
               source = pkgs.writeText "nwg-bar.css" ''
                 window {
                   border: 1px solid rgb(88, 91, 112);
-                  border-radius: ${toString (builtins.floor (designFactor / 2))}px;
+                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
                 }
 
                 #bar {
-                  margin: ${toString (builtins.floor (designFactor * 2))}px;
-                  font-size: ${toString (builtins.floor designFactor)}px;
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                  font-size: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                   font-family: ${fontPreferences.name.sansSerif};
                 }
 
@@ -5399,8 +5472,8 @@ in
                 }
 
                 button {
-                  margin: ${toString (builtins.floor (designFactor / 4))}px;
-                  padding-top: ${toString (builtins.floor (designFactor / 2))}px;
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+                  padding-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
                 }
 
                 button:hover {
@@ -5412,10 +5485,10 @@ in
                 }
 
                 grid {
-                  box-shadow: 0 0 ${toString (builtins.floor (designFactor * 3))}px rgb(49, 50, 68);
-                  border-radius: ${toString (builtins.floor (designFactor / 2))}px;
+                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 3))}px rgb(49, 50, 68);
+                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
                   background-color: rgb(17, 17, 27);
-                  padding: ${toString (builtins.floor (designFactor / 2))}px;
+                  padding: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
                 }''; # Catppuccin Mocha: "Surface 2" rgb(88, 91, 112), "Text" rgb(205, 214, 244), "Surface 0" rgb(49, 50, 68), "Crust" rgb(17, 17, 27)
 
               target = "nwg-bar/style.css";
@@ -5424,17 +5497,6 @@ in
           };
 
           dataFile = {
-            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
-              enable = true;
-
-              source = builtins.fetchurl {
-                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
-              };
-
-              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
-              executable = null;
-            };
-
             "SourceGit/Catppuccin_${
               pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
             }${builtins.substring 1 255 config.catppuccin.flavor}.json" =
@@ -5586,10 +5648,14 @@ in
           style.name = config.qt.style;
 
           qt6ctSettings = {
+            Fonts = {
+              fixed = "\"${fontPreferences.name.monospace},${pkgs.lib.toString fontPreferences.size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
+              general = "\"${fontPreferences.name.sansSerif},${pkgs.lib.toString fontPreferences.size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
+            };
+
             Appearance = {
               custom_palette = true;
               color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-              # color_scheme_path = "${pkgs.catppuccin-qt5ct}/share/qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
               style = "kvantum-dark";
 
               icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
@@ -5601,7 +5667,6 @@ in
               activate_item_on_single_click = 0; # 0 = Disabled
               buttonbox_layout = 2; # 2 = KDE
               dialog_buttons_have_icons = 0; # 0 = Disabled
-              gui_effects = "General, AnimateMenu, AnimateCombo, AnimateTooltip, AnimateToolBox";
               keyboard_scheme = 3; # 3 = KDE
               menus_have_icons = true;
               show_shortcuts_in_context_menus = true;
@@ -5614,7 +5679,6 @@ in
             Appearance = {
               custom_palette = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.custom_palette;
               color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-              # color_scheme_path = "${pkgs.catppuccin-qt5ct}/share/qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
               style = "kvantum-dark";
 
               icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
@@ -5628,7 +5692,6 @@ in
               buttonbox_layout = config.home-manager.users.normal.qt.qt6ctSettings.Interface.buttonbox_layout;
               dialog_buttons_have_icons =
                 config.home-manager.users.normal.qt.qt6ctSettings.Interface.dialog_buttons_have_icons;
-              gui_effects = config.home-manager.users.normal.qt.qt6ctSettings.Interface.gui_effects;
               keyboard_scheme = config.home-manager.users.normal.qt.qt6ctSettings.Interface.keyboard_scheme;
               menus_have_icons = config.home-manager.users.normal.qt.qt6ctSettings.Interface.menus_have_icons;
               show_shortcuts_in_context_menus =
@@ -5705,6 +5768,11 @@ in
 
           ssh-agent.enable = !config.programs.gnupg.agent.enable;
 
+          network-manager-applet = {
+            enable = config.programs.nm-applet.enable;
+            package = config.programs.nm-applet.package;
+          };
+
           udiskie = {
             enable = true;
             package = pkgs.udiskie;
@@ -5740,7 +5808,7 @@ in
               position = "bottom";
               orientation = "h";
               show-percentage = true;
-              transition-time = 250;
+              transition-time = transitionDuration;
               timeout = 2; # 2 Seconds
             };
           };
@@ -5865,7 +5933,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = true;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -5920,7 +5988,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = true;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -6026,7 +6094,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = true;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -6078,7 +6146,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = true;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -6133,7 +6201,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = true;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -6241,7 +6309,7 @@ in
                   drawer = {
                     click-to-reveal = false;
                     transition-left-to-right = false;
-                    transition-duration = 500;
+                    transition-duration = transitionDuration;
                   };
                   orientation = "inherit";
                 };
@@ -6279,7 +6347,7 @@ in
             style = ''
               * {
                 font-family: ${fontPreferences.name.sansSerif};
-                font-size: ${toString fontPreferences.size}px;
+                font-size: ${pkgs.lib.toString fontPreferences.size}px;
               }
 
               window#waybar {
@@ -6312,10 +6380,10 @@ in
               #custom-swaynotificationcenter,
               #gamemode,
               #window {
-                border-radius: ${toString designFactor}px;
+                border-radius: ${pkgs.lib.toString designFactor}px;
                 background-color: @crust;
-                padding: ${toString (builtins.floor (designFactor / 8))}px ${
-                  toString (builtins.floor (designFactor / 2))
+                padding: ${pkgs.lib.toString (builtins.floor (designFactor / 8))}px ${
+                  pkgs.lib.toString (builtins.floor (designFactor / 2))
                 }px;
                 color: @text;
               }
@@ -6326,7 +6394,7 @@ in
               #temperature,
               #disk,
               #user {
-                margin-left: ${toString (builtins.floor (designFactor / 4))}px;
+                margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
               }
 
               #idle_inhibitor.deactivated {
@@ -6413,15 +6481,15 @@ in
               }
 
               button {
-                margin: 0px ${toString (builtins.floor (designFactor / 8))}px;
-                border-radius: ${toString designFactor}px;
+                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 8))}px;
+                border-radius: ${pkgs.lib.toString designFactor}px;
                 background-color: @crust;
                 padding: 0px;
                 color: @text;
               }
 
               button * {
-                padding: 0px ${toString (builtins.floor (designFactor / 4))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
               }
 
               button.active {
@@ -6433,18 +6501,18 @@ in
               }
 
               #window label {
-                padding: 0px ${toString (builtins.floor (designFactor / 4))}px;
-                font-size: ${toString fontPreferences.size}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+                font-size: ${pkgs.lib.toString fontPreferences.size}px;
               }
 
               #tray > widget {
-                border-radius: ${toString designFactor}px;
+                border-radius: ${pkgs.lib.toString designFactor}px;
                 background-color: @crust;
                 color: @text;
               }
 
               #tray image {
-                padding: 0px ${toString (builtins.floor (designFactor / 2))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
               }
 
               #tray > .passive {
@@ -6987,7 +7055,7 @@ in
             flavor = config.catppuccin.flavor;
 
             font = fontPreferences.name.sansSerif;
-            fontSize = toString fontPreferences.size;
+            fontSize = pkgs.lib.toString fontPreferences.size;
           };
 
           wezterm = {
