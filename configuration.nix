@@ -349,31 +349,6 @@ in
         mkdir -p /usr/share/i18n
         ln -sfn /run/current-system/sw/share/i18n/locales /usr/share/i18n/locales
       '';
-
-      copyOnlyOfficeFonts =
-        let
-          fonts = config.fonts.packages;
-        in
-        ''
-          DIRECTORY="/var/lib/onlyoffice-fonts/"
-          mkdir -p "$DIRECTORY"
-
-          ${pkgs.lib.concatMapStrings (package: ''
-            if [ -d "${package}/share/fonts" ]; then
-              find "${package}/share/fonts" -type f \( \
-                -name "*.bdf" -o \
-                -name "*.otf" -o \
-                -name "*.pcf" -o \
-                -name "*.pfa" -o \
-                -name "*.pfb" -o \
-                -name "*.ttc" -o \
-                -name "*.ttf" \
-              \) -exec cp -f {} "$DIRECTORY" \;
-            fi
-          '') fonts}
-
-          chmod -R 777 "$DIRECTORY"
-        '';
     };
 
     # userActivationScripts = { };
@@ -2201,23 +2176,7 @@ in
       enableBashIntegration = true;
     };
 
-    nano = {
-      enable = true;
-      package = (
-        pkgs.nano.override {
-          enableNls = true;
-        }
-      );
-
-      syntaxHighlight = true;
-
-      nanorc = ''
-        set linenumbers
-        set indicator
-        set softwrap
-        set autoindent
-      '';
-    };
+    nano.enable = false;
 
     bat = {
       enable = true;
@@ -2895,6 +2854,7 @@ in
         libnotify
         libogg
         libopus
+        libreoffice
         libsecret
         libsixel
         libultrahdr
@@ -3138,7 +3098,6 @@ in
         video2x
         virt-v2v
         vorbis-tools
-        vscodium
         vulnix
         wafw00f
         wavemon
@@ -3604,6 +3563,8 @@ in
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
 
       CHROME_EXECUTABLE = "brave";
+
+      EDITOR = "emacs";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
@@ -3679,103 +3640,103 @@ in
       defaultApplications = {
         "inode/directory" = "org.kde.krusader.desktop";
 
-        "text/1d-interleaved-parityfec" = "codium.desktop";
-        "text/cache-manifest" = "codium.desktop";
-        "text/calendar" = "codium.desktop";
-        "text/cql" = "codium.desktop";
-        "text/cql-expression" = "codium.desktop";
-        "text/cql-identifier" = "codium.desktop";
-        "text/css" = "codium.desktop";
-        "text/csv" = "codium.desktop";
-        "text/csv-schema" = "codium.desktop";
-        "text/directory" = "codium.desktop";
-        "text/dns" = "codium.desktop";
-        "text/ecmascript" = "codium.desktop";
-        "text/encaprtp" = "codium.desktop";
-        "text/enriched" = "codium.desktop";
-        "text/fhirpath" = "codium.desktop";
-        "text/flexfec" = "codium.desktop";
-        "text/fwdred" = "codium.desktop";
-        "text/gff3" = "codium.desktop";
-        "text/grammar-ref-list" = "codium.desktop";
-        "text/hl7v2" = "codium.desktop";
-        "text/html" = "codium.desktop";
-        "text/javascript" = "codium.desktop";
-        "text/jcr-cnd" = "codium.desktop";
-        "text/markdown" = "codium.desktop";
-        "text/mizar" = "codium.desktop";
-        "text/n3" = "codium.desktop";
-        "text/org" = "codium.desktop";
-        "text/parameters" = "codium.desktop";
-        "text/parityfec" = "codium.desktop";
-        "text/plain" = "codium.desktop";
-        "text/provenance-notation" = "codium.desktop";
-        "text/prs.fallenstein.rst" = "codium.desktop";
-        "text/prs.lines.tag" = "codium.desktop";
-        "text/prs.prop.logic" = "codium.desktop";
-        "text/prs.texi" = "codium.desktop";
-        "text/raptorfec" = "codium.desktop";
-        "text/RED" = "codium.desktop";
-        "text/rfc822-headers" = "codium.desktop";
-        "text/richtext" = "codium.desktop";
-        "text/rtf" = "codium.desktop";
-        "text/rtp-enc-aescm128" = "codium.desktop";
-        "text/rtploopback" = "codium.desktop";
-        "text/rtx" = "codium.desktop";
-        "text/SGML" = "codium.desktop";
-        "text/shaclc" = "codium.desktop";
-        "text/shex" = "codium.desktop";
-        "text/spdx" = "codium.desktop";
-        "text/strings" = "codium.desktop";
-        "text/t140" = "codium.desktop";
-        "text/tab-separated-values" = "codium.desktop";
-        "text/troff" = "codium.desktop";
-        "text/turtle" = "codium.desktop";
-        "text/ulpfec" = "codium.desktop";
-        "text/uri-list" = "codium.desktop";
-        "text/vcard" = "codium.desktop";
-        "text/vnd.a" = "codium.desktop";
-        "text/vnd.abc" = "codium.desktop";
-        "text/vnd.ascii-art" = "codium.desktop";
-        "text/vnd.curl" = "codium.desktop";
-        "text/vnd.debian.copyright" = "codium.desktop";
-        "text/vnd.DMClientScript" = "codium.desktop";
-        "text/vnd.dvb.subtitle" = "codium.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "codium.desktop";
-        "text/vnd.exchangeable" = "codium.desktop";
-        "text/vnd.familysearch.gedcom" = "codium.desktop";
-        "text/vnd.ficlab.flt" = "codium.desktop";
-        "text/vnd.fly" = "codium.desktop";
-        "text/vnd.fmi.flexstor" = "codium.desktop";
-        "text/vnd.gml" = "codium.desktop";
-        "text/vnd.graphviz" = "codium.desktop";
-        "text/vnd.hans" = "codium.desktop";
-        "text/vnd.hgl" = "codium.desktop";
-        "text/vnd.in3d.3dml" = "codium.desktop";
-        "text/vnd.in3d.spot" = "codium.desktop";
-        "text/vnd.IPTC.NewsML" = "codium.desktop";
-        "text/vnd.IPTC.NITF" = "codium.desktop";
-        "text/vnd.latex-z" = "codium.desktop";
-        "text/vnd.motorola.reflex" = "codium.desktop";
-        "text/vnd.ms-mediapackage" = "codium.desktop";
-        "text/vnd.net2phone.commcenter.command" = "codium.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "codium.desktop";
-        "text/vnd.senx.warpscript" = "codium.desktop";
-        "text/vnd.si.uricatalogue" = "codium.desktop";
-        "text/vnd.sosi" = "codium.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "codium.desktop";
-        "text/vnd.trolltech.linguist" = "codium.desktop";
-        "text/vnd.typst" = "codium.desktop";
-        "text/vnd.vcf" = "codium.desktop";
-        "text/vnd.wap.si" = "codium.desktop";
-        "text/vnd.wap.sl" = "codium.desktop";
-        "text/vnd.wap.wml" = "codium.desktop";
-        "text/vnd.wap.wmlscript" = "codium.desktop";
-        "text/vnd.zoo.kcl" = "codium.desktop";
-        "text/vtt" = "codium.desktop";
-        "text/wgsl" = "codium.desktop";
-        "text/xml" = "codium.desktop";
-        "text/xml-external-parsed-entity" = "codium.desktop";
+        "text/1d-interleaved-parityfec" = "emacs.desktop";
+        "text/cache-manifest" = "emacs.desktop";
+        "text/calendar" = "emacs.desktop";
+        "text/cql" = "emacs.desktop";
+        "text/cql-expression" = "emacs.desktop";
+        "text/cql-identifier" = "emacs.desktop";
+        "text/css" = "emacs.desktop";
+        "text/csv" = "emacs.desktop";
+        "text/csv-schema" = "emacs.desktop";
+        "text/directory" = "emacs.desktop";
+        "text/dns" = "emacs.desktop";
+        "text/ecmascript" = "emacs.desktop";
+        "text/encaprtp" = "emacs.desktop";
+        "text/enriched" = "emacs.desktop";
+        "text/fhirpath" = "emacs.desktop";
+        "text/flexfec" = "emacs.desktop";
+        "text/fwdred" = "emacs.desktop";
+        "text/gff3" = "emacs.desktop";
+        "text/grammar-ref-list" = "emacs.desktop";
+        "text/hl7v2" = "emacs.desktop";
+        "text/html" = "emacs.desktop";
+        "text/javascript" = "emacs.desktop";
+        "text/jcr-cnd" = "emacs.desktop";
+        "text/markdown" = "emacs.desktop";
+        "text/mizar" = "emacs.desktop";
+        "text/n3" = "emacs.desktop";
+        "text/org" = "emacs.desktop";
+        "text/parameters" = "emacs.desktop";
+        "text/parityfec" = "emacs.desktop";
+        "text/plain" = "emacs.desktop";
+        "text/provenance-notation" = "emacs.desktop";
+        "text/prs.fallenstein.rst" = "emacs.desktop";
+        "text/prs.lines.tag" = "emacs.desktop";
+        "text/prs.prop.logic" = "emacs.desktop";
+        "text/prs.texi" = "emacs.desktop";
+        "text/raptorfec" = "emacs.desktop";
+        "text/RED" = "emacs.desktop";
+        "text/rfc822-headers" = "emacs.desktop";
+        "text/richtext" = "emacs.desktop";
+        "text/rtf" = "emacs.desktop";
+        "text/rtp-enc-aescm128" = "emacs.desktop";
+        "text/rtploopback" = "emacs.desktop";
+        "text/rtx" = "emacs.desktop";
+        "text/SGML" = "emacs.desktop";
+        "text/shaclc" = "emacs.desktop";
+        "text/shex" = "emacs.desktop";
+        "text/spdx" = "emacs.desktop";
+        "text/strings" = "emacs.desktop";
+        "text/t140" = "emacs.desktop";
+        "text/tab-separated-values" = "emacs.desktop";
+        "text/troff" = "emacs.desktop";
+        "text/turtle" = "emacs.desktop";
+        "text/ulpfec" = "emacs.desktop";
+        "text/uri-list" = "emacs.desktop";
+        "text/vcard" = "emacs.desktop";
+        "text/vnd.a" = "emacs.desktop";
+        "text/vnd.abc" = "emacs.desktop";
+        "text/vnd.ascii-art" = "emacs.desktop";
+        "text/vnd.curl" = "emacs.desktop";
+        "text/vnd.debian.copyright" = "emacs.desktop";
+        "text/vnd.DMClientScript" = "emacs.desktop";
+        "text/vnd.dvb.subtitle" = "emacs.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "emacs.desktop";
+        "text/vnd.exchangeable" = "emacs.desktop";
+        "text/vnd.familysearch.gedcom" = "emacs.desktop";
+        "text/vnd.ficlab.flt" = "emacs.desktop";
+        "text/vnd.fly" = "emacs.desktop";
+        "text/vnd.fmi.flexstor" = "emacs.desktop";
+        "text/vnd.gml" = "emacs.desktop";
+        "text/vnd.graphviz" = "emacs.desktop";
+        "text/vnd.hans" = "emacs.desktop";
+        "text/vnd.hgl" = "emacs.desktop";
+        "text/vnd.in3d.3dml" = "emacs.desktop";
+        "text/vnd.in3d.spot" = "emacs.desktop";
+        "text/vnd.IPTC.NewsML" = "emacs.desktop";
+        "text/vnd.IPTC.NITF" = "emacs.desktop";
+        "text/vnd.latex-z" = "emacs.desktop";
+        "text/vnd.motorola.reflex" = "emacs.desktop";
+        "text/vnd.ms-mediapackage" = "emacs.desktop";
+        "text/vnd.net2phone.commcenter.command" = "emacs.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "emacs.desktop";
+        "text/vnd.senx.warpscript" = "emacs.desktop";
+        "text/vnd.si.uricatalogue" = "emacs.desktop";
+        "text/vnd.sosi" = "emacs.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "emacs.desktop";
+        "text/vnd.trolltech.linguist" = "emacs.desktop";
+        "text/vnd.typst" = "emacs.desktop";
+        "text/vnd.vcf" = "emacs.desktop";
+        "text/vnd.wap.si" = "emacs.desktop";
+        "text/vnd.wap.sl" = "emacs.desktop";
+        "text/vnd.wap.wml" = "emacs.desktop";
+        "text/vnd.wap.wmlscript" = "emacs.desktop";
+        "text/vnd.zoo.kcl" = "emacs.desktop";
+        "text/vtt" = "emacs.desktop";
+        "text/wgsl" = "emacs.desktop";
+        "text/xml" = "emacs.desktop";
+        "text/xml-external-parsed-entity" = "emacs.desktop";
 
         "image/aces" = "org.kde.gwenview.desktop";
         "image/apng" = "org.kde.gwenview.desktop";
@@ -4123,26 +4084,20 @@ in
         "video/VP9" = "io.github.diegopvlk.Cine.desktop";
         "video/x-matroska" = "io.github.diegopvlk.Cine.desktop"; # https://mime.wcode.net/mkv
 
-        "application/vnd.oasis.opendocument.text" = "onlyoffice-desktopeditors.desktop"; # .odt
-        "application/msword" = "onlyoffice-desktopeditors.desktop"; # .doc
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
-          "onlyoffice-desktopeditors.desktop"; # .docx
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.template" =
-          "onlyoffice-desktopeditors.desktop"; # .dotx
+        "application/vnd.oasis.opendocument.text" = "writer.desktop"; # .odt
+        "application/msword" = "writer.desktop"; # .doc
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = "writer.desktop"; # .docx
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.template" = "writer.desktop"; # .dotx
 
-        "application/vnd.oasis.opendocument.spreadsheet" = "onlyoffice-desktopeditors.desktop"; # .ods
-        "application/vnd.ms-excel" = "onlyoffice-desktopeditors.desktop"; # .xls
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
-          "onlyoffice-desktopeditors.desktop"; # .xlsx
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.template" =
-          "onlyoffice-desktopeditors.desktop"; # .xltx
+        "application/vnd.oasis.opendocument.spreadsheet" = "calc.desktop"; # .ods
+        "application/vnd.ms-excel" = "calc.desktop"; # .xls
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = "calc.desktop"; # .xlsx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template" = "calc.desktop"; # .xltx
 
-        "application/vnd.oasis.opendocument.presentation" = "onlyoffice-desktopeditors.desktop"; # .odp
-        "application/vnd.ms-powerpoint" = "onlyoffice-desktopeditors.desktop"; # .ppt
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
-          "onlyoffice-desktopeditors.desktop"; # .pptx
-        "application/vnd.openxmlformats-officedocument.presentationml.template" =
-          "onlyoffice-desktopeditors.desktop"; # .potx
+        "application/vnd.oasis.opendocument.presentation" = "impress.desktop"; # .odp
+        "application/vnd.ms-powerpoint" = "impress.desktop"; # .ppt
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
+        "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
         "application/pdf" = "org.kde.okular.desktop";
 
@@ -4371,13 +4326,7 @@ in
 
           # sessionSearchVariables = { };
 
-          activation = {
-            copyOnlyOfficeFonts = ''
-              mkdir -p $HOME/.local/share/fonts/
-              cp -f /var/lib/onlyoffice-fonts/* $HOME/.local/share/fonts/ || true
-              ${pkgs.fontconfig}/bin/fc-cache -f $HOME/.local/share/fonts/
-            '';
-          };
+          # activation = { };
 
           enableDebugInfo = config.environment.enableDebugInfo;
 
@@ -4623,14 +4572,14 @@ in
               }
               {
                 _args = [
-                  "SUPER + mouse_down"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
+                  "SUPER + mouse_up"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
                 ];
               }
               {
                 _args = [
-                  "SUPER + mouse_up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
+                  "SUPER + mouse_down"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
                 ];
               }
               {
@@ -4938,7 +4887,7 @@ in
               {
                 _args = [
                   "SUPER + E"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- codium\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs\")")
                 ];
               }
             ];
@@ -6336,8 +6285,8 @@ in
                   format = "{name}";
                   move-to-monitor = false;
 
-                  on-scroll-up = "hyprctl dispatch \"hl.dsp.focus({workspace = 'e-1'})\"";
-                  on-scroll-down = "hyprctl dispatch \"hl.dsp.focus({workspace = 'e+1'})\"";
+                  on-scroll-up = "hyprctl dispatch \"hl.dsp.focus({workspace = 'm-1'})\"";
+                  on-scroll-down = "hyprctl dispatch \"hl.dsp.focus({workspace = 'm+1'})\"";
 
                   on-click = "hyprctl dispatch \"hl.dsp.focus({ workspace = <id> })\""; # FIXME: Does Not Work
                 };
@@ -6693,195 +6642,275 @@ in
             enable = true;
           };
 
-          vscodium = {
+          emacs = {
             enable = true;
-            package = (
-              pkgs.vscodium.override {
-                useVSCodeRipgrep = false;
-              }
-            );
+            package = pkgs.emacs-pgtk;
+            # overrides = {
 
-            mutableExtensionsDir = true;
-
-            profiles = {
-              default = {
-                extensions =
-                  with pkgs.vscode-extensions;
-                  [
-                    aaron-bond.better-comments
-                    adpyke.codesnap
-                    albymor.increment-selection
-                    alefragnani.bookmarks
-                    alexisvt.flutter-snippets
-                    anweber.vscode-httpyac
-                    bradgashler.htmltagwrap
-                    chanhx.crabviz
-                    codezombiech.gitignore
-                    coolbear.systemd-unit-file
-                    cweijan.vscode-database-client2
-                    davidanson.vscode-markdownlint
-                    dbaeumer.vscode-eslint
-                    dendron.adjust-heading-level
-                    docker.docker
-                    dotenv.dotenv-vscode
-                    ecmel.vscode-html-css
-                    esbenp.prettier-vscode
-                    fabiospampinato.vscode-open-in-github
-                    foxundermoon.shell-format
-                    grapecity.gc-excelviewer
-                    gruntfuggly.todo-tree
-                    hars.cppsnippets
-                    hbenl.vscode-test-explorer
-                    ibm.output-colorizer
-                    iciclesoft.workspacesort
-                    iliazeus.vscode-ansi
-                    james-yu.latex-workshop
-                    jbockle.jbockle-format-files
-                    jellyedwards.gitsweep
-                    jnoortheen.nix-ide
-                    jock.svg
-                    lokalise.i18n-ally
-                    mads-hartmann.bash-ide-vscode
-                    mathiasfrohlich.kotlin
-                    mechatroner.rainbow-csv
-                    mishkinf.goto-next-previous-member
-                    mkhl.direnv
-                    moshfeu.compare-folders
-                    ms-kubernetes-tools.vscode-kubernetes-tools
-                    njpwerner.autodocstring
-                    oderwat.indent-rainbow
-                    platformio.platformio-vscode-ide
-                    quicktype.quicktype
-                    rioj7.commandonallfiles
-                    ryu1kn.partial-diff
-                    shardulm94.trailing-spaces
-                    spywhere.guides
-                    stylelint.vscode-stylelint
-                    tailscale.vscode-tailscale
-                    tamasfe.even-better-toml
-                    timonwong.shellcheck
-                    usernamehw.errorlens
-                    vincaslt.highlight-matching-tag
-                    vscjava.vscode-gradle
-                    wmaurer.change-case
-                    xdebug.php-debug
-                    zainchen.json
-                    zhwu95.riscv
+            # };
+            extraPackages =
+              epkgs: with epkgs; [
+                reformatter
+                arduino-mode
+                auto-compile
+                catppuccin-theme
+                cmake-mode
+                colorful-mode
+                com-css-sort
+                company
+                company-arduino
+                company-emoji
+                company-nixos-options
+                company-phpactor
+                company-statistics
+                dap-mode
+                dart-mode
+                dashboard
+                direnv
+                docker-compose-mode
+                dockerfile-mode
+                editorconfig
+                flutter
+                flutter-l10n-flycheck
+                flymake
+                flymake-cursor
+                flymake-languagetool
+                flymake-markdownlint
+                flymake-phpcs
+                flymake-phpstan
+                flymake-pyrefly
+                flymake-yamllint
+                git-modes
+                gnu-elpa
+                gnu-elpa-keyring-update
+                gnu-indent
+                highlight
+                html5-schema
+                http-server
+                hugoista
+                hyprlang-ts-mode
+                indent-bars
+                indent-control
+                indent-tools
+                isortify
+                json-mode
+                kubernetes
+                lsp-dart
+                lsp-docker
+                lsp-focus
+                lsp-mode
+                lsp-treemacs
+                magit
+                nerd-icons
+                nix-ts-mode
+                nixfmt
+                nixos-options
+                ollama-buddy
+                org
+                php-mode
+                php-runtime
+                phpactor
+                phpinspect
+                phpstan
+                pinentry
+                pipewire
+                platformio-mode
+                projectile
+                python
+                quelpa
+                quelpa-use-package
+                trailing-newline-indicator
+                tree-sitter
+                tree-sitter-indent
+                tree-sitter-langs
+                treemacs
+                treemacs-magit
+                treemacs-projectile
+                treemacs-tab-bar
+                use-package
+                xml-rpc
+                (treesit-grammars.with-grammars (
+                  grammars: with grammars; [
+                    tree-sitter-awk
+                    tree-sitter-bash
+                    tree-sitter-bibtex
+                    tree-sitter-c
+                    tree-sitter-cmake
+                    tree-sitter-comment
+                    tree-sitter-cpp
+                    tree-sitter-css
+                    tree-sitter-csv
+                    tree-sitter-dart
+                    tree-sitter-diff
+                    tree-sitter-dockerfile
+                    tree-sitter-dot
+                    tree-sitter-dtd
+                    tree-sitter-git-config
+                    tree-sitter-git-rebase
+                    tree-sitter-gitattributes
+                    tree-sitter-gitcommit
+                    tree-sitter-gitignore
+                    tree-sitter-graphql
+                    tree-sitter-hosts
+                    tree-sitter-html
+                    tree-sitter-http
+                    tree-sitter-hurl
+                    tree-sitter-hyprlang
+                    tree-sitter-ini
+                    tree-sitter-javascript
+                    tree-sitter-jq
+                    tree-sitter-json
+                    tree-sitter-kotlin
+                    tree-sitter-latex
+                    tree-sitter-ld
+                    tree-sitter-llvm
+                    tree-sitter-log
+                    tree-sitter-lua
+                    tree-sitter-mail
+                    tree-sitter-make
+                    tree-sitter-markdown
+                    tree-sitter-markdown-inline
+                    tree-sitter-mermaid
+                    tree-sitter-nix
+                    tree-sitter-org
+                    tree-sitter-passwd
+                    tree-sitter-pem
+                    tree-sitter-php
+                    tree-sitter-powershell
+                    tree-sitter-python
+                    tree-sitter-query
+                    tree-sitter-regex
+                    tree-sitter-smali
+                    tree-sitter-sql
+                    tree-sitter-sshclientconfig
+                    tree-sitter-todotxt
+                    tree-sitter-toml
+                    tree-sitter-xml
+                    tree-sitter-yaml
                   ]
+                ))
+              ];
 
-                  ++ (with pkgs.vscode-extensions.bierner; [
-                    color-info
-                    docs-view
-                    emojisense
-                    github-markdown-preview
-                    markdown-checkbox
-                    markdown-emoji
-                    markdown-footnotes
-                    markdown-mermaid
-                    markdown-preview-github-styles
-                  ])
+            extraConfig = ''
+              ;;; -*- lexical-binding: t; -*-
 
-                  ++ (with pkgs.vscode-extensions.dart-code; [
-                    dart-code
-                    flutter
-                  ])
+              (load-theme 'catppuccin :no-confirm)
+              (setq catppuccin-flavor '${config.catppuccin.flavor})
+              (catppuccin-reload)
 
-                  ++ (with pkgs.vscode-extensions.formulahendry; [
-                    auto-close-tag
-                    auto-rename-tag
-                  ])
+              (setq display-buffer-base-action '((display-buffer-same-window)))
+              (setq tab-bar-show 1)
+              (setq tab-line-show 1)
 
-                  ++ (with pkgs.vscode-extensions.github; [
-                    vscode-github-actions
-                    vscode-pull-request-github
-                  ])
+              (display-time-mode t)
 
-                  ++ (with pkgs.vscode-extensions.ms-python; [
-                    black-formatter
-                    debugpy
-                    flake8
-                    isort
-                    mypy-type-checker
-                    pylint
-                    python
-                  ])
+              (require 'use-package)
+              (use-package nerd-icons
+                :custom (nerd-icons-font-family "${fontPreferences.name.monospace}"))
+              (require 'dashboard)
+              (setq dashboard-display-icons t)
+              (setq dashboard-set-heading-icon t)
+              (setq dashboard-set-file-icons t)
+              (setq dashboard-icon-type 'nerd-icons)
+              (setq dashboard-show-shortcuts t)
+              (setq dashboard-filter-agenda-entry 'dashboard-no-filter-agenda)
+              (add-to-list 'dashboard-items '(agenda) t)
+              (setq dashboard-navigation-cycle t)
+              (dashboard-setup-startup-hook)
 
-                  ++ (with pkgs.vscode-extensions.ms-vscode; [
-                    cmake-tools
-                    hexeditor
-                    live-server
-                    makefile-tools
-                    test-adapter-converter
-                  ])
+              (use-package projectile
+                :init (projectile-mode +1))
+              (use-package magit)
+              (use-package treemacs
+                :defer t
+                :config (progn
+                  (setq treemacs-show-hidden-files t)
+                  (treemacs-follow-mode t)
+                  (treemacs-filewatch-mode t)
+                  (treemacs-git-commit-diff-mode t))
+                :init)
+              (use-package treemacs-projectile
+                :after (treemacs projectile))
+              (use-package treemacs-magit
+                :after (treemacs magit))
+              (use-package treemacs-tab-bar
+                :after (treemacs)
+                :config (treemacs-set-scope-type 'Tabs))
+              (treemacs-start-on-boot)
 
-                  ++ (with pkgs.vscode-extensions.redhat; [
-                    vscode-xml
-                    vscode-yaml
-                  ])
+              (size-indication-mode t)
+              (global-display-line-numbers-mode t)
+              (column-number-mode t)
+              (global-hl-line-mode t)
+              (show-paren-mode t)
+              (transient-mark-mode t)
 
-                  ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-                    {
-                      name = "arb-editor";
-                      publisher = "Google";
-                      version = "0.2.2";
-                      sha256 = "sSYiudnBRFTsio0uNJ6+FOzkjO92wGDvGJYJcRrzWX0=";
-                    }
+              (use-package trailing-newline-indicator
+                :init (global-trailing-newline-indicator-mode 1))
 
-                    {
-                      name = "github-local-actions";
-                      publisher = "SanjulaGanepola";
-                      version = "1.2.5";
-                      sha256 = "gc3iOB/ibu4YBRdeyE6nmG72RbAsV0WIhiD8x2HNCfY=";
-                    }
+              (use-package direnv
+                :config (direnv-mode))
 
-                    {
-                      name = "pubspec-assist";
-                      publisher = "jeroen-meijer";
-                      version = "2.4.0";
-                      sha256 = "COjlH34kGHTrgd7gCYIozEA3i1KkwHLRU09yaE0TsOk=";
-                    }
+              (use-package editorconfig
+                :config (editorconfig-mode 1))
 
-                    {
-                      name = "unique-lines";
-                      publisher = "bibhasdn";
-                      version = "1.0.0";
-                      sha256 = "W0ZpZ6+vjkfNfOtekx5NWOFTyxfWAiB0XYcIwHabFPQ=";
-                    }
+              (setq standard-indent 2)
 
-                    {
-                      name = "vscode-serial-monitor";
-                      publisher = "ms-vscode";
-                      version = "0.13.251128001";
-                      sha256 = "eTQcLyF6DMvzDByKLw2KR8PrjVwejsOU60Hew7IOmY8=";
-                    }
+              (setq treesit-font-lock-level 4)
+              (use-package nix-ts-mode
+                :mode "\\.nix\\'")
+              (add-hook 'nix-ts-mode-hook 'nixfmt-on-save-mode)
 
-                    {
-                      name = "vscode-sort";
-                      publisher = "henriiik";
-                      version = "0.2.5";
-                      sha256 = "pvlSlWJTnLB9IbcVsz5HypT6NM9Ujb7UYs2kohwWVWk=";
-                    }
+              (use-package company
+                :config
+                (global-company-mode 1)
+                (add-to-company-list 'company-backends 'company-nixos-options))
 
-                    {
-                      name = "vscode-sort-json";
-                      publisher = "richie5um2";
-                      version = "1.20.0";
-                      sha256 = "Jobx5Pf4SYQVR2I4207RSSP9I85qtVY6/2Nvs/Vvi/0=";
-                    }
-                  ]
-                  ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
-                    with pkgs.vscode-extensions;
-                    [
-                      ms-vscode.cpptools
-                    ]
-                  );
+              (add-hook 'nix-ts-mode-hook 'indent-bars-mode)
 
-                enableUpdateCheck = true;
-                enableExtensionUpdateCheck = true;
+              (use-package dart-mode
+                :hook (dart-mode . flutter-test-mode))
+              (require 'lsp-mode)
+              (setq lsp-auto-guess-root t)
+              ;; (use-package lsp-dart
+              ;;   :hook (dart-mode . lsp)
+              ;;   :init)
+              (add-hook 'dart-mode-hook 'lsp)
+              (require 'reformatter)
+              (reformatter-define dart-format
+                :program "dart"
+                :args '("format"))
+              (with-eval-after-load "projectile"
+                (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
+                (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
 
-                enableMcpIntegration = config.home-manager.users.normal.programs.mcp.enable;
-              };
-            };
+              (use-package flutter
+                :after (dart-mode)
+                :custom (flutter-sdk-path "${pkgs.flutter}/"))
+
+              (require 'dockerfile-mode)
+              (use-package docker-compose-mode)
+
+              (use-package hugoista)
+
+              (use-package arduino-mode)
+              (require 'company-arduino)
+
+              (require 'platformio-mode)
+              (add-hook 'c++-mode-hook (lambda ()
+                (lsp-deferred)
+                (platformio-conditionally-enable)))
+
+              (use-package indent-bars
+                :custom (indent-bars-treesit-support t))
+
+              (use-package kubernetes
+                :commands (kubernetes-overview))
+
+              (use-package ollama-buddy)
+
+              (require 'pipewire)
+            ''; # TODO: Test nixfmt Hook, Indent Bars, & Trailing New Line Indicator
           };
 
           bat = {
@@ -6903,11 +6932,6 @@ in
               kubectl = pkgs.lib.getExe pkgs.kubectl;
               preset = "dark";
             };
-          };
-
-          onlyoffice = {
-            enable = true;
-            package = pkgs.onlyoffice-desktopeditors;
           };
 
           mangohud = {
