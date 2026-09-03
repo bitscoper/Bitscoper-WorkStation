@@ -2395,7 +2395,7 @@ in
       package = (
         pkgs.obs-studio.override {
           alsaSupport = true;
-          browserSupport = true;
+          browserSupport = false;
           pipewireSupport = true;
           pulseaudioSupport = true;
           scriptingSupport = true;
@@ -2594,7 +2594,6 @@ in
         binutils
         binwalk
         bitwarden-cli
-        bitwarden-desktop
         blanket
         bleachbit
         bluez-alsa
@@ -2621,9 +2620,9 @@ in
         certdump
         chunkfs
         cine
-        clang_22
         clang-analyzer
         clang-tools
+        clang_22
         clapgrep
         clinfo
         cloc
@@ -2686,7 +2685,6 @@ in
         efibootmgr
         efivar
         egypt
-        electron-mail
         elf-dissector
         eloquent
         emblem
@@ -2739,6 +2737,7 @@ in
         gcr_4
         gdb
         gearlever
+        geeqie
         genealogos-cli
         gerbolyze
         gh
@@ -2826,7 +2825,6 @@ in
         kdiff3
         kernel-hardening-checker
         kernelshark
-        kgeotag
         killall
         kind
         kmod
@@ -2883,7 +2881,6 @@ in
         mdns-scanner
         megacmd
         mergerfs
-        mermaid-cli
         mesa-demos
         meshlab
         metadata-cleaner
@@ -2971,13 +2968,11 @@ in
         pods
         poop # POOP = Performance Optimizer Observation Platform
         powershell
-        prettier
         printrun # Printerface, Pronsole
         procps
         profile-cleaner
         progress
         protocol
-        proton-pass
         proton-pass-cli
         proton-vpn
         proton-vpn-cli
@@ -3101,8 +3096,8 @@ in
         vulnix
         wafw00f
         wavemon
-        wayback_machine_downloader
         wayback-machine-archiver
+        wayback_machine_downloader
         waycheck
         waydroid-helper
         wayland-scanner
@@ -3487,7 +3482,6 @@ in
         audiocd-kio
         ffmpegthumbs
         filelight
-        gwenview
         kalgebra
         kalzium
         kcachegrind
@@ -3576,7 +3570,6 @@ in
       ADW_DISABLE_PORTAL = 1;
 
       NIXOS_OZONE_WL = 1;
-      ELECTRON_OZONE_PLATFORM_HINT = "auto";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
@@ -3738,91 +3731,91 @@ in
         "text/xml" = "emacs.desktop";
         "text/xml-external-parsed-entity" = "emacs.desktop";
 
-        "image/aces" = "org.kde.gwenview.desktop";
-        "image/apng" = "org.kde.gwenview.desktop";
-        "image/avci" = "org.kde.gwenview.desktop";
-        "image/avcs" = "org.kde.gwenview.desktop";
-        "image/avif" = "org.kde.gwenview.desktop";
-        "image/bmp" = "org.kde.gwenview.desktop";
-        "image/cgm" = "org.kde.gwenview.desktop";
-        "image/dicom-rle" = "org.kde.gwenview.desktop";
-        "image/dpx" = "org.kde.gwenview.desktop";
-        "image/emf" = "org.kde.gwenview.desktop";
-        "image/fits" = "org.kde.gwenview.desktop";
-        "image/g3fax" = "org.kde.gwenview.desktop";
-        "image/gif" = "org.kde.gwenview.desktop";
-        "image/heic-sequence" = "org.kde.gwenview.desktop";
-        "image/heic" = "org.kde.gwenview.desktop";
-        "image/heif-sequence" = "org.kde.gwenview.desktop";
-        "image/heif" = "org.kde.gwenview.desktop";
-        "image/hej2k" = "org.kde.gwenview.desktop";
-        "image/hsj2" = "org.kde.gwenview.desktop";
-        "image/ief" = "org.kde.gwenview.desktop";
-        "image/j2c" = "org.kde.gwenview.desktop";
-        "image/jaii" = "org.kde.gwenview.desktop";
-        "image/jais" = "org.kde.gwenview.desktop";
-        "image/jls" = "org.kde.gwenview.desktop";
-        "image/jp2" = "org.kde.gwenview.desktop";
-        "image/jpeg" = "org.kde.gwenview.desktop";
-        "image/jph" = "org.kde.gwenview.desktop";
-        "image/jphc" = "org.kde.gwenview.desktop";
-        "image/jpm" = "org.kde.gwenview.desktop";
-        "image/jpx" = "org.kde.gwenview.desktop";
-        "image/jxl" = "org.kde.gwenview.desktop";
-        "image/jxr" = "org.kde.gwenview.desktop";
-        "image/jxrA" = "org.kde.gwenview.desktop";
-        "image/jxrS" = "org.kde.gwenview.desktop";
-        "image/jxs" = "org.kde.gwenview.desktop";
-        "image/jxsc" = "org.kde.gwenview.desktop";
-        "image/jxsi" = "org.kde.gwenview.desktop";
-        "image/jxss" = "org.kde.gwenview.desktop";
-        "image/ktx" = "org.kde.gwenview.desktop";
-        "image/ktx2" = "org.kde.gwenview.desktop";
-        "image/naplps" = "org.kde.gwenview.desktop";
-        "image/png" = "org.kde.gwenview.desktop";
-        "image/prs.btif" = "org.kde.gwenview.desktop";
-        "image/prs.pti" = "org.kde.gwenview.desktop";
-        "image/pwg-raster" = "org.kde.gwenview.desktop";
-        "image/svg+xml" = "org.kde.gwenview.desktop";
-        "image/t38" = "org.kde.gwenview.desktop";
-        "image/tiff-fx" = "org.kde.gwenview.desktop";
-        "image/tiff" = "org.kde.gwenview.desktop";
-        "image/vnd.adobe.photoshop" = "org.kde.gwenview.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.kde.gwenview.desktop";
-        "image/vnd.blockfact.facti" = "org.kde.gwenview.desktop";
-        "image/vnd.clip" = "org.kde.gwenview.desktop";
-        "image/vnd.cns.inf2" = "org.kde.gwenview.desktop";
-        "image/vnd.dece.graphic" = "org.kde.gwenview.desktop";
-        "image/vnd.djvu" = "org.kde.gwenview.desktop";
-        "image/vnd.dvb.subtitle" = "org.kde.gwenview.desktop";
-        "image/vnd.dwg" = "org.kde.gwenview.desktop";
-        "image/vnd.dxf" = "org.kde.gwenview.desktop";
-        "image/vnd.fastbidsheet" = "org.kde.gwenview.desktop";
-        "image/vnd.fpx" = "org.kde.gwenview.desktop";
-        "image/vnd.fst" = "org.kde.gwenview.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.kde.gwenview.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.kde.gwenview.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.kde.gwenview.desktop";
-        "image/vnd.microsoft.icon" = "org.kde.gwenview.desktop";
-        "image/vnd.mix" = "org.kde.gwenview.desktop";
-        "image/vnd.mozilla.apng" = "org.kde.gwenview.desktop";
-        "image/vnd.ms-modi" = "org.kde.gwenview.desktop";
-        "image/vnd.net-fpx" = "org.kde.gwenview.desktop";
-        "image/vnd.pco.b16" = "org.kde.gwenview.desktop";
-        "image/vnd.radiance" = "org.kde.gwenview.desktop";
-        "image/vnd.sealed.png" = "org.kde.gwenview.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.kde.gwenview.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.kde.gwenview.desktop";
-        "image/vnd.svf" = "org.kde.gwenview.desktop";
-        "image/vnd.tencent.tap" = "org.kde.gwenview.desktop";
-        "image/vnd.valve.source.texture" = "org.kde.gwenview.desktop";
-        "image/vnd.wap.wbmp" = "org.kde.gwenview.desktop";
-        "image/vnd.xiff" = "org.kde.gwenview.desktop";
-        "image/vnd.zbrush.pcx" = "org.kde.gwenview.desktop";
-        "image/webp" = "org.kde.gwenview.desktop";
-        "image/wmf" = "org.kde.gwenview.desktop";
-        "image/x-emf" = "org.kde.gwenview.desktop";
-        "image/x-wmf" = "org.kde.gwenview.desktop";
+        "image/aces" = "org.geeqie.Geeqie.desktop";
+        "image/apng" = "org.geeqie.Geeqie.desktop";
+        "image/avci" = "org.geeqie.Geeqie.desktop";
+        "image/avcs" = "org.geeqie.Geeqie.desktop";
+        "image/avif" = "org.geeqie.Geeqie.desktop";
+        "image/bmp" = "org.geeqie.Geeqie.desktop";
+        "image/cgm" = "org.geeqie.Geeqie.desktop";
+        "image/dicom-rle" = "org.geeqie.Geeqie.desktop";
+        "image/dpx" = "org.geeqie.Geeqie.desktop";
+        "image/emf" = "org.geeqie.Geeqie.desktop";
+        "image/fits" = "org.geeqie.Geeqie.desktop";
+        "image/g3fax" = "org.geeqie.Geeqie.desktop";
+        "image/gif" = "org.geeqie.Geeqie.desktop";
+        "image/heic-sequence" = "org.geeqie.Geeqie.desktop";
+        "image/heic" = "org.geeqie.Geeqie.desktop";
+        "image/heif-sequence" = "org.geeqie.Geeqie.desktop";
+        "image/heif" = "org.geeqie.Geeqie.desktop";
+        "image/hej2k" = "org.geeqie.Geeqie.desktop";
+        "image/hsj2" = "org.geeqie.Geeqie.desktop";
+        "image/ief" = "org.geeqie.Geeqie.desktop";
+        "image/j2c" = "org.geeqie.Geeqie.desktop";
+        "image/jaii" = "org.geeqie.Geeqie.desktop";
+        "image/jais" = "org.geeqie.Geeqie.desktop";
+        "image/jls" = "org.geeqie.Geeqie.desktop";
+        "image/jp2" = "org.geeqie.Geeqie.desktop";
+        "image/jpeg" = "org.geeqie.Geeqie.desktop";
+        "image/jph" = "org.geeqie.Geeqie.desktop";
+        "image/jphc" = "org.geeqie.Geeqie.desktop";
+        "image/jpm" = "org.geeqie.Geeqie.desktop";
+        "image/jpx" = "org.geeqie.Geeqie.desktop";
+        "image/jxl" = "org.geeqie.Geeqie.desktop";
+        "image/jxr" = "org.geeqie.Geeqie.desktop";
+        "image/jxrA" = "org.geeqie.Geeqie.desktop";
+        "image/jxrS" = "org.geeqie.Geeqie.desktop";
+        "image/jxs" = "org.geeqie.Geeqie.desktop";
+        "image/jxsc" = "org.geeqie.Geeqie.desktop";
+        "image/jxsi" = "org.geeqie.Geeqie.desktop";
+        "image/jxss" = "org.geeqie.Geeqie.desktop";
+        "image/ktx" = "org.geeqie.Geeqie.desktop";
+        "image/ktx2" = "org.geeqie.Geeqie.desktop";
+        "image/naplps" = "org.geeqie.Geeqie.desktop";
+        "image/png" = "org.geeqie.Geeqie.desktop";
+        "image/prs.btif" = "org.geeqie.Geeqie.desktop";
+        "image/prs.pti" = "org.geeqie.Geeqie.desktop";
+        "image/pwg-raster" = "org.geeqie.Geeqie.desktop";
+        "image/svg+xml" = "org.geeqie.Geeqie.desktop";
+        "image/t38" = "org.geeqie.Geeqie.desktop";
+        "image/tiff-fx" = "org.geeqie.Geeqie.desktop";
+        "image/tiff" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.adobe.photoshop" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.blockfact.facti" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.clip" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.cns.inf2" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.dece.graphic" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.djvu" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.dvb.subtitle" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.dwg" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.dxf" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.fastbidsheet" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.fpx" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.fst" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.microsoft.icon" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.mix" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.mozilla.apng" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.ms-modi" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.net-fpx" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.pco.b16" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.radiance" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.sealed.png" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.svf" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.tencent.tap" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.valve.source.texture" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.wap.wbmp" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.xiff" = "org.geeqie.Geeqie.desktop";
+        "image/vnd.zbrush.pcx" = "org.geeqie.Geeqie.desktop";
+        "image/webp" = "org.geeqie.Geeqie.desktop";
+        "image/wmf" = "org.geeqie.Geeqie.desktop";
+        "image/x-emf" = "org.geeqie.Geeqie.desktop";
+        "image/x-wmf" = "org.geeqie.Geeqie.desktop";
 
         "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
         "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
@@ -4126,7 +4119,7 @@ in
         "x-scheme-handler/http" = "com.brave.Browser.desktop";
         "x-scheme-handler/https" = "com.brave.Browser.desktop";
 
-        "x-scheme-handler/mailto" = "electron-mail.desktop";
+        "x-scheme-handler/mailto" = "electron-mail.desktop"; # TODO: Find Alternative
       };
     };
   };
@@ -4882,7 +4875,7 @@ in
                 _args = [
                   "XF86Mail"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- electron-mail\")")
-                ];
+                ]; # TODO: Find Alternative
               }
               {
                 _args = [
@@ -6662,7 +6655,6 @@ in
                 company-emoji
                 company-nixos-options
                 company-phpactor
-                company-statistics
                 dap-mode
                 dart-mode
                 dashboard
@@ -6864,9 +6856,15 @@ in
               (use-package company
                 :config
                 (global-company-mode 1)
-                (add-to-company-list 'company-backends 'company-nixos-options))
+                (add-to-list 'company-backends 'company-nixos-options))
 
-              (add-hook 'nix-ts-mode-hook 'indent-bars-mode)
+              (use-package indent-bars
+                :hook ((prog-mode . indent-bars-mode)
+                       (text-mode . indent-bars-mode))
+                :custom (indent-bars-treesit-support t))
+
+              (use-package indent-control
+                :hook (prog-mode . indent-control-mode))
 
               (use-package dart-mode
                 :hook (dart-mode . flutter-test-mode))
@@ -6901,16 +6899,20 @@ in
                 (lsp-deferred)
                 (platformio-conditionally-enable)))
 
-              (use-package indent-bars
-                :custom (indent-bars-treesit-support t))
-
               (use-package kubernetes
                 :commands (kubernetes-overview))
+
+              (global-colorful-mode 1)
+
+              (use-package auto-compile
+                :config
+                (auto-compile-on-load-mode 1)
+                (auto-compile-on-save-mode 1))
 
               (use-package ollama-buddy)
 
               (require 'pipewire)
-            ''; # TODO: Test nixfmt Hook, Indent Bars, & Trailing New Line Indicator
+            '';
           };
 
           bat = {
