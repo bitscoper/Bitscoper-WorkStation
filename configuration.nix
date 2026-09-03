@@ -856,151 +856,54 @@ in
         logoutWait = 0;
       };
 
-      services = {
-        ly = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
+      services = builtins.listToAttrs (
+        map
+          (name: {
+            inherit name;
+            value = {
+              unixAuth = true;
+              fprintAuth = true;
 
-          logFailures = true;
-          nodelay = false;
+              rules.auth = {
+                unix = {
+                  modulePath = "${pkgs.pam}/lib/security/pam_unix.so";
+                  control = "sufficient";
+                  order = 1;
+                };
 
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
+                fprintd = {
+                  modulePath = "${config.services.fprintd.package}/lib/security/pam_fprintd.so";
+                  control = "sufficient";
+                  order = 2;
+                };
+              };
 
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
+              allowNullPassword = pkgs.lib.mkForce false;
+              logFailures = true;
+              nodelay = false;
 
-          showMotd = true;
-        };
+              enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
 
-        login = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
+              gnupg = {
+                enable = config.home-manager.users.normal.programs.gpg.enable;
+                storeOnly = false;
+                noAutostart = false;
+              };
 
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        hyprlock = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        vlock = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        su = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sudo = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        polkit-1 = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-
-        sshd = {
-          unixAuth = true;
-          fprintAuth = config.services.fprintd.enable;
-
-          logFailures = true;
-          nodelay = false;
-
-          enableGnomeKeyring = config.services.gnome.gnome-keyring.enable;
-
-          gnupg = {
-            enable = config.home-manager.users.normal.programs.gpg.enable;
-            storeOnly = false;
-            noAutostart = false;
-          };
-
-          showMotd = true;
-        };
-      }; # ls /etc/pam.d/
+              showMotd = true;
+            };
+          })
+          [
+            "hyprlock"
+            "login"
+            "ly"
+            "polkit-1"
+            "sshd"
+            "su"
+            "sudo"
+            "vlock"
+          ]
+      ); # ls /etc/pam.d/
 
       loginLimits = [
         {
@@ -2670,7 +2573,6 @@ in
         dislocker
         disorderfs
         dive
-        djvulibre
         dmg2img
         dmidecode
         dnsrecon
@@ -2953,6 +2855,7 @@ in
         pciutils
         pdfarranger
         pe-bear
+        peazip
         pev
         pg_top
         pgbadger
@@ -3477,7 +3380,6 @@ in
       ])
 
       ++ (with kdePackages; [
-        ark
         audiocd-kio
         ffmpegthumbs
         filelight
@@ -3513,7 +3415,6 @@ in
         marble
         ocean-sound-theme
         okular
-        poppler
         qrca
         skanpage
         step
@@ -4096,15 +3997,15 @@ in
 
         "model/stl" = "io.github.nokse22.Exhibit.desktop";
 
-        "application/gzip" = "org.kde.ark.desktop";
-        "application/vnd.rar" = "org.kde.ark.desktop";
-        "application/x-7z-compressed" = "org.kde.ark.desktop";
-        "application/x-arj" = "org.kde.ark.desktop";
-        "application/x-bzip2" = "org.kde.ark.desktop";
-        "application/x-gtar" = "org.kde.ark.desktop";
-        "application/x-rar-compressed " = "org.kde.ark.desktop"; # More Common Than "application/vnd.rar"
-        "application/x-tar" = "org.kde.ark.desktop";
-        "application/zip" = "org.kde.ark.desktop";
+        "application/gzip" = "peazip.desktop";
+        "application/vnd.rar" = "peazip.desktop";
+        "application/x-7z-compressed" = "peazip.desktop";
+        "application/x-arj" = "peazip.desktop";
+        "application/x-bzip2" = "peazip.desktop";
+        "application/x-gtar" = "peazip.desktop";
+        "application/x-rar-compressed " = "peazip.desktop"; # More Common Than "application/vnd.rar"
+        "application/x-tar" = "peazip.desktop";
+        "application/zip" = "peazip.desktop";
 
         "font/collection" = "com.github.FontManager.FontViewer.desktop";
         "font/otf" = "com.github.FontManager.FontViewer.desktop";
