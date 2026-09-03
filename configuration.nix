@@ -140,9 +140,9 @@ let
           -fuzz 16% \
           -transparent black \
           -background "#1e1e2e" \
-          -resize 1920x1080\> \
+          -resize ${config.specificHardwareConfiguration.screenWidthHeight}\> \
           -gravity center \
-          -extent 1920x1080 \
+          -extent ${config.specificHardwareConfiguration.screenWidthHeight} \
           $out
       '';
   # It assumes that the background of BGRT is black and that 16% fuzz is sufficient.
@@ -375,7 +375,7 @@ in
         fsIdentifier = "uuid";
         device = "nodev";
 
-        gfxmodeEfi = "1920x1080,auto";
+        gfxmodeEfi = "${config.specificHardwareConfiguration.screenWidthHeight},auto";
         gfxpayloadEfi = "keep";
         splashMode = "normal";
 
@@ -3028,7 +3028,6 @@ in
         smartmontools
         sof-tools
         songrec
-        sourcegit
         sox
         spectre-meltdown-checker
         speedtest
@@ -3558,7 +3557,8 @@ in
 
       CHROME_EXECUTABLE = "brave";
 
-      EDITOR = "emacs";
+      EDITOR = "emacs -nw";
+      PAGER = "bat";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
@@ -5438,23 +5438,7 @@ in
             };
           };
 
-          dataFile = {
-            "SourceGit/Catppuccin_${
-              pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
-            }${builtins.substring 1 255 config.catppuccin.flavor}.json" =
-              {
-                enable = true;
-
-                source = builtins.fetchurl {
-                  url = "https://raw.githubusercontent.com/sourcegit-scm/sourcegit-theme/refs/heads/main/themes/Catpuccin_Mocha.json";
-                };
-
-                target = "SourceGit/Catppuccin_${
-                  pkgs.lib.strings.toUpper (builtins.substring 0 1 config.catppuccin.flavor)
-                }${builtins.substring 1 255 config.catppuccin.flavor}.json";
-                executable = null;
-              }; # Non-Standard Path
-          };
+          # dataFile = { };
 
           # stateFile = { };
 
@@ -6786,20 +6770,55 @@ in
             extraConfig = ''
               ;;; -*- lexical-binding: t; -*-
 
+              (setq display-buffer-base-action '((display-buffer-same-window)))
+
+              (setq tab-bar-show 1)
+              (setq tab-line-show 1)
+
+              (setq-default cursor-type 'bar)
+              (blink-cursor-mode 1)
+              (setq-default word-wrap t)
+              (setq-default truncate-lines nil)
+              (setq-default line-spacing 0.15)
+              (setq-default left-margin-width 1)
+              (setq-default right-margin-width 1)
+
+              (setq window-divider-default-right-width 1)
+              (setq window-divider-default-bottom-width 1)
+              (window-divider-mode 1)
+
+              (pixel-scroll-precision-mode 1)
+              (setq scroll-preserve-screen-position t)
+
+              (size-indication-mode t)
+              (column-number-mode t)
+              (global-display-line-numbers-mode t)
+              (global-hl-line-mode t)
+              (show-paren-mode t)
+              (transient-mark-mode t)
+
+              (setq standard-indent 2)
+
+              (display-time-mode t)
+
               (load-theme 'catppuccin :no-confirm)
               (setq catppuccin-flavor '${config.catppuccin.flavor})
               (catppuccin-reload)
 
-              (setq display-buffer-base-action '((display-buffer-same-window)))
-              (setq tab-bar-show 1)
-              (setq tab-line-show 1)
-
-              (display-time-mode t)
+              (add-hook 'prog-mode-hook
+                (lambda ()
+                  (setq left-margin-width 1)
+                  (setq right-margin-width 1)
+                  (set-window-buffer (selected-window) (current-buffer))))
 
               (require 'use-package)
+
               (use-package nerd-icons
-                :custom (nerd-icons-font-family "${fontPreferences.name.monospace}"))
+                :custom
+                (nerd-icons-font-family "${fontPreferences.name.monospace}"))
+
               (require 'dashboard)
+
               (setq dashboard-display-icons t)
               (setq dashboard-set-heading-icon t)
               (setq dashboard-set-file-icons t)
@@ -6808,101 +6827,116 @@ in
               (setq dashboard-filter-agenda-entry 'dashboard-no-filter-agenda)
               (add-to-list 'dashboard-items '(agenda) t)
               (setq dashboard-navigation-cycle t)
+
               (dashboard-setup-startup-hook)
-
-              (use-package projectile
-                :init (projectile-mode +1))
-              (use-package magit)
-              (use-package treemacs
-                :defer t
-                :config (progn
-                  (setq treemacs-show-hidden-files t)
-                  (treemacs-follow-mode t)
-                  (treemacs-filewatch-mode t)
-                  (treemacs-git-commit-diff-mode t))
-                :init)
-              (use-package treemacs-projectile
-                :after (treemacs projectile))
-              (use-package treemacs-magit
-                :after (treemacs magit))
-              (use-package treemacs-tab-bar
-                :after (treemacs)
-                :config (treemacs-set-scope-type 'Tabs))
-              (treemacs-start-on-boot)
-
-              (size-indication-mode t)
-              (global-display-line-numbers-mode t)
-              (column-number-mode t)
-              (global-hl-line-mode t)
-              (show-paren-mode t)
-              (transient-mark-mode t)
-
-              (use-package trailing-newline-indicator
-                :init (global-trailing-newline-indicator-mode 1))
-
-              (use-package direnv
-                :config (direnv-mode))
-
-              (use-package editorconfig
-                :config (editorconfig-mode 1))
-
-              (setq standard-indent 2)
-
-              (setq treesit-font-lock-level 4)
-              (use-package nix-ts-mode
-                :mode "\\.nix\\'")
-              (add-hook 'nix-ts-mode-hook 'nixfmt-on-save-mode)
 
               (use-package company
                 :config
-                (global-company-mode 1)
-                (add-to-list 'company-backends 'company-nixos-options))
+                (global-company-mode 1))
 
               (use-package indent-bars
                 :hook ((prog-mode . indent-bars-mode)
                        (text-mode . indent-bars-mode))
-                :custom (indent-bars-treesit-support t))
+                :custom
+                (indent-bars-treesit-support t))
 
               (use-package indent-control
                 :hook (prog-mode . indent-control-mode))
 
-              (use-package dart-mode
-                :hook (dart-mode . flutter-test-mode))
+              (use-package trailing-newline-indicator
+                :init
+                (global-trailing-newline-indicator-mode 1))
+
+              (use-package direnv
+                :config
+                (direnv-mode))
+
+              (use-package editorconfig
+                :config
+                (editorconfig-mode 1))
+
+              (global-colorful-mode 1)
+
+              (use-package projectile
+                :init
+                (projectile-mode +1))
+
+              (use-package magit)
+
+              (use-package treemacs
+                :defer t
+                :config
+                (setq treemacs-show-hidden-files t)
+                (treemacs-follow-mode t)
+                (treemacs-filewatch-mode t)
+                (treemacs-git-commit-diff-mode t))
+
+              (use-package treemacs-projectile
+                :after (treemacs projectile))
+
+              (use-package treemacs-magit
+                :after (treemacs magit))
+
+              (use-package treemacs-tab-bar
+                :after (treemacs)
+                :config
+                (treemacs-set-scope-type 'Tabs))
+
+              (treemacs-start-on-boot)
+
+              (setq treesit-font-lock-level 4)
+
+              (require 'reformatter)
+
               (require 'lsp-mode)
               (setq lsp-auto-guess-root t)
-              ;; (use-package lsp-dart
-              ;;   :hook (dart-mode . lsp)
-              ;;   :init)
-              (add-hook 'dart-mode-hook 'lsp)
-              (require 'reformatter)
-              (reformatter-define dart-format
-                :program "dart"
-                :args '("format"))
+
+              (require 'platformio-mode)
+
+              (add-hook 'c++-mode-hook
+                (lambda ()
+                  (lsp-deferred)
+                  (platformio-conditionally-enable)))
+
+              (use-package company-arduino)
+
+              (use-package arduino-mode)
+
+              (use-package nix-ts-mode
+                :mode "\\.nix\\'")
+
+              (add-hook 'nix-ts-mode-hook 'nixfmt-on-save-mode)
+
               (with-eval-after-load "projectile"
                 (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
                 (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
 
+              (with-eval-after-load 'company
+                (add-to-list 'company-backends 'company-nixos-options))
+
+              (use-package dart-mode
+                :hook
+                (dart-mode . flutter-test-mode))
+
+              (add-hook 'dart-mode-hook 'lsp)
+
+              (reformatter-define dart-format
+                :program "dart"
+                :args '("format"))
+
               (use-package flutter
                 :after (dart-mode)
-                :custom (flutter-sdk-path "${pkgs.flutter}/"))
+                :custom
+                (flutter-sdk-path "${pkgs.flutter}/"))
 
               (require 'dockerfile-mode)
+
               (use-package docker-compose-mode)
 
               (use-package hugoista)
 
-              (use-package arduino-mode)
-              (require 'company-arduino)
-
-              (require 'platformio-mode)
-              (add-hook 'c++-mode-hook (lambda ()
-                (lsp-deferred)
-                (platformio-conditionally-enable)))
-
               (use-package kubernetes
                 :commands (kubernetes-overview))
-
-              (global-colorful-mode 1)
 
               (use-package auto-compile
                 :config

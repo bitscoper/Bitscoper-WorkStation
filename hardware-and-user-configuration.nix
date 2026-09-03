@@ -35,6 +35,16 @@
         example = "";
       };
 
+      screenWidthHeight = lib.mkOption {
+        type = lib.types.str;
+        internal = false;
+        visible = true;
+        readOnly = false;
+        description = "`width`x`height`";
+        default = "";
+        example = "";
+      };
+
       boot = {
         extraModprobeConfig = lib.mkOption {
           type = lib.types.str;
@@ -312,6 +322,8 @@
     specificHardwareConfiguration = {
       systemArchitecture = "x86_64";
       cpuVendor = "intel";
+
+      screenWidthHeight = "1920x1080";
 
       boot = {
         extraModprobeConfig = ''
