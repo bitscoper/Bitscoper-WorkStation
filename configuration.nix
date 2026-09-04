@@ -2668,6 +2668,7 @@ in
         gnused
         gnutar
         go2tv
+        goldendict-ng
         google-lighthouse
         gource
         gphoto2fs
@@ -2700,7 +2701,6 @@ in
         hyprland-qt-support
         hyprland-qtutils
         hyprmag
-        hyprpicker
         hyprshot
         hyprshutdown
         hyprtoolkit
@@ -2796,11 +2796,13 @@ in
         monkeys-audio
         morphosis
         mousam
+        moxnotify
         mp3fs
         mslicer
         mt-st
         mtools
         mysqltuner
+        naps2
         nethogs
         netpeek
         newelle
@@ -2820,6 +2822,7 @@ in
         nmap
         noaa-apt
         nocturne
+        normcap
         ntfs2btrfs
         ntfs3g
         ntfsprogs-plus
@@ -2885,13 +2888,13 @@ in
         psmisc
         pwvucontrol
         qalculate-gtk
+        qdirstat
         qemu-user
         qemu-utils
         qr-backup
         qsstv
         qtrvsim
         qtscrcpy
-        quick-lookup
         radare2
         raider
         raindropio # From config.nixpkgs.overlays
@@ -3377,12 +3380,15 @@ in
         (gstreamer.override {
           enableDocumentation = config.documentation.enable;
         })
+
+        (zint-qt.override {
+          withGUI = true;
+        })
       ])
 
       ++ (with kdePackages; [
         audiocd-kio
         ffmpegthumbs
-        filelight
         kalgebra
         kalzium
         kcachegrind
@@ -3407,16 +3413,11 @@ in
         kmousetool
         kmouth
         kontrast
-        krdp
-        krfb
-        kruler
         kshisen
         kubrick
         marble
         ocean-sound-theme
         okular
-        qrca
-        skanpage
         step
       ])
 
@@ -3470,7 +3471,11 @@ in
     sessionVariables = {
       ADW_DISABLE_PORTAL = 1;
 
+      GDK_BACKEND = "wayland";
+      QT_QPA_PLATFORM = "wayland";
+      SDL_VIDEODRIVER = "wayland";
       NIXOS_OZONE_WL = 1;
+      _JAVA_AWT_WM_NONREPARENTING = "1";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
@@ -4291,6 +4296,7 @@ in
                   function()
                     hl.exec_cmd("dbus-update-activation-environment --systemd --all") -- Fixes the Soteria Service Not Starting
 
+                    hl.exec_cmd("uwsm-all -- moxnotify")
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
                   end
                 '')
@@ -5564,11 +5570,6 @@ in
             };
           };
 
-          swaync = {
-            enable = true;
-            package = pkgs.swaynotificationcenter;
-          };
-
           gnome-keyring = {
             enable = config.services.gnome.gnome-keyring.enable;
             package = pkgs.gnome-keyring;
@@ -5746,7 +5747,6 @@ in
 
                 modules-right = [
                   "systemd-failed-units"
-                  "custom/swaynotificationcenter"
                   "tray"
                   "gamemode"
                   "group/taskbar-and-workspaces"
@@ -6081,34 +6081,6 @@ in
                   on-click = "uwsm-app -- kjournaldbrowser";
                 };
 
-                "custom/swaynotificationcenter" = {
-                  exec-if = "which swaync-client";
-                  exec = "swaync-client --subscribe-waybar";
-                  return-type = "json";
-                  escape = true;
-
-                  format = "{} {icon}";
-                  format-icons = {
-                    notification = "<sup></sup>";
-                    none = "";
-
-                    inhibited-notification = "<sup></sup>";
-                    inhibited-none = "";
-
-                    dnd-notification = "<sup></sup>";
-                    dnd-none = "";
-
-                    dnd-inhibited-notification = "<sup></sup>";
-                    dnd-inhibited-none = "";
-                  };
-
-                  tooltip = true;
-
-                  on-click = "swaync-client --toggle-panel --skip-wait";
-                  on-click-middle = "swaync-client --close-all --skip-wait";
-                  on-click-right = "swaync-client --toggle-dnd --skip-wait";
-                };
-
                 tray = {
                   show-passive-items = true;
                   reverse-direction = false;
@@ -6204,7 +6176,6 @@ in
               #clock,
               #user,
               #systemd-failed-units,
-              #custom-swaynotificationcenter,
               #gamemode,
               #window {
                 border-radius: ${pkgs.lib.toString designFactor}px;
@@ -6291,10 +6262,6 @@ in
 
               #systemd-failed-units.degraded {
                 color: @red;
-              }
-
-              #custom-swaynotificationcenter {
-                font-family: ${fontPreferences.name.monospace};
               }
 
               #gamemode.running {
@@ -6847,6 +6814,26 @@ in
               (use-package ollama-buddy)
 
               (require 'pipewire)
+
+              (when (getenv "WAYLAND_DISPLAY")
+                (setq interprogram-cut-function
+                  (lambda (text &optional _push)
+                    (let ((process-connection-type nil))
+                      (let ((proc
+                        (start-process
+                          "wl-copy" nil
+                          "${pkgs.wl-clipboard}/bin/wl-copy")))
+                        (process-send-string proc text)
+                        (process-send-eof proc)))))
+
+                (setq interprogram-paste-function
+                  (lambda ()
+                    (with-temp-buffer
+                      (when (zerop
+                        (call-process
+                          "${pkgs.wl-clipboard}/bin/wl-paste"
+                          nil t nil "--no-newline"))
+                      (buffer-string))))))
             '';
           };
 
@@ -7008,15 +6995,6 @@ in
             accent = config.catppuccin.accent;
 
             mode = "prependImport";
-          };
-
-          swaync = {
-            enable = config.home-manager.users.normal.services.swaync.enable;
-
-            flavor = config.catppuccin.flavor;
-
-            font = fontPreferences.name.sansSerif;
-            fontSize = pkgs.lib.toString fontPreferences.size;
           };
 
           wezterm = {
