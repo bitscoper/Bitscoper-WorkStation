@@ -20,6 +20,7 @@ let
 
   grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -265,47 +266,14 @@ in
       })
 
       (final: previous: {
+        cromite = cromiteFlake.packages.${config.nixpkgs.hostPlatform.system}.default;
+      }) # Addition
+
+      (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
         };
       })
-
-      (
-        final: previous:
-        let
-          src = final.fetchurl {
-            url =
-              if config.nixpkgs.hostPlatform.system == "x86_64-linux" then
-                "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-x86_64.AppImage"
-              else if config.nixpkgs.hostPlatform.system == "aarch64-linux" then
-                "https://github.com/raindropio/desktop/releases/latest/download/Raindrop-arm64.AppImage"
-              else
-                throw "No ${config.nixpkgs.hostPlatform.system} AppImage for Raindrop.io!";
-
-            hash = "sha256-wQJMFMQjkeMhOt2qE41cPKjjMgPNdpqQ3YGKtNWgvSk=";
-          };
-
-          raindropioExtracted = final.appimageTools.extract {
-            pname = "raindropio";
-            version = "latest";
-            inherit src;
-          };
-
-          raindropio = final.appimageTools.wrapType2 {
-            pname = "raindropio";
-            version = "latest";
-            inherit src;
-          };
-
-          raindropioDesktopFile = "${raindropioExtracted}/raindrop.desktop";
-        in
-        {
-          inherit
-            raindropio
-            raindropioDesktopFile
-            ;
-        }
-      ) # Addition
 
       (final: prev: {
         rtcqs = final.python3.pkgs.buildPythonApplication rec {
@@ -1199,10 +1167,14 @@ in
 
   services = {
     journald = {
-      audit = "keep";
+      settings = {
+        Journal = {
+          Audit = "keep";
 
-      forwardToSyslog = false;
-      storage = "persistent";
+          ForwardToSyslog = false;
+          Storage = "persistent";
+        };
+      };
     };
 
     das_watchdog.enable = true;
@@ -2501,7 +2473,6 @@ in
         bleachbit
         bluez-alsa
         bluez-tools
-        brave
         brightnessctl
         btfs
         btrfs-assistant
@@ -2620,7 +2591,6 @@ in
         flawz
         flightgear
         flutter
-        foliate
         font-manager
         fontfor
         fontforge-gtk
@@ -2897,7 +2867,6 @@ in
         qtscrcpy
         radare2
         raider
-        raindropio # From config.nixpkgs.overlays
         resources
         rp-pppoe
         rpi-imager
@@ -3312,7 +3281,6 @@ in
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
-      ++ config.home-manager.users.normal.programs.brave.nativeMessagingHosts
       ++ config.home-manager.users.normal.programs.lutris.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.networking.networkmanager.plugins
@@ -3457,7 +3425,7 @@ in
 
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
 
-      CHROME_EXECUTABLE = "brave";
+      CHROME_EXECUTABLE = "cromite";
 
       EDITOR = "emacs -nw";
       PAGER = "bat";
@@ -4022,8 +3990,8 @@ in
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
-        "x-scheme-handler/http" = "com.brave.Browser.desktop";
-        "x-scheme-handler/https" = "com.brave.Browser.desktop";
+        "x-scheme-handler/http" = "cromite.desktop";
+        "x-scheme-handler/https" = "cromite.desktop";
 
         "x-scheme-handler/mailto" = "electron-mail.desktop"; # TODO: Find Alternative
       };
@@ -4296,7 +4264,7 @@ in
                   function()
                     hl.exec_cmd("dbus-update-activation-environment --systemd --all") -- Fixes the Soteria Service Not Starting
 
-                    hl.exec_cmd("uwsm-all -- moxnotify")
+                    hl.exec_cmd("uwsm-app -- moxnotify")
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
                   end
                 '')
@@ -4757,25 +4725,25 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- krusader\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.kde.krusader.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- krusader\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.kde.krusader.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cromite.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brave --incognito\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite --incognito\")")
                 ];
               }
               {
@@ -4787,7 +4755,7 @@ in
               {
                 _args = [
                   "SUPER + E"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs.desktop\")")
                 ];
               }
             ];
@@ -5176,47 +5144,6 @@ in
                   Keywords = builtins.readFile (get "Keywords");
                 };
               }; # Addition
-
-            raindropio =
-              let
-                desktopFile = "${pkgs.raindropioDesktopFile}";
-
-                get =
-                  key:
-                  pkgs.runCommand "get_${key}_from_raindropio_desktop_file" { } ''
-                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
-                    import configparser
-
-                    parser = configparser.ConfigParser(strict=False)
-
-                    parser.read("${desktopFile}")
-                    value = parser.get("Desktop Entry", "${key}", fallback="")
-                    print(value)
-
-                    EOF
-                  '';
-              in
-              {
-                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
-                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
-
-                name = builtins.readFile (get "Name");
-                icon = builtins.readFile (get "Icon"); # Available in config.home-manager.users.normal.gtk.iconTheme
-                comment = builtins.readFile (get "Comment");
-
-                mimeType = pkgs.lib.filter (value: value != "") (
-                  pkgs.lib.splitString ";" (pkgs.lib.strings.trim (builtins.readFile (get "MimeType")))
-                );
-                exec = "raindropio";
-                terminal = builtins.fromJSON (
-                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
-                );
-
-                settings = {
-                  X-AppImage-Version = builtins.readFile (get "X-AppImage-Version");
-                  StartupWMClass = builtins.readFile (get "StartupWMClass");
-                };
-              }; # Addition
           };
 
           portal = {
@@ -5247,24 +5174,6 @@ in
             "mimeapps.list" = {
               force = true;
             };
-
-            # "qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf" = {
-            #   enable = true;
-
-            #   source = "${pkgs.catppuccin-qt5ct}/share/qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-
-            #   target = "qt6ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-            #   executable = null;
-            # };
-
-            # "qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf" = {
-            #   enable = true;
-
-            #   source = "${pkgs.catppuccin-qt5ct}/share/qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-
-            #   target = "qt5ct/colors/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-            #   executable = null;
-            # };
 
             "nwg-bar/bar.json" = {
               enable = true;
@@ -5511,8 +5420,8 @@ in
           qt5ctSettings = {
             Appearance = {
               custom_palette = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.custom_palette;
-              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-              style = "kvantum-dark";
+              color_scheme_path = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.color_scheme_path;
+              style = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.style;
 
               icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
 
@@ -5790,7 +5699,7 @@ in
                   on-scroll-up = "brightnessctl set +1%";
                   on-scroll-down = "brightnessctl set 1%-";
 
-                  on-click = "uwsm-app -- nwg-displays & uwsm-app -- com.sidevesh.Luminance";
+                  on-click = "uwsm-app -- nwg-displays.desktop & uwsm-app -- com.sidevesh.Luminance.desktop";
                 };
 
                 idle_inhibitor = {
@@ -5848,7 +5757,7 @@ in
                   on-scroll-up = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+";
                   on-scroll-down = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-";
 
-                  on-click = "uwsm-app -- pwvucontrol & uwsm-app -- helvum";
+                  on-click = "uwsm-app -- pwvucontrol & uwsm-app -- org.pipewire.Helvum.desktop";
                   on-click-middle = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
                   on-click-right = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
                 };
@@ -5878,7 +5787,7 @@ in
                   tooltip-format-enumerate-connected = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}";
                   tooltip-format-enumerate-connected-battery = "\n\tAddress: {device_address} ({device_address_type})\n\tAlias: {device_alias}\n\tBattery: {device_battery_percentage}%";
 
-                  on-click = "uwsm-app -- overskride";
+                  on-click = "uwsm-app -- io.github.kaii_lb.Overskride.desktop";
                 };
 
                 battery = {
@@ -5909,7 +5818,7 @@ in
                   tooltip = true;
                   tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 "group/cpu-and-load-and-temperature" = {
@@ -5933,7 +5842,7 @@ in
 
                   tooltip = true;
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 load = {
@@ -5943,7 +5852,7 @@ in
 
                   tooltip = true;
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 temperature = {
@@ -5962,7 +5871,7 @@ in
                   tooltip = true;
                   tooltip-format = "{temperatureF}°F\n{temperatureK}K";
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 "group/memory-and-disk" = {
@@ -5986,7 +5895,7 @@ in
                   tooltip = true;
                   tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 disk = {
@@ -5999,7 +5908,7 @@ in
                   tooltip = true;
                   tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 network = {
@@ -6017,7 +5926,7 @@ in
                   tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
                   tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
 
-                  on-click = "uwsm-app -- resources";
+                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
                 };
 
                 "group/clock-and-user" = {
@@ -6078,7 +5987,7 @@ in
                   format = "{nr_failed_system}, {nr_failed_user} ";
                   format-ok = "";
 
-                  on-click = "uwsm-app -- kjournaldbrowser";
+                  on-click = "uwsm-app -- org.kde.kjournaldbrowser.desktop";
                 };
 
                 tray = {
@@ -6531,8 +6440,6 @@ in
                 highlight
                 html5-schema
                 http-server
-                hugoista
-                hyprlang-ts-mode
                 indent-bars
                 indent-control
                 indent-tools
@@ -6594,12 +6501,9 @@ in
                     tree-sitter-gitattributes
                     tree-sitter-gitcommit
                     tree-sitter-gitignore
-                    tree-sitter-graphql
                     tree-sitter-hosts
                     tree-sitter-html
                     tree-sitter-http
-                    tree-sitter-hurl
-                    tree-sitter-hyprlang
                     tree-sitter-ini
                     tree-sitter-javascript
                     tree-sitter-jq
@@ -6641,7 +6545,6 @@ in
               (setq display-buffer-base-action '((display-buffer-same-window)))
 
               (setq tab-bar-show 1)
-              (setq tab-line-show 1)
 
               (setq-default cursor-type 'bar)
               (blink-cursor-mode 1)
@@ -6670,8 +6573,6 @@ in
               (display-time-mode t)
 
               (load-theme 'catppuccin :no-confirm)
-              (setq catppuccin-flavor '${config.catppuccin.flavor})
-              (catppuccin-reload)
 
               (add-hook 'prog-mode-hook
                 (lambda ()
@@ -6687,8 +6588,6 @@ in
 
               (require 'dashboard)
 
-              (setq dashboard-display-icons t)
-              (setq dashboard-set-heading-icon t)
               (setq dashboard-set-file-icons t)
               (setq dashboard-icon-type 'nerd-icons)
               (setq dashboard-show-shortcuts t)
@@ -6735,8 +6634,6 @@ in
                 :defer t
                 :config
                 (setq treemacs-show-hidden-files t)
-                (treemacs-follow-mode t)
-                (treemacs-filewatch-mode t)
                 (treemacs-git-commit-diff-mode t))
 
               (use-package treemacs-projectile
@@ -6746,13 +6643,9 @@ in
                 :after (treemacs magit))
 
               (use-package treemacs-tab-bar
-                :after (treemacs)
-                :config
-                (treemacs-set-scope-type 'Tabs))
+                :after (treemacs))
 
               (treemacs-start-on-boot)
-
-              (setq treesit-font-lock-level 4)
 
               (require 'reformatter)
 
@@ -6801,8 +6694,6 @@ in
 
               (use-package docker-compose-mode)
 
-              (use-package hugoista)
-
               (use-package kubernetes
                 :commands (kubernetes-overview))
 
@@ -6834,6 +6725,13 @@ in
                           "${pkgs.wl-clipboard}/bin/wl-paste"
                           nil t nil "--no-newline"))
                       (buffer-string))))))
+
+              (cua-mode 1)
+              (global-tab-line-mode 1)
+              (global-hl-line-mode t)
+
+              (setq compilation-scroll-output 'first-error)
+              (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
             '';
           };
 
@@ -6843,8 +6741,14 @@ in
             extraPackages = config.programs.bat.extraPackages;
           };
 
-          # brave.nativeMessagingHosts = with pkgs; [
-          # ];
+          chromium = {
+            enable = true;
+            package = pkgs.cromite; # From config.nixpkgs.overlays
+
+            dictionaries = with pkgs.hunspellDictsChromium; [
+              en_US
+            ];
+          };
 
           kubecolor = {
             enable = true;
