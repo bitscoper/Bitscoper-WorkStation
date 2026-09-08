@@ -6743,6 +6743,68 @@ in
             dictionaries = with pkgs.hunspellDictsChromium; [
               en_US
             ];
+
+            extensions =
+              let
+                createChromiumExtensionFor =
+                  browserVersion:
+                  {
+                    id,
+                    version,
+                    sha256,
+                  }:
+                  {
+                    inherit id;
+                    inherit version;
+
+                    crxPath = builtins.fetchurl {
+                      url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=${browserVersion}&x=id%3D${id}%26installsource%3Dondemand%26uc";
+                      name = "${id}.crx";
+                      inherit sha256;
+                    };
+                  };
+
+                createChromiumExtension = createChromiumExtensionFor (
+                  pkgs.lib.versions.major config.home-manager.users.normal.programs.chromium.package.version
+                );
+              in
+              [
+                (createChromiumExtension {
+                  id = "bkkmolkhemgaeaeggcmfbghljjjoofoh";
+                  version = "5.0.0";
+                  sha256 = "sha256:01bzcbpxgrzmwp514q7fgp8g144bs7rzfmp0r07g6ysq0ykbhz3v";
+                }) # "Catppuccin Chrome Theme - Mocha"
+
+                (createChromiumExtension {
+                  id = "ldpochfccmkkmhdbclfhpagapcfdljkj";
+                  version = "3.0.2";
+                  sha256 = "sha256:056slds04sb38gcwgbrigvk05xj7mg82a9mzai7024j5lgsvwnrd";
+                }) # "Decentraleyes"
+
+                (createChromiumExtension {
+                  id = "mpiodijhokgodhhofbcjdecpffjipkle";
+                  version = "1.24.1";
+                  sha256 = "sha256:126nmmm371n4mcywqqjm3raad54pwwpzkc3xha448iabfcxazphn";
+                }) # "SingleFile"
+
+                (createChromiumExtension {
+                  id = "mnjggcdmjocbbbhaepdhchncahnbgone";
+                  version = "6.1.6";
+                  sha256 = "sha256:1zxlrlvggis8zhyydmmnwmg5qxbawzpwdryxl0f10ilrd8mzx1sm";
+                }) # "SponsorBlock for YouTube - Skip Sponsorships"
+
+                (createChromiumExtension {
+                  id = "ddkjiahejlhfcafbddmgiahcphecmpfh";
+                  version = "2026.907.2003";
+                  sha256 = "sha256:07xbrdpha0h1q7iyjjjsapy8xzalw0il6blwi27aln0y49ypsjd2";
+                }) # "uBlock Origin Lite"
+
+                (createChromiumExtension {
+                  id = "jabopobgcpjmedljpbcaablpmlmfcogm";
+                  version = "3.2.0";
+                  sha256 = "sha256:1lhgbi5k1ds0g0ryk49dvihji40mf1gk94k4y3b5znn0i5xzxznz";
+                }) # "WhatFont"
+              ];
           };
 
           kubecolor = {
@@ -6932,11 +6994,7 @@ in
             flavor = config.catppuccin.flavor;
           };
 
-          chromium = {
-            enable = config.home-manager.users.normal.programs.chromium.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
+          chromium.enable = false; # Manually Done Instead
 
           mangohud = {
             enable = config.home-manager.users.normal.programs.mangohud.enable;
