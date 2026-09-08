@@ -2034,7 +2034,7 @@ in
     java = {
       enable = true;
       package = (
-        pkgs.jdk.override {
+        pkgs.jdk25.override {
           enableGtk = true;
         }
       );
@@ -2626,9 +2626,9 @@ in
         git-repo
         github-backup
         github-changelog-generator
-        github-desktop
         github-distributed-owners
         gitlogue
+        glab
         glib
         gnome-firmware
         gnome-frog
@@ -2912,7 +2912,6 @@ in
         sshfs
         sshfs-fuse
         sslscan
-        standardnotes
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
@@ -3425,8 +3424,9 @@ in
 
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
 
-      CHROME_EXECUTABLE = "cromite";
+      JAVA_HOME = "${config.programs.java.package}/lib/openjdk";
 
+      CHROME_EXECUTABLE = "cromite";
       EDITOR = "emacs -nw";
       PAGER = "bat";
     }
@@ -6933,6 +6933,12 @@ in
 
           bat = {
             enable = config.programs.bat.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
+          chromium = {
+            enable = config.home-manager.users.normal.programs.chromium.enable;
 
             flavor = config.catppuccin.flavor;
           };
