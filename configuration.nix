@@ -20,7 +20,6 @@ let
 
   grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  cromiteFlake = builtins.getFlake "github:Impqxr/cromite-nix-flake/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -264,10 +263,6 @@ in
               ''; # installPhase Runs postInstall
             });
       })
-
-      (final: previous: {
-        cromite = cromiteFlake.packages.${config.nixpkgs.hostPlatform.system}.default;
-      }) # Addition
 
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
@@ -3426,7 +3421,7 @@ in
 
       JAVA_HOME = "${config.programs.java.package}/lib/openjdk";
 
-      CHROME_EXECUTABLE = "cromite";
+      CHROME_EXECUTABLE = "chromium-browser";
       EDITOR = "emacs -nw";
       PAGER = "bat";
     }
@@ -3990,8 +3985,8 @@ in
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
 
-        "x-scheme-handler/http" = "cromite.desktop";
-        "x-scheme-handler/https" = "cromite.desktop";
+        "x-scheme-handler/http" = "chromium-browser.desktop";
+        "x-scheme-handler/https" = "chromium-browser.desktop";
 
         "x-scheme-handler/mailto" = "electron-mail.desktop"; # TODO: Find Alternative
       };
@@ -4737,13 +4732,13 @@ in
               {
                 _args = [
                   "SUPER + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cromite.desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- chromium-browser.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cromite --incognito\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"chromium-browser --incognito\")")
                 ];
               }
               {
@@ -6743,7 +6738,7 @@ in
 
           chromium = {
             enable = true;
-            package = pkgs.cromite; # From config.nixpkgs.overlays
+            package = pkgs.ungoogled-chromium;
 
             dictionaries = with pkgs.hunspellDictsChromium; [
               en_US
