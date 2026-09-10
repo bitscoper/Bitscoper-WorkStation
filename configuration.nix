@@ -265,6 +265,13 @@ in
       })
 
       (final: previous: {
+        coreutils-full = previous.coreutils-full.override {
+          aclSupport = true;
+          withOpenssl = true;
+        };
+      })
+
+      (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
         };
@@ -1335,8 +1342,8 @@ in
         KERNEL=="rtc0", GROUP="audio"
         KERNEL=="hpet", GROUP="audio"
         DEVPATH=="/devices/virtual/misc/cpu_dma_latency", OWNER="root", GROUP="audio", MODE="0660"
-        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${config.home-manager.users.normal.programs.dircolors.package}/bin/chmod a+w /sys/class/backlight/%k/brightness"
-      '' # config.home-manager.users.normal.programs.dircolors.package = Overriden coreutils-full
+        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${pkgs.coreutils-full}/bin/chmod a+w /sys/class/backlight/%k/brightness"
+      ''
       + config.specificHardwareConfiguration.services.udev.extraRules;
     };
 
@@ -2504,6 +2511,7 @@ in
         compsize
         concessio
         constrict
+        coreutils-full
         coulomb
         cpio
         cramfsprogs
@@ -2525,7 +2533,7 @@ in
         darktable
         darling-dmg
         davfs2
-        dbeaver-bin # Disabling Theming Allows to Use GTK Theme
+        dbeaver-bin # To Use the GTK Theme: Window > Preferences > "User Interface" > Appearance > Uncheck "Enable theming"
         dconf-editor
         dconf2nix
         ddrescue
@@ -2572,7 +2580,6 @@ in
         fdroidcl
         fdt-viewer
         fdupes
-        ffmpegthumbnailer
         ffpb
         fh
         field-monitor
@@ -2719,7 +2726,7 @@ in
         libnotify
         libogg
         libopus
-        libreoffice
+        libreoffice # To Use the GTK Theme: Tools > "Options..." > LibreOffice > Appearance > "LibreOffice Themes" > Uncheck "Enable application theming"
         libsecret
         libsixel
         libultrahdr
@@ -2744,7 +2751,6 @@ in
         lzham
         macchanger
         mailcap
-        mapscii
         mdns-scanner
         megacmd
         mergerfs
@@ -2882,6 +2888,7 @@ in
         sdrangel
         seabird
         seer # seergdb
+        selectdefaultapplication
         semver-tool
         sequoia-sq
         share-preview
@@ -3249,7 +3256,6 @@ in
         })
 
         config.hardware.firmware
-        config.home-manager.users.normal.programs.dircolors.package # Overriden coreutils-full
         config.home-manager.users.normal.services.udiskie.package
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
@@ -6246,6 +6252,16 @@ in
             };
           };
 
+          vivid = {
+            enable = true;
+            package = pkgs.vivid;
+
+            enableBashIntegration = true;
+
+            colorMode = "24-bit";
+            activeTheme = "catppuccin-${config.catppuccin.flavor}";
+          };
+
           bash = {
             enable = true;
             package = pkgs.bashInteractive;
@@ -6259,7 +6275,9 @@ in
 
             # profileExtra = '''';
 
-            # initExtra = '''';
+            initExtra = ''
+              export LS_COLORS="$(${config.home-manager.users.normal.programs.vivid.package}/bin/vivid generate ${config.home-manager.users.normal.programs.vivid.activeTheme})"
+            '';
 
             # logoutExtra = '''';
           };
@@ -6285,17 +6303,7 @@ in
 
           command-not-found.enable = config.programs.command-not-found.enable;
 
-          dircolors = {
-            enable = true;
-            package = (
-              pkgs.coreutils-full.override {
-                aclSupport = true;
-                withOpenssl = true;
-              }
-            );
-
-            enableBashIntegration = true;
-          };
+          dircolors.enable = !config.home-manager.users.normal.programs.vivid.enable;
 
           direnv = {
             enable = config.programs.direnv.enable;
@@ -6986,6 +6994,12 @@ in
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
+          };
+
+          vivid = {
+            enable = config.catppuccin.enable;
+
+            flavor = config.catppuccin.flavor;
           };
 
           bat = {
