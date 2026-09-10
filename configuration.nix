@@ -94,16 +94,10 @@ let
   };
 
   fontPreferences = {
-    package = pkgs.nerd-fonts.noto;
-
-    name = {
-      monospace = "NotoMono Nerd Font Mono";
-      sansSerif = "NotoSans Nerd Font";
-      serif = "NotoSerif Nerd Font";
-      emoji = "Noto Color Emoji";
-    };
-
-    size = 12;
+    monospace = "NotoMono Nerd Font Mono";
+    sansSerif = "NotoSans Nerd Font";
+    serif = "NotoSerif Nerd Font";
+    emoji = "Noto Color Emoji";
   };
 
   tlsCertificateFiles =
@@ -152,7 +146,7 @@ let
     url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
   };
 
-  designFactor = 16;
+  designFactor = 8;
   transitionDuration = 500; # 500 Milliseconds
 in
 {
@@ -162,7 +156,7 @@ in
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
-    ./hardware-and-user-configuration.nix
+    ./hardware-configuration.nix
   ];
 
   nix = {
@@ -446,7 +440,7 @@ in
       "ee1004" # DDR4 SPD
       "spd5118" # DDR5 SPD
     ]
-    ++ config.specificHardwareConfiguration.kernelModules; # From hardware-and-user-configuration.nix
+    ++ config.specificHardwareConfiguration.kernelModules; # From hardware-configuration.nix
 
     blacklistedKernelModules = [
       "efifb"
@@ -456,7 +450,7 @@ in
     extraModprobeConfig = ''
       options kvm ignore_msrs=1 report_ignored_msrs=0
     ''
-    + config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-and-user-configuration.nix
+    + config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-configuration.nix
 
     kernelParams = [
       "boot.shell_on_fail"
@@ -471,7 +465,7 @@ in
       "udev.log_level=err"
       "udev.log_priority=err"
     ]
-    ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-and-user-configuration.nix
+    ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-configuration.nix
 
     initrd = {
       enable = true;
@@ -482,7 +476,7 @@ in
         "usbhid"
         "xhci_pci"
       ]
-      ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-and-user-configuration.nix
+      ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-configuration.nix
 
       systemd = {
         enable = true;
@@ -518,7 +512,7 @@ in
       ];
       theme = "catppuccin-${config.catppuccin.flavor}";
 
-      font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
+      font = "${config.home-manager.users.normal.gtk.font.package}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
       logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
 
@@ -582,8 +576,8 @@ in
       enable = true;
       enable32Bit = true;
 
-      extraPackages = config.specificHardwareConfiguration.hardware.graphics.extraPackages; # From hardware-and-user-configuration.nix
-      extraPackages32 = config.specificHardwareConfiguration.hardware.graphics.extraPackages32; # From hardware-and-user-configuration.nix
+      extraPackages = config.specificHardwareConfiguration.hardware.graphics.extraPackages; # From hardware-configuration.nix
+      extraPackages32 = config.specificHardwareConfiguration.hardware.graphics.extraPackages32; # From hardware-configuration.nix
     };
 
     sensor = {
@@ -2134,7 +2128,9 @@ in
           settings = {
             "org/gnome/desktop/interface" = {
               gtk-enable-primary-paste = true;
-              monospace-font-name = "${fontPreferences.name.monospace} ${pkgs.lib.toString fontPreferences.size}";
+              monospace-font-name = "${fontPreferences.monospace} ${
+                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+              }";
             };
 
             "org/gnome/desktop/privacy" = {
@@ -2346,12 +2342,14 @@ in
     packages =
       with pkgs;
       [
-        nerd-fonts.noto
         noto-fonts
         noto-fonts-cjk-sans
         noto-fonts-cjk-serif
         noto-fonts-color-emoji
         noto-fonts-lgc-plus
+      ]
+      ++ [
+        config.home-manager.users.normal.gtk.font.package
       ]
       ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
         with pkgs;
@@ -2369,19 +2367,19 @@ in
 
       defaultFonts = {
         monospace = [
-          fontPreferences.name.monospace
+          fontPreferences.monospace
         ];
 
         sansSerif = [
-          fontPreferences.name.sansSerif
+          fontPreferences.sansSerif
         ];
 
         serif = [
-          fontPreferences.name.serif
+          fontPreferences.serif
         ];
 
         emoji = [
-          fontPreferences.name.emoji
+          fontPreferences.emoji
         ];
       };
 
@@ -2785,8 +2783,6 @@ in
         nix-health
         nix-info
         nix-query-tree-viewer
-        nixd
-        nixfmt
         nixmate
         nixoscope
         nixpkgs-reviewFull
@@ -2871,6 +2867,7 @@ in
         resources
         rp-pppoe
         rpi-imager
+        rpm
         rpmextract
         rt-tests
         rtcqs # From config.nixpkgs.overlays
@@ -2892,10 +2889,8 @@ in
         semver-tool
         sequoia-sq
         share-preview
-        shellcheck
         shellclear
         sherlock
-        shfmt
         shortwave
         simple-mtpfs
         sipvicious
@@ -3282,6 +3277,7 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.hardware.sane.extraBackends
       ++ config.home-manager.users.normal.programs.lutris.extraPackages
+      ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.networking.networkmanager.plugins
       ++ config.programs.bat.extraPackages
@@ -3385,7 +3381,6 @@ in
         kubrick
         marble
         ocean-sound-theme
-        okular
         step
       ])
 
@@ -3428,7 +3423,6 @@ in
       JAVA_HOME = "${config.programs.java.package}/lib/openjdk";
 
       CHROME_EXECUTABLE = "chromium-browser";
-      EDITOR = "emacs -nw";
       PAGER = "bat";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
@@ -3438,6 +3432,8 @@ in
     };
 
     sessionVariables = {
+      GIT_EDITOR = "zeditor -w";
+
       ADW_DISABLE_PORTAL = 1;
 
       GDK_BACKEND = "wayland";
@@ -3508,103 +3504,103 @@ in
       defaultApplications = {
         "inode/directory" = "org.kde.krusader.desktop";
 
-        "text/1d-interleaved-parityfec" = "emacs.desktop";
-        "text/cache-manifest" = "emacs.desktop";
-        "text/calendar" = "emacs.desktop";
-        "text/cql" = "emacs.desktop";
-        "text/cql-expression" = "emacs.desktop";
-        "text/cql-identifier" = "emacs.desktop";
-        "text/css" = "emacs.desktop";
-        "text/csv" = "emacs.desktop";
-        "text/csv-schema" = "emacs.desktop";
-        "text/directory" = "emacs.desktop";
-        "text/dns" = "emacs.desktop";
-        "text/ecmascript" = "emacs.desktop";
-        "text/encaprtp" = "emacs.desktop";
-        "text/enriched" = "emacs.desktop";
-        "text/fhirpath" = "emacs.desktop";
-        "text/flexfec" = "emacs.desktop";
-        "text/fwdred" = "emacs.desktop";
-        "text/gff3" = "emacs.desktop";
-        "text/grammar-ref-list" = "emacs.desktop";
-        "text/hl7v2" = "emacs.desktop";
-        "text/html" = "emacs.desktop";
-        "text/javascript" = "emacs.desktop";
-        "text/jcr-cnd" = "emacs.desktop";
-        "text/markdown" = "emacs.desktop";
-        "text/mizar" = "emacs.desktop";
-        "text/n3" = "emacs.desktop";
-        "text/org" = "emacs.desktop";
-        "text/parameters" = "emacs.desktop";
-        "text/parityfec" = "emacs.desktop";
-        "text/plain" = "emacs.desktop";
-        "text/provenance-notation" = "emacs.desktop";
-        "text/prs.fallenstein.rst" = "emacs.desktop";
-        "text/prs.lines.tag" = "emacs.desktop";
-        "text/prs.prop.logic" = "emacs.desktop";
-        "text/prs.texi" = "emacs.desktop";
-        "text/raptorfec" = "emacs.desktop";
-        "text/RED" = "emacs.desktop";
-        "text/rfc822-headers" = "emacs.desktop";
-        "text/richtext" = "emacs.desktop";
-        "text/rtf" = "emacs.desktop";
-        "text/rtp-enc-aescm128" = "emacs.desktop";
-        "text/rtploopback" = "emacs.desktop";
-        "text/rtx" = "emacs.desktop";
-        "text/SGML" = "emacs.desktop";
-        "text/shaclc" = "emacs.desktop";
-        "text/shex" = "emacs.desktop";
-        "text/spdx" = "emacs.desktop";
-        "text/strings" = "emacs.desktop";
-        "text/t140" = "emacs.desktop";
-        "text/tab-separated-values" = "emacs.desktop";
-        "text/troff" = "emacs.desktop";
-        "text/turtle" = "emacs.desktop";
-        "text/ulpfec" = "emacs.desktop";
-        "text/uri-list" = "emacs.desktop";
-        "text/vcard" = "emacs.desktop";
-        "text/vnd.a" = "emacs.desktop";
-        "text/vnd.abc" = "emacs.desktop";
-        "text/vnd.ascii-art" = "emacs.desktop";
-        "text/vnd.curl" = "emacs.desktop";
-        "text/vnd.debian.copyright" = "emacs.desktop";
-        "text/vnd.DMClientScript" = "emacs.desktop";
-        "text/vnd.dvb.subtitle" = "emacs.desktop";
-        "text/vnd.esmertec.theme-descriptor" = "emacs.desktop";
-        "text/vnd.exchangeable" = "emacs.desktop";
-        "text/vnd.familysearch.gedcom" = "emacs.desktop";
-        "text/vnd.ficlab.flt" = "emacs.desktop";
-        "text/vnd.fly" = "emacs.desktop";
-        "text/vnd.fmi.flexstor" = "emacs.desktop";
-        "text/vnd.gml" = "emacs.desktop";
-        "text/vnd.graphviz" = "emacs.desktop";
-        "text/vnd.hans" = "emacs.desktop";
-        "text/vnd.hgl" = "emacs.desktop";
-        "text/vnd.in3d.3dml" = "emacs.desktop";
-        "text/vnd.in3d.spot" = "emacs.desktop";
-        "text/vnd.IPTC.NewsML" = "emacs.desktop";
-        "text/vnd.IPTC.NITF" = "emacs.desktop";
-        "text/vnd.latex-z" = "emacs.desktop";
-        "text/vnd.motorola.reflex" = "emacs.desktop";
-        "text/vnd.ms-mediapackage" = "emacs.desktop";
-        "text/vnd.net2phone.commcenter.command" = "emacs.desktop";
-        "text/vnd.radisys.msml-basic-layout" = "emacs.desktop";
-        "text/vnd.senx.warpscript" = "emacs.desktop";
-        "text/vnd.si.uricatalogue" = "emacs.desktop";
-        "text/vnd.sosi" = "emacs.desktop";
-        "text/vnd.sun.j2me.app-descriptor" = "emacs.desktop";
-        "text/vnd.trolltech.linguist" = "emacs.desktop";
-        "text/vnd.typst" = "emacs.desktop";
-        "text/vnd.vcf" = "emacs.desktop";
-        "text/vnd.wap.si" = "emacs.desktop";
-        "text/vnd.wap.sl" = "emacs.desktop";
-        "text/vnd.wap.wml" = "emacs.desktop";
-        "text/vnd.wap.wmlscript" = "emacs.desktop";
-        "text/vnd.zoo.kcl" = "emacs.desktop";
-        "text/vtt" = "emacs.desktop";
-        "text/wgsl" = "emacs.desktop";
-        "text/xml" = "emacs.desktop";
-        "text/xml-external-parsed-entity" = "emacs.desktop";
+        "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
+        "text/cache-manifest" = "dev.zed.Zed.desktop";
+        "text/calendar" = "dev.zed.Zed.desktop";
+        "text/cql" = "dev.zed.Zed.desktop";
+        "text/cql-expression" = "dev.zed.Zed.desktop";
+        "text/cql-identifier" = "dev.zed.Zed.desktop";
+        "text/css" = "dev.zed.Zed.desktop";
+        "text/csv" = "dev.zed.Zed.desktop";
+        "text/csv-schema" = "dev.zed.Zed.desktop";
+        "text/directory" = "dev.zed.Zed.desktop";
+        "text/dns" = "dev.zed.Zed.desktop";
+        "text/ecmascript" = "dev.zed.Zed.desktop";
+        "text/encaprtp" = "dev.zed.Zed.desktop";
+        "text/enriched" = "dev.zed.Zed.desktop";
+        "text/fhirpath" = "dev.zed.Zed.desktop";
+        "text/flexfec" = "dev.zed.Zed.desktop";
+        "text/fwdred" = "dev.zed.Zed.desktop";
+        "text/gff3" = "dev.zed.Zed.desktop";
+        "text/grammar-ref-list" = "dev.zed.Zed.desktop";
+        "text/hl7v2" = "dev.zed.Zed.desktop";
+        "text/html" = "dev.zed.Zed.desktop";
+        "text/javascript" = "dev.zed.Zed.desktop";
+        "text/jcr-cnd" = "dev.zed.Zed.desktop";
+        "text/markdown" = "dev.zed.Zed.desktop";
+        "text/mizar" = "dev.zed.Zed.desktop";
+        "text/n3" = "dev.zed.Zed.desktop";
+        "text/org" = "dev.zed.Zed.desktop";
+        "text/parameters" = "dev.zed.Zed.desktop";
+        "text/parityfec" = "dev.zed.Zed.desktop";
+        "text/plain" = "dev.zed.Zed.desktop";
+        "text/provenance-notation" = "dev.zed.Zed.desktop";
+        "text/prs.fallenstein.rst" = "dev.zed.Zed.desktop";
+        "text/prs.lines.tag" = "dev.zed.Zed.desktop";
+        "text/prs.prop.logic" = "dev.zed.Zed.desktop";
+        "text/prs.texi" = "dev.zed.Zed.desktop";
+        "text/raptorfec" = "dev.zed.Zed.desktop";
+        "text/RED" = "dev.zed.Zed.desktop";
+        "text/rfc822-headers" = "dev.zed.Zed.desktop";
+        "text/richtext" = "dev.zed.Zed.desktop";
+        "text/rtf" = "dev.zed.Zed.desktop";
+        "text/rtp-enc-aescm128" = "dev.zed.Zed.desktop";
+        "text/rtploopback" = "dev.zed.Zed.desktop";
+        "text/rtx" = "dev.zed.Zed.desktop";
+        "text/SGML" = "dev.zed.Zed.desktop";
+        "text/shaclc" = "dev.zed.Zed.desktop";
+        "text/shex" = "dev.zed.Zed.desktop";
+        "text/spdx" = "dev.zed.Zed.desktop";
+        "text/strings" = "dev.zed.Zed.desktop";
+        "text/t140" = "dev.zed.Zed.desktop";
+        "text/tab-separated-values" = "dev.zed.Zed.desktop";
+        "text/troff" = "dev.zed.Zed.desktop";
+        "text/turtle" = "dev.zed.Zed.desktop";
+        "text/ulpfec" = "dev.zed.Zed.desktop";
+        "text/uri-list" = "dev.zed.Zed.desktop";
+        "text/vcard" = "dev.zed.Zed.desktop";
+        "text/vnd.a" = "dev.zed.Zed.desktop";
+        "text/vnd.abc" = "dev.zed.Zed.desktop";
+        "text/vnd.ascii-art" = "dev.zed.Zed.desktop";
+        "text/vnd.curl" = "dev.zed.Zed.desktop";
+        "text/vnd.debian.copyright" = "dev.zed.Zed.desktop";
+        "text/vnd.DMClientScript" = "dev.zed.Zed.desktop";
+        "text/vnd.dvb.subtitle" = "dev.zed.Zed.desktop";
+        "text/vnd.esmertec.theme-descriptor" = "dev.zed.Zed.desktop";
+        "text/vnd.exchangeable" = "dev.zed.Zed.desktop";
+        "text/vnd.familysearch.gedcom" = "dev.zed.Zed.desktop";
+        "text/vnd.ficlab.flt" = "dev.zed.Zed.desktop";
+        "text/vnd.fly" = "dev.zed.Zed.desktop";
+        "text/vnd.fmi.flexstor" = "dev.zed.Zed.desktop";
+        "text/vnd.gml" = "dev.zed.Zed.desktop";
+        "text/vnd.graphviz" = "dev.zed.Zed.desktop";
+        "text/vnd.hans" = "dev.zed.Zed.desktop";
+        "text/vnd.hgl" = "dev.zed.Zed.desktop";
+        "text/vnd.in3d.3dml" = "dev.zed.Zed.desktop";
+        "text/vnd.in3d.spot" = "dev.zed.Zed.desktop";
+        "text/vnd.IPTC.NewsML" = "dev.zed.Zed.desktop";
+        "text/vnd.IPTC.NITF" = "dev.zed.Zed.desktop";
+        "text/vnd.latex-z" = "dev.zed.Zed.desktop";
+        "text/vnd.motorola.reflex" = "dev.zed.Zed.desktop";
+        "text/vnd.ms-mediapackage" = "dev.zed.Zed.desktop";
+        "text/vnd.net2phone.commcenter.command" = "dev.zed.Zed.desktop";
+        "text/vnd.radisys.msml-basic-layout" = "dev.zed.Zed.desktop";
+        "text/vnd.senx.warpscript" = "dev.zed.Zed.desktop";
+        "text/vnd.si.uricatalogue" = "dev.zed.Zed.desktop";
+        "text/vnd.sosi" = "dev.zed.Zed.desktop";
+        "text/vnd.sun.j2me.app-descriptor" = "dev.zed.Zed.desktop";
+        "text/vnd.trolltech.linguist" = "dev.zed.Zed.desktop";
+        "text/vnd.typst" = "dev.zed.Zed.desktop";
+        "text/vnd.vcf" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.si" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.sl" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.wml" = "dev.zed.Zed.desktop";
+        "text/vnd.wap.wmlscript" = "dev.zed.Zed.desktop";
+        "text/vnd.zoo.kcl" = "dev.zed.Zed.desktop";
+        "text/vtt" = "dev.zed.Zed.desktop";
+        "text/wgsl" = "dev.zed.Zed.desktop";
+        "text/xml" = "dev.zed.Zed.desktop";
+        "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
         "image/aces" = "org.geeqie.Geeqie.desktop";
         "image/apng" = "org.geeqie.Geeqie.desktop";
@@ -4180,7 +4176,7 @@ in
 
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             # package = config.catppuccin.sources.cursors."${config.catppuccin.flavor}${pkgs.lib.toSentenceCase config.catppuccin.accent}"; # Already Defined by Catppuccin
-            size = 20;
+            size = builtins.floor (designFactor * 3);
 
             gtk = {
               enable = true;
@@ -4756,7 +4752,7 @@ in
               {
                 _args = [
                   "SUPER + E"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- emacs.desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- dev.zed.Zed.desktop\")")
                 ];
               }
             ];
@@ -4769,15 +4765,15 @@ in
 
                 layout = "dwindle";
 
-                gaps_in = builtins.floor (designFactor / 4); # 4
+                gaps_in = builtins.floor (designFactor / 2);
                 gaps_out = {
-                  top = builtins.floor (designFactor / 4); # 4
-                  right = builtins.floor (designFactor / 4); # 4
-                  bottom = builtins.floor (designFactor / 4); # 4
-                  left = builtins.floor (designFactor / 4); # 4
+                  top = builtins.floor (designFactor / 2);
+                  right = builtins.floor (designFactor / 2);
+                  bottom = builtins.floor (designFactor / 2);
+                  left = builtins.floor (designFactor / 2);
                 };
 
-                float_gaps = builtins.floor (designFactor / 4); # 4
+                float_gaps = builtins.floor (designFactor / 2);
 
                 border_size = 1;
                 "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
@@ -4794,8 +4790,8 @@ in
                   enabled = true;
 
                   respect_gaps = true;
-                  monitor_gap = builtins.floor (designFactor / 4); # 4
-                  window_gap = builtins.floor (designFactor / 4); # 4
+                  monitor_gap = builtins.floor (designFactor / 2);
+                  window_gap = builtins.floor (designFactor / 2);
 
                   border_overlap = false;
                 };
@@ -4813,7 +4809,7 @@ in
                 };
 
                 border_part_of_window = true;
-                rounding = builtins.floor (designFactor / 2); # 8
+                rounding = builtins.floor designFactor;
                 rounding_power = 4.0; # 4.0 = Squircle
 
                 active_opacity = 1.0;
@@ -4969,7 +4965,7 @@ in
 
                 middle_click_paste = true;
 
-                font_family = fontPreferences.name.sansSerif;
+                font_family = fontPreferences.sansSerif;
               };
 
               binds = {
@@ -5213,13 +5209,13 @@ in
               source = pkgs.writeText "nwg-bar.css" ''
                 window {
                   border: 1px solid rgb(88, 91, 112);
-                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
                 #bar {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
-                  font-size: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                  font-family: ${fontPreferences.name.sansSerif};
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 4))}px;
+                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2)}px;
+                  font-family: ${fontPreferences.sansSerif};
                 }
 
                 button,
@@ -5231,8 +5227,8 @@ in
                 }
 
                 button {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
-                  padding-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
                 button:hover {
@@ -5244,10 +5240,10 @@ in
                 }
 
                 grid {
-                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 3))}px rgb(49, 50, 68);
-                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6))}px rgb(49, 50, 68);
+                  border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                   background-color: rgb(17, 17, 27);
-                  padding: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  padding: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }''; # Catppuccin Mocha: "Surface 2" rgb(88, 91, 112), "Text" rgb(205, 214, 244), "Surface 0" rgb(49, 50, 68), "Crust" rgb(17, 17, 27)
 
               target = "nwg-bar/style.css";
@@ -5266,9 +5262,9 @@ in
           enable = true;
 
           font = {
-            name = fontPreferences.name.sansSerif;
-            package = fontPreferences.package;
-            size = fontPreferences.size;
+            name = fontPreferences.sansSerif;
+            package = pkgs.nerd-fonts.noto;
+            size = builtins.floor (designFactor * 1.5);
           };
 
           colorScheme = "dark";
@@ -5392,8 +5388,12 @@ in
 
           qt6ctSettings = {
             Fonts = {
-              fixed = "\"${fontPreferences.name.monospace},${pkgs.lib.toString fontPreferences.size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
-              general = "\"${fontPreferences.name.sansSerif},${pkgs.lib.toString fontPreferences.size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
+              fixed = "\"${fontPreferences.monospace},${
+                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+              },-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
+              general = "\"${fontPreferences.sansSerif},${
+                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+              },-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
             };
 
             Appearance = {
@@ -5505,6 +5505,11 @@ in
           };
 
           ssh-agent.enable = !config.programs.gnupg.agent.enable;
+
+          easyeffects = {
+            enable = true;
+            package = pkgs.easyeffects;
+          };
 
           network-manager-applet = {
             enable = config.programs.nm-applet.enable;
@@ -5640,7 +5645,7 @@ in
                 layer = "top";
                 passthrough = false;
                 fixed-center = true;
-                spacing = builtins.floor (designFactor / 4); # 4
+                spacing = builtins.floor (designFactor / 2);
 
                 modules-left = [
                   "group/backlight-and-idle-inhibitor"
@@ -5994,8 +5999,8 @@ in
                 tray = {
                   show-passive-items = true;
                   reverse-direction = false;
-                  icon-size = fontPreferences.size;
-                  spacing = builtins.floor (designFactor / 4); # 4
+                  icon-size = builtins.floor (designFactor * 1.5);
+                  spacing = builtins.floor (designFactor / 2);
                 };
 
                 gamemode = {
@@ -6028,7 +6033,7 @@ in
                   active-first = false;
                   sort-by-app-id = false;
                   format = "{icon}";
-                  icon-size = fontPreferences.size;
+                  icon-size = builtins.floor (designFactor * 1.5);
                   markup = true;
 
                   tooltip = true;
@@ -6055,8 +6060,8 @@ in
 
             style = ''
               * {
-                font-family: ${fontPreferences.name.sansSerif};
-                font-size: ${pkgs.lib.toString fontPreferences.size}px;
+                font-family: ${fontPreferences.sansSerif};
+                font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
               }
 
               window#waybar {
@@ -6088,11 +6093,11 @@ in
               #systemd-failed-units,
               #gamemode,
               #window {
-                border-radius: ${pkgs.lib.toString designFactor}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
                 background-color: @crust;
-                padding: ${pkgs.lib.toString (builtins.floor (designFactor / 8))}px ${
-                  pkgs.lib.toString (builtins.floor (designFactor / 2))
-                }px;
+                padding: ${
+                  pkgs.lib.toString (builtins.floor (designFactor / 4))
+                }px ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 color: @text;
               }
 
@@ -6102,7 +6107,7 @@ in
               #temperature,
               #disk,
               #user {
-                margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+                margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
               }
 
               #idle_inhibitor.deactivated {
@@ -6185,15 +6190,15 @@ in
               }
 
               button {
-                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 8))}px;
-                border-radius: ${pkgs.lib.toString designFactor}px;
+                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
                 background-color: @crust;
                 padding: 0px;
                 color: @text;
               }
 
               button * {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
               }
 
               button.active {
@@ -6205,18 +6210,18 @@ in
               }
 
               #window label {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
-                font-size: ${pkgs.lib.toString fontPreferences.size}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
               }
 
               #tray > widget {
-                border-radius: ${pkgs.lib.toString designFactor}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
                 background-color: @crust;
                 color: @text;
               }
 
               #tray image {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor designFactor)}px;
               }
 
               #tray > .passive {
@@ -6247,8 +6252,8 @@ in
             settings = {
               hide_tab_bar_if_only_one_tab = true;
 
-              font = pkgs.lib.generators.mkLuaInline ''wezterm.font("${fontPreferences.name.monospace}")'';
-              font_size = fontPreferences.size;
+              font = pkgs.lib.generators.mkLuaInline ''wezterm.font("${fontPreferences.monospace}")'';
+              font_size = builtins.floor (designFactor * 1.5);
             };
           };
 
@@ -6399,343 +6404,744 @@ in
             enable = true;
           };
 
-          emacs = {
+          zed-editor = {
             enable = true;
-            package = pkgs.emacs-pgtk;
-            # overrides = {
+            package = (
+              pkgs.zed-editor.override {
+                buildRemoteServer = config.home-manager.users.normal.programs.zed-editor.installRemoteServer;
+              }
+            );
+            installRemoteServer = false;
 
+            extraPackages = with pkgs; [
+              arduino-language-server
+              basedpyright
+              bash-language-server
+              css-variables-language-server
+              ctags-lsp
+              docker-compose-language-service
+              dockerfile-language-server
+              kdePackages.okular
+              kotlin-language-server
+              nixd
+              nixfmt
+              postgres-language-server
+              prettier
+              ruff
+              shellcheck
+              shfmt
+              sql-formatter
+              yaml-language-server
+            ];
+
+            enableMcpIntegration = true;
+
+            # curl -s https://raw.githubusercontent.com/zed-industries/extensions/main/.gitmodules
+            extensions = [
+              "arduino"
+              "assembly"
+              "awk"
+              "basher"
+              "bloc"
+              "bookmark"
+              "catppuccin"
+              "catppuccin-icons"
+              "comment"
+              "comment-block-snippets"
+              "css-variables"
+              "csv"
+              "ctags"
+              "dart"
+              "desktop"
+              "docker-compose"
+              "dockerfile"
+              "editorconfig"
+              "emoji-completions"
+              "env"
+              "flutter-snippets"
+              "git-firefly"
+              "github-actions"
+              "github-activity-summarizer"
+              "gitignore-templates"
+              "graphql"
+              "graphviz"
+              "groovy"
+              "html-snippets"
+              "http"
+              "import-cost-lsp"
+              "ini"
+              "intl-lens"
+              "javascript-snippets"
+              "keep-a-changelog-snippets"
+              "kubernetes-snippets"
+              "latex"
+              "live-server"
+              "log"
+              "logcat"
+              "ltex"
+              "lua"
+              "make"
+              "markdown-snippets"
+              "markdownlint"
+              "mermaid"
+              "nix"
+              "pbxproj"
+              "php"
+              "php-snippets"
+              "phpcs"
+              "phpmd"
+              "platformio"
+              "postgres-context-server"
+              "postgres-language-server"
+              "powershell"
+              "python-requirements"
+              "python-snippets"
+              "regedit"
+              "riverpod-dart-flutter-snippets"
+              "rpmspec"
+              "sieve"
+              "sql"
+              "ssh-config"
+              "stylelint"
+              "toml"
+              "unicode"
+              "vcard"
+              "xml"
+            ];
+
+            mutableUserDebug = true;
+            mutableUserKeymaps = true;
+            mutableUserSettings = true;
+            mutableUserTasks = true;
+
+            userSettings = {
+              telemetry = {
+                diagnostics = false;
+                metrics = false;
+              };
+
+              title_bar = {
+                show_branch_name = true;
+                show_branch_status_icon = true;
+                show_menus = true;
+                show_onboarding_banner = true;
+                show_project_items = true;
+                show_sign_in = true;
+                show_user_menu = true;
+                show_user_picture = true;
+              };
+
+              toolbar = {
+                agent_review = true;
+                breadcrumbs = true;
+                code_actions = true;
+                quick_actions = true;
+                selections_menu = true;
+              };
+
+              status_bar = {
+                active_language_button = true;
+                cursor_position_button = true;
+                line_endings_button = true;
+              };
+              line_indicator_format = "long";
+
+              project_panel = {
+                dock = "left";
+                button = true;
+
+                scrollbar = {
+                  show = "auto";
+                };
+
+                sticky_scroll = true;
+                entry_spacing = "comfortable";
+
+                indent_guides = {
+                  show = "always";
+                };
+
+                hide_root = false;
+                hide_hidden = false;
+                sort_mode = "directories_first";
+
+                folder_icons = true;
+                file_icons = true;
+                git_status = true;
+                show_diagnostics = "all";
+
+                drag_and_drop = true;
+              };
+
+              file_finder = {
+                file_icons = true;
+              };
+
+              outline_panel = {
+                dock = "left";
+                button = true;
+
+                folder_icons = true;
+                file_icons = true;
+                git_status = true;
+
+                indent_guides = {
+                  show = "always";
+                };
+
+                scrollbar = {
+                  show = "auto";
+                };
+              };
+
+              git_panel = {
+                dock = "left";
+                button = true;
+
+                scrollbar = {
+                  show = "auto";
+                };
+              };
+
+              collaboration_panel = {
+                dock = "right";
+                button = true;
+              };
+
+              bottom_dock_layout = "full";
+              terminal = {
+                dock = "bottom";
+                flexible = true;
+                button = true;
+
+                toolbar = {
+                  breadcrumbs = true;
+                };
+
+                scrollbar = {
+                  show = "auto";
+                };
+
+                font_family = fontPreferences.monospace;
+                font_size = builtins.floor (designFactor * 2);
+                line_height = "comfortable";
+
+                cursor_shape = "bar";
+                blinking = "on";
+
+                copy_on_select = false;
+                keep_selection_on_copy = true;
+
+                detect_venv = {
+                  on = {
+                    directories = [
+                      ".venv"
+                      "venv"
+                    ];
+                    activate_script = "default";
+                  };
+                };
+
+                # env = {
+                # };
+              };
+
+              debugger = {
+                dock = "left";
+                button = true;
+              };
+
+              tab_bar = {
+                show = true;
+
+                show_tab_bar_buttons = true;
+                show_nav_history_buttons = true;
+              };
+
+              tabs = {
+                file_icons = true;
+
+                show_close_button = "hover";
+                close_position = "right";
+
+                git_status = true;
+                show_diagnostics = "all";
+              };
+
+              search = {
+                button = true;
+              };
+
+              gutter = {
+                line_numbers = true;
+                runnables = true;
+                breakpoints = true;
+                folds = true;
+              };
+
+              scrollbar = {
+                show = "auto";
+                axes = {
+                  horizontal = true;
+                  vertical = true;
+                };
+
+                cursors = true;
+                diagnostics = "all";
+                git_diff = true;
+                search_results = true;
+                selected_symbol = true;
+                selected_text = true;
+              };
+
+              minimap = {
+                show = "auto";
+                display_in = "all_editors";
+                thumb = "always";
+              };
+
+              sticky_scroll = {
+                enabled = true;
+              };
+
+              indent_guides = {
+                enabled = true;
+
+                coloring = "indent_aware";
+                background_coloring = "disabled";
+              };
+
+              git = {
+                inline_blame = {
+                  enabled = true;
+
+                  show_commit_summary = true;
+                };
+
+                hunk_style = "staged_hollow";
+              };
+
+              diagnostics = {
+                button = true;
+
+                inline = {
+                  enabled = true;
+                };
+              };
+
+              inlay_hints = {
+                enabled = true;
+
+                show_background = false;
+
+                show_type_hints = true;
+                show_parameter_hints = true;
+                show_other_hints = true;
+              };
+
+              drag_and_drop_selection = {
+                enabled = true;
+              };
+
+              edit_predictions = {
+                mode = "subtle";
+
+                provider = "ollama";
+                ollama = { };
+              };
+
+              agent = {
+                enabled = true;
+
+                dock = "right";
+                sidebar_side = "right";
+                flexible = true;
+                button = true;
+
+                # default_model = {
+                #   provider = "ollama";
+                # };
+
+                # inline_alternatives = [
+                #   {
+                #     provider = "ollama";
+                #   }
+                # ];
+              };
+
+              journal = {
+                hour_format = "hour12";
+              };
+
+              image_viewer = {
+                unit = "binary";
+              };
+
+              session = {
+                restore_unsaved_buffers = true;
+              };
+
+              use_system_prompts = true;
+              use_system_path_prompts = true;
+              close_on_file_delete = false;
+              confirm_quit = true;
+
+              vim_mode = false;
+              helix_mode = false;
+              hide_mouse = "never";
+
+              show_call_status_icon = true;
+
+              ui_font_family = fontPreferences.sansSerif;
+              ui_font_size = builtins.floor (designFactor * 2);
+
+              agent_ui_font_family = fontPreferences.sansSerif;
+              agent_ui_font_size = builtins.floor (designFactor * 2);
+
+              buffer_font_family = fontPreferences.monospace;
+              buffer_font_size = builtins.floor (designFactor * 2);
+              buffer_line_height = "comfortable";
+
+              agent_buffer_font_family = fontPreferences.monospace;
+              agent_buffer_font_size = builtins.floor (designFactor * 2);
+
+              markdown_preview_font_family = fontPreferences.sansSerif;
+              markdown_preview_code_font_family = fontPreferences.monospace;
+              markdown_preview_font_size = builtins.floor (designFactor * 2);
+
+              mouse_wheel_zoom = true;
+
+              cursor_shape = "bar";
+              cursor_blink = true;
+
+              soft_wrap = "editor_width";
+              show_whitespaces = "all";
+              show_wrap_guides = true;
+              lsp_document_colors = "inlay";
+              colorize_brackets = true;
+              current_line_highlight = "all";
+              selection_highlight = true;
+              rounded_selection = true;
+
+              inline_code_actions = true;
+              hover_popover_enabled = true;
+              hover_popover_sticky = true;
+              code_lens = "on";
+
+              disable_ai = false;
+              show_completions_on_input = true;
+              show_completion_documentation = true;
+              completion_menu_scrollbar = "auto";
+              auto_signature_help = true;
+              show_signature_help_after_edits = true;
+
+              use_auto_surround = true;
+              extend_comment_on_newline = false;
+              auto_indent = "syntax_aware";
+              auto_indent_on_paste = true;
+              hard_tabs = false;
+              tab_size = 2;
+
+              line_ending = "detect";
+              format_on_save = "on";
+              redact_private_values = true;
+
+              file_types = {
+                Diff = [
+                  "diff"
+                ];
+
+                "Git Attributes" = [
+                  "**/{git,.git,.git/info}/attributes"
+                ];
+                "Git Config" = [
+                  "*.gitconfig"
+                  "**/{git,.git,.git/modules,.git/modules/*}/config"
+                ];
+                "Git Ignore" = [
+                  "**/{git,.git}/ignore"
+                  "**/.git/info/exclude"
+                ];
+
+                "HTML" = [
+                  "*.svg"
+                  "*.xhtml"
+                ];
+
+                Dockerfile = [
+                  "Dockerfile.*"
+                ];
+
+                "GitHub Actions" = [
+                  ".github/workflows/*.yaml"
+                  ".github/workflows/*.yml"
+                ];
+
+                "Python constraints" = [
+                  "*constraints*.txt"
+                ];
+                "Python requirements" = [
+                  "**/requirements/*.{in,txt}"
+                  "*requirements*.{in,txt}"
+                ];
+
+                "JSON" = [
+                  "*.webmanifest"
+                ];
+              };
+
+              languages = {
+                Nix = {
+                  language_servers = [
+                    "nixd"
+                    "!nil"
+                  ];
+
+                  formatter = {
+                    external = {
+                      command = "nixfmt";
+                      arguments = [ ];
+                    };
+                  };
+                };
+
+                "Shell Script" = {
+                  formatter = {
+                    external = {
+                      command = "shfmt";
+                      arguments = [
+                        "--filename"
+                        "{buffer_path}"
+                        "--indent"
+                        "2"
+                      ];
+                    };
+                  };
+                };
+
+                C = {
+                  language_servers = [
+                    "ctags-lsp"
+                  ];
+                };
+
+                "C++" = {
+                  language_servers = [
+                    "ctags-lsp"
+                  ];
+                };
+
+                PHP = {
+                  language_servers = [
+                    "phpactor"
+                    "phpcs"
+                    "phpmd"
+                    "ctags-lsp"
+                    "!intelephense"
+                    "!phptools"
+                  ];
+
+                  code_actions_on_format = {
+                    "source.fixAll" = true;
+                  };
+                };
+
+                JavaScript = {
+                  formatter = {
+                    external = {
+                      command = "prettier";
+                      arguments = [
+                        "--stdin-filepath"
+                        "{buffer_path}"
+                      ];
+                    };
+                  };
+
+                  code_actions_on_format = {
+                    "source.fixAll.eslint" = true;
+                  };
+                };
+
+                Python = {
+                  language_servers = [
+                    "basedpyright"
+                    "ruff"
+                    "ctags-lsp"
+                  ];
+
+                  formatter = {
+                    language_server = {
+                      name = "ruff";
+                    };
+                  };
+
+                  code_actions_on_format = {
+                    "source.organizeImports.ruff" = true;
+                  };
+                };
+
+                SQL = {
+                  formatter = {
+                    external = {
+                      command = "sql-formatter";
+                      # arguments = [
+                      #   "--language"
+                      #   "postgresql"
+                      # ];
+                      # # Or
+                      # arguments = [
+                      #   "--language"
+                      #   "mariadb"
+                      # ];
+                    };
+                  };
+                };
+
+                CSS = {
+                  code_actions_on_format = {
+                    "source.fixAll.stylelint" = true;
+                  };
+                };
+
+                Markdown = {
+                  indent_list_on_tab = true;
+                  extend_list_on_newline = true;
+
+                  remove_trailing_whitespace_on_save = false;
+                };
+              };
+
+              global_lsp_settings = {
+                button = true;
+
+                semantic_token_rules = [
+                  {
+                    token_type = "comment";
+                  }
+                ];
+              };
+
+              lsp = {
+                # unicode = {
+                #   settings = {
+                #     include_all_symbols = true;
+                #   };
+                # }; # FIXME: Errors
+
+                nixd = {
+                  initialization_options = {
+                    formatting = {
+                      command = [
+                        "nixfmt"
+                      ];
+                    };
+                  };
+                };
+
+                clangd = {
+                  binary = {
+                    path = "${pkgs.clang-tools}/bin/clangd";
+                    arguments = [ ];
+                  };
+                };
+
+                arduino-language-server = {
+                  binary = {
+                    path = "${pkgs.arduino-language-server}/bin/arduino-language-server";
+                    arguments = [
+                      "--fqbn"
+                      "arduino:avr"
+                    ];
+                  };
+                };
+
+                dart = {
+                  binary = {
+                    path = "${pkgs.flutter}/bin/dart";
+                    arguments = [
+                      "language-server"
+                      "--protocol=lsp"
+                    ];
+                  };
+                };
+
+                phpmd = {
+                  settings = {
+                    rulesets = "cleancode,codesize,controversial,design,naming,unusedcode";
+                  };
+                };
+
+                eslint = {
+                  settings = {
+                    workingDirectory = {
+                      mode = "auto";
+                    };
+                  };
+                };
+
+                css-variables = {
+                  settings = {
+                    cssVariables = {
+                      undefinedVarFallback = "info";
+                    };
+                  };
+                };
+
+                ltex = {
+                  settings = {
+                    ltex = {
+                      language = "auto";
+                    };
+                  };
+                };
+                texlab = {
+                  settings = {
+                    texlab = {
+                      build = {
+                        onSave = true;
+                        forwardSearchAfter = true;
+                      };
+                      forwardSearch = {
+                        executable = "okular";
+                        args = [
+                          "--unique"
+                          "file:%p\#src:%l%f"
+                        ];
+                      };
+                    };
+                  };
+                };
+
+                yaml-language-server = {
+                  binary = {
+                    path = "${pkgs.yaml-language-server}/bin/yaml-language-server";
+                    arguments = [ ];
+                  };
+
+                  settings = {
+                    yaml = {
+                      schemaStore = {
+                        enable = true;
+                      };
+
+                      keyOrdering = true;
+                      singleQuote = false;
+                    };
+                  };
+                };
+              };
+            };
+
+            # userTasks = {
             # };
-            extraPackages =
-              epkgs: with epkgs; [
-                reformatter
-                arduino-mode
-                auto-compile
-                catppuccin-theme
-                cmake-mode
-                colorful-mode
-                com-css-sort
-                company
-                company-arduino
-                company-emoji
-                company-nixos-options
-                company-phpactor
-                dap-mode
-                dart-mode
-                dashboard
-                direnv
-                docker-compose-mode
-                dockerfile-mode
-                editorconfig
-                flutter
-                flutter-l10n-flycheck
-                flymake
-                flymake-cursor
-                flymake-languagetool
-                flymake-markdownlint
-                flymake-phpcs
-                flymake-phpstan
-                flymake-pyrefly
-                flymake-yamllint
-                git-modes
-                gnu-elpa
-                gnu-elpa-keyring-update
-                gnu-indent
-                highlight
-                html5-schema
-                http-server
-                indent-bars
-                indent-control
-                indent-tools
-                isortify
-                json-mode
-                kubernetes
-                lsp-dart
-                lsp-docker
-                lsp-focus
-                lsp-mode
-                lsp-treemacs
-                magit
-                nerd-icons
-                nix-ts-mode
-                nixfmt
-                nixos-options
-                ollama-buddy
-                org
-                php-mode
-                php-runtime
-                phpactor
-                phpinspect
-                phpstan
-                pinentry
-                pipewire
-                platformio-mode
-                projectile
-                python
-                quelpa
-                quelpa-use-package
-                trailing-newline-indicator
-                tree-sitter
-                tree-sitter-indent
-                tree-sitter-langs
-                treemacs
-                treemacs-magit
-                treemacs-projectile
-                treemacs-tab-bar
-                use-package
-                xml-rpc
-                (treesit-grammars.with-grammars (
-                  grammars: with grammars; [
-                    tree-sitter-awk
-                    tree-sitter-bash
-                    tree-sitter-bibtex
-                    tree-sitter-c
-                    tree-sitter-cmake
-                    tree-sitter-comment
-                    tree-sitter-cpp
-                    tree-sitter-css
-                    tree-sitter-csv
-                    tree-sitter-dart
-                    tree-sitter-diff
-                    tree-sitter-dockerfile
-                    tree-sitter-dot
-                    tree-sitter-dtd
-                    tree-sitter-git-config
-                    tree-sitter-git-rebase
-                    tree-sitter-gitattributes
-                    tree-sitter-gitcommit
-                    tree-sitter-gitignore
-                    tree-sitter-hosts
-                    tree-sitter-html
-                    tree-sitter-http
-                    tree-sitter-ini
-                    tree-sitter-javascript
-                    tree-sitter-jq
-                    tree-sitter-json
-                    tree-sitter-kotlin
-                    tree-sitter-latex
-                    tree-sitter-ld
-                    tree-sitter-llvm
-                    tree-sitter-log
-                    tree-sitter-lua
-                    tree-sitter-mail
-                    tree-sitter-make
-                    tree-sitter-markdown
-                    tree-sitter-markdown-inline
-                    tree-sitter-mermaid
-                    tree-sitter-nix
-                    tree-sitter-org
-                    tree-sitter-passwd
-                    tree-sitter-pem
-                    tree-sitter-php
-                    tree-sitter-powershell
-                    tree-sitter-python
-                    tree-sitter-query
-                    tree-sitter-regex
-                    tree-sitter-smali
-                    tree-sitter-sql
-                    tree-sitter-sshclientconfig
-                    tree-sitter-todotxt
-                    tree-sitter-toml
-                    tree-sitter-xml
-                    tree-sitter-yaml
-                  ]
-                ))
-              ];
 
-            extraConfig = ''
-              ;;; -*- lexical-binding: t; -*-
+            # userDebug = {
+            # };
 
-              (setq display-buffer-base-action '((display-buffer-same-window)))
+            # userKeymaps = {
+            # };
 
-              (setq tab-bar-show 1)
-
-              (setq-default cursor-type 'bar)
-              (blink-cursor-mode 1)
-              (setq-default word-wrap t)
-              (setq-default truncate-lines nil)
-              (setq-default line-spacing 0.15)
-              (setq-default left-margin-width 1)
-              (setq-default right-margin-width 1)
-
-              (setq window-divider-default-right-width 1)
-              (setq window-divider-default-bottom-width 1)
-              (window-divider-mode 1)
-
-              (pixel-scroll-precision-mode 1)
-              (setq scroll-preserve-screen-position t)
-
-              (size-indication-mode t)
-              (column-number-mode t)
-              (global-display-line-numbers-mode t)
-              (global-hl-line-mode t)
-              (show-paren-mode t)
-              (transient-mark-mode t)
-
-              (setq standard-indent 2)
-
-              (display-time-mode t)
-
-              (load-theme 'catppuccin :no-confirm)
-
-              (add-hook 'prog-mode-hook
-                (lambda ()
-                  (setq left-margin-width 1)
-                  (setq right-margin-width 1)
-                  (set-window-buffer (selected-window) (current-buffer))))
-
-              (require 'use-package)
-
-              (use-package nerd-icons
-                :custom
-                (nerd-icons-font-family "${fontPreferences.name.monospace}"))
-
-              (require 'dashboard)
-
-              (setq dashboard-set-file-icons t)
-              (setq dashboard-icon-type 'nerd-icons)
-              (setq dashboard-show-shortcuts t)
-              (setq dashboard-filter-agenda-entry 'dashboard-no-filter-agenda)
-              (add-to-list 'dashboard-items '(agenda) t)
-              (setq dashboard-navigation-cycle t)
-
-              (dashboard-setup-startup-hook)
-
-              (use-package company
-                :config
-                (global-company-mode 1))
-
-              (use-package indent-bars
-                :hook ((prog-mode . indent-bars-mode)
-                       (text-mode . indent-bars-mode))
-                :custom
-                (indent-bars-treesit-support t))
-
-              (use-package indent-control
-                :hook (prog-mode . indent-control-mode))
-
-              (use-package trailing-newline-indicator
-                :init
-                (global-trailing-newline-indicator-mode 1))
-
-              (use-package direnv
-                :config
-                (direnv-mode))
-
-              (use-package editorconfig
-                :config
-                (editorconfig-mode 1))
-
-              (global-colorful-mode 1)
-
-              (use-package projectile
-                :init
-                (projectile-mode +1))
-
-              (use-package magit)
-
-              (use-package treemacs
-                :defer t
-                :config
-                (setq treemacs-show-hidden-files t)
-                (treemacs-git-commit-diff-mode t))
-
-              (use-package treemacs-projectile
-                :after (treemacs projectile))
-
-              (use-package treemacs-magit
-                :after (treemacs magit))
-
-              (use-package treemacs-tab-bar
-                :after (treemacs))
-
-              (treemacs-start-on-boot)
-
-              (require 'reformatter)
-
-              (require 'lsp-mode)
-              (setq lsp-auto-guess-root t)
-
-              (require 'platformio-mode)
-
-              (add-hook 'c++-mode-hook
-                (lambda ()
-                  (lsp-deferred)
-                  (platformio-conditionally-enable)))
-
-              (use-package company-arduino)
-
-              (use-package arduino-mode)
-
-              (use-package nix-ts-mode
-                :mode "\\.nix\\'")
-
-              (add-hook 'nix-ts-mode-hook 'nixfmt-on-save-mode)
-
-              (with-eval-after-load "projectile"
-                (add-to-list 'projectile-project-root-files-bottom-up "pubspec.yaml")
-                (add-to-list 'projectile-project-root-files-bottom-up "BUILD"))
-
-              (with-eval-after-load 'company
-                (add-to-list 'company-backends 'company-nixos-options))
-
-              (use-package dart-mode
-                :hook
-                (dart-mode . flutter-test-mode))
-
-              (add-hook 'dart-mode-hook 'lsp)
-
-              (reformatter-define dart-format
-                :program "dart"
-                :args '("format"))
-
-              (use-package flutter
-                :after (dart-mode)
-                :custom
-                (flutter-sdk-path "${pkgs.flutter}/"))
-
-              (require 'dockerfile-mode)
-
-              (use-package docker-compose-mode)
-
-              (use-package kubernetes
-                :commands (kubernetes-overview))
-
-              (use-package auto-compile
-                :config
-                (auto-compile-on-load-mode 1)
-                (auto-compile-on-save-mode 1))
-
-              (use-package ollama-buddy)
-
-              (require 'pipewire)
-
-              (when (getenv "WAYLAND_DISPLAY")
-                (setq interprogram-cut-function
-                  (lambda (text &optional _push)
-                    (let ((process-connection-type nil))
-                      (let ((proc
-                        (start-process
-                          "wl-copy" nil
-                          "${pkgs.wl-clipboard}/bin/wl-copy")))
-                        (process-send-string proc text)
-                        (process-send-eof proc)))))
-
-                (setq interprogram-paste-function
-                  (lambda ()
-                    (with-temp-buffer
-                      (when (zerop
-                        (call-process
-                          "${pkgs.wl-clipboard}/bin/wl-paste"
-                          nil t nil "--no-newline"))
-                      (buffer-string))))))
-
-              (cua-mode 1)
-              (global-tab-line-mode 1)
-              (global-hl-line-mode t)
-
-              (setq compilation-scroll-output 'first-error)
-              (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
-            '';
+            defaultEditor = true;
           };
 
           bat = {
@@ -7000,6 +7406,21 @@ in
             enable = config.catppuccin.enable;
 
             flavor = config.catppuccin.flavor;
+          };
+
+          zed = {
+            enable = config.home-manager.users.normal.programs.zed-editor.enable;
+
+            flavor = config.catppuccin.flavor;
+            accent = config.catppuccin.accent;
+
+            icons = {
+              enable = true;
+
+              flavor = config.catppuccin.flavor;
+            };
+
+            italics = false;
           };
 
           bat = {
