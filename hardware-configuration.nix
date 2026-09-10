@@ -15,34 +15,48 @@
 {
   options = {
     specificHardwareConfiguration = {
-      systemArchitecture = lib.mkOption {
-        type = lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`\${nixpkgs.hostPlatform.system}-linux`";
-        default = "";
-        example = "";
+      cpu = {
+        architecture = lib.mkOption {
+          type = lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`\${nixpkgs.hostPlatform.system}-linux`";
+          default = "";
+          example = "";
+        };
+
+        vendor = lib.mkOption {
+          type = lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`hardware.cpu`";
+          default = "";
+          example = "";
+        };
       };
 
-      cpuVendor = lib.mkOption {
-        type = lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`hardware.cpu`";
-        default = "";
-        example = "";
-      };
+      screen = {
+        width = lib.mkOption {
+          type = lib.types.int;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "";
+          default = "";
+          example = "";
+        };
 
-      screenWidthHeight = lib.mkOption {
-        type = lib.types.str;
-        internal = false;
-        visible = true;
-        readOnly = false;
-        description = "`width`x`height`";
-        default = "";
-        example = "";
+        height = lib.mkOption {
+          type = lib.types.int;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "";
+          default = "";
+          example = "";
+        };
       };
 
       boot = {
@@ -320,10 +334,15 @@
     };
 
     specificHardwareConfiguration = {
-      systemArchitecture = "x86_64";
-      cpuVendor = "intel";
+      cpu = {
+        architecture = "x86_64";
+        vendor = "intel";
+      };
 
-      screenWidthHeight = "1920x1080";
+      screen = {
+        width = 1980;
+        height = 1080;
+      };
 
       boot = {
         extraModprobeConfig = ''

@@ -134,9 +134,9 @@ let
           -fuzz 16% \
           -transparent black \
           -background "#1e1e2e" \
-          -resize ${config.specificHardwareConfiguration.screenWidthHeight}\> \
+          -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> \
           -gravity center \
-          -extent ${config.specificHardwareConfiguration.screenWidthHeight} \
+          -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} \
           $out
       '';
   # It assumes that the background of BGRT is black and that 16% fuzz is sufficient.
@@ -146,7 +146,7 @@ let
     url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
   };
 
-  designFactor = 8;
+  designFactor = 8.0;
   transitionDuration = 500; # 500 Milliseconds
 in
 {
@@ -210,7 +210,7 @@ in
 
   nixpkgs = {
     hostPlatform = {
-      system = "${config.specificHardwareConfiguration.systemArchitecture}-linux";
+      system = "${config.specificHardwareConfiguration.cpu.architecture}-linux";
     };
 
     config = {
@@ -252,8 +252,8 @@ in
 
                 cp ${bgrtPng} $THEME_DIRECTORY/background.png
 
-                sed -i 's/VerticalAlignment=.*/VerticalAlignment=.80/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
-                sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.80/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
+                sed -i 's/VerticalAlignment=.*/VerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
+                sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
               ''; # installPhase Runs postInstall
             });
       })
@@ -339,7 +339,7 @@ in
         fsIdentifier = "uuid";
         device = "nodev";
 
-        gfxmodeEfi = "${config.specificHardwareConfiguration.screenWidthHeight},auto";
+        gfxmodeEfi = "${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)},auto";
         gfxpayloadEfi = "keep";
         splashMode = "normal";
 
@@ -548,9 +548,9 @@ in
     firmwareCompression = "zstd";
 
     cpu = {
-      "${config.specificHardwareConfiguration.cpuVendor}" = {
+      "${config.specificHardwareConfiguration.cpu.vendor}" = {
         updateMicrocode = true;
-        microcodePackage = pkgs."microcode-${config.specificHardwareConfiguration.cpuVendor}";
+        microcodePackage = pkgs."microcode-${config.specificHardwareConfiguration.cpu.vendor}";
       };
     };
 
@@ -2590,7 +2590,6 @@ in
         flare-floss
         flawz
         flightgear
-        flutter
         font-manager
         fontfor
         fontforge-gtk
@@ -4176,7 +4175,7 @@ in
 
             name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-cursors";
             # package = config.catppuccin.sources.cursors."${config.catppuccin.flavor}${pkgs.lib.toSentenceCase config.catppuccin.accent}"; # Already Defined by Catppuccin
-            size = builtins.floor (designFactor * 3);
+            size = builtins.floor (designFactor * 3.0);
 
             gtk = {
               enable = true;
@@ -4765,15 +4764,15 @@ in
 
                 layout = "dwindle";
 
-                gaps_in = builtins.floor (designFactor / 2);
+                gaps_in = builtins.floor (designFactor / 2.0);
                 gaps_out = {
-                  top = builtins.floor (designFactor / 2);
-                  right = builtins.floor (designFactor / 2);
-                  bottom = builtins.floor (designFactor / 2);
-                  left = builtins.floor (designFactor / 2);
+                  top = builtins.floor (designFactor / 2.0);
+                  right = builtins.floor (designFactor / 2.0);
+                  bottom = builtins.floor (designFactor / 2.0);
+                  left = builtins.floor (designFactor / 2.0);
                 };
 
-                float_gaps = builtins.floor (designFactor / 2);
+                float_gaps = builtins.floor (designFactor / 2.0);
 
                 border_size = 1;
                 "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
@@ -4790,8 +4789,8 @@ in
                   enabled = true;
 
                   respect_gaps = true;
-                  monitor_gap = builtins.floor (designFactor / 2);
-                  window_gap = builtins.floor (designFactor / 2);
+                  monitor_gap = builtins.floor (designFactor / 2.0);
+                  window_gap = builtins.floor (designFactor / 2.0);
 
                   border_overlap = false;
                 };
@@ -5213,8 +5212,8 @@ in
                 }
 
                 #bar {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 4))}px;
-                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2)}px;
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 4.0))}px;
+                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
                   font-family: ${fontPreferences.sansSerif};
                 }
 
@@ -5227,7 +5226,7 @@ in
                 }
 
                 button {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
                   padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
@@ -5240,7 +5239,7 @@ in
                 }
 
                 grid {
-                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6))}px rgb(49, 50, 68);
+                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6.0))}px rgb(49, 50, 68);
                   border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                   background-color: rgb(17, 17, 27);
                   padding: ${pkgs.lib.toString (builtins.floor designFactor)}px;
@@ -5596,13 +5595,14 @@ in
 
             settings = {
               general = {
+                screencopy_mode = 0; # 0 = GPU Accelerated
                 immediate_render = true;
                 fractional_scaling = 2; # 2 = Automatic
 
-                text_trim = false;
                 hide_cursor = false;
 
                 ignore_empty_input = true;
+                text_trim = false;
               };
 
               auth = {
@@ -5613,7 +5613,14 @@ in
 
                 fingerprint = {
                   enabled = true;
+
+                  ready_message = "Scan Fingerprint";
+                  present_message = "Scanning Fingerprint";
                 };
+              };
+
+              animations = {
+                enabled = true;
               };
 
               background = [
@@ -5622,8 +5629,79 @@ in
                   path = "${bgrtPng}";
                 }
               ];
-            }; # Addition
-          }; # TODO: Design
+
+              label = [
+                {
+                  monitor = ""; # "" = All
+                  halign = "center";
+                  valign = "top";
+                  position = "0, -${
+                    pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.10))
+                  }";
+
+                  text_align = "center";
+                  font_family = fontPreferences.sansSerif;
+                  font_size = builtins.floor (designFactor * 8.0);
+                  color = "\$text";
+                  text = "\$TIME12";
+                }
+
+                {
+                  monitor = ""; # "" = All
+                  halign = "center";
+                  valign = "bottom";
+                  position = "0, ${
+                    pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.04))
+                  }";
+
+                  text_align = "center";
+                  font_family = fontPreferences.sansSerif;
+                  font_size = builtins.floor (designFactor * 1.5);
+                  color = "\$text";
+                  text = "\$FPRINTPROMPT";
+                }
+              ];
+
+              input-field = [
+                {
+                  monitor = ""; # "" = All
+                  halign = "center";
+                  valign = "bottom";
+                  position = "0, ${
+                    pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.10))
+                  }";
+
+                  size = "${pkgs.lib.toString (builtins.floor (designFactor * 42.0))}, ${
+                    pkgs.lib.toString (builtins.floor (designFactor * 6.0))
+                  }";
+                  rounding = builtins.floor (designFactor * 2.0);
+                  outline_thickness = 1;
+                  outer_color = "\$surface2";
+                  shadow_passes = 0; # 0 = Disabled
+
+                  inner_color = "\$mantle";
+
+                  hide_input = false;
+                  font_family = fontPreferences.sansSerif;
+                  font_color = "\$text";
+                  placeholder_text = "Enter Password for $DESC";
+                  dots_center = true;
+                  dots_rounding = -1;
+
+                  fade_on_empty = true;
+
+                  invert_numlock = false;
+                  capslock_color = "\$peach";
+                  numlock_color = "\$peach";
+                  bothlock_color = "\$peach";
+
+                  check_color = "\$lavender";
+                  fail_color = "\$red";
+                  fail_text = "$FAIL <b>($ATTEMPTS)</b>";
+                }
+              ];
+            };
+          };
 
           waybar = {
             enable = true;
@@ -5645,7 +5723,7 @@ in
                 layer = "top";
                 passthrough = false;
                 fixed-center = true;
-                spacing = builtins.floor (designFactor / 2);
+                spacing = builtins.floor (designFactor / 2.0);
 
                 modules-left = [
                   "group/backlight-and-idle-inhibitor"
@@ -6000,7 +6078,7 @@ in
                   show-passive-items = true;
                   reverse-direction = false;
                   icon-size = builtins.floor (designFactor * 1.5);
-                  spacing = builtins.floor (designFactor / 2);
+                  spacing = builtins.floor (designFactor / 2.0);
                 };
 
                 gamemode = {
@@ -6093,10 +6171,10 @@ in
               #systemd-failed-units,
               #gamemode,
               #window {
-                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 background-color: @crust;
                 padding: ${
-                  pkgs.lib.toString (builtins.floor (designFactor / 4))
+                  pkgs.lib.toString (builtins.floor (designFactor / 4.0))
                 }px ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 color: @text;
               }
@@ -6107,7 +6185,7 @@ in
               #temperature,
               #disk,
               #user {
-                margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
               }
 
               #idle_inhibitor.deactivated {
@@ -6190,15 +6268,15 @@ in
               }
 
               button {
-                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
-                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4.0))}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 background-color: @crust;
                 padding: 0px;
                 color: @text;
               }
 
               button * {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
               }
 
               button.active {
@@ -6210,12 +6288,12 @@ in
               }
 
               #window label {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
                 font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
               }
 
               #tray > widget {
-                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 background-color: @crust;
                 color: @text;
               }
@@ -6411,7 +6489,7 @@ in
                 buildRemoteServer = config.home-manager.users.normal.programs.zed-editor.installRemoteServer;
               }
             );
-            installRemoteServer = false;
+            installRemoteServer = true;
 
             extraPackages = with pkgs; [
               arduino-language-server
@@ -6421,6 +6499,7 @@ in
               ctags-lsp
               docker-compose-language-service
               dockerfile-language-server
+              flutter
               kdePackages.okular
               kotlin-language-server
               nixd
@@ -6623,7 +6702,7 @@ in
                 };
 
                 font_family = fontPreferences.monospace;
-                font_size = builtins.floor (designFactor * 2);
+                font_size = builtins.floor (designFactor * 2.0);
                 line_height = "comfortable";
 
                 cursor_shape = "bar";
@@ -6793,21 +6872,21 @@ in
               show_call_status_icon = true;
 
               ui_font_family = fontPreferences.sansSerif;
-              ui_font_size = builtins.floor (designFactor * 2);
+              ui_font_size = builtins.floor (designFactor * 2.0);
 
               agent_ui_font_family = fontPreferences.sansSerif;
-              agent_ui_font_size = builtins.floor (designFactor * 2);
+              agent_ui_font_size = builtins.floor (designFactor * 2.0);
 
               buffer_font_family = fontPreferences.monospace;
-              buffer_font_size = builtins.floor (designFactor * 2);
+              buffer_font_size = builtins.floor (designFactor * 2.0);
               buffer_line_height = "comfortable";
 
               agent_buffer_font_family = fontPreferences.monospace;
-              agent_buffer_font_size = builtins.floor (designFactor * 2);
+              agent_buffer_font_size = builtins.floor (designFactor * 2.0);
 
               markdown_preview_font_family = fontPreferences.sansSerif;
               markdown_preview_code_font_family = fontPreferences.monospace;
-              markdown_preview_font_size = builtins.floor (designFactor * 2);
+              markdown_preview_font_size = builtins.floor (designFactor * 2.0);
 
               mouse_wheel_zoom = true;
 
