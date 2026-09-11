@@ -1387,7 +1387,10 @@ in
 
     accounts-daemon.enable = true;
 
-    gnome.gnome-keyring.enable = true;
+    gnome = {
+      gnome-keyring.enable = true;
+      sushi.enable = true;
+    };
 
     fprintd = {
       enable = true;
@@ -1397,6 +1400,16 @@ in
         enable = config.specificHardwareConfiguration.services.fprintd.tod.enable;
         driver = pkgs.lib.optionals config.services.fprintd.tod.enable config.specificHardwareConfiguration.services.fprintd.tod.package;
       };
+    };
+
+    gvfs = {
+      enable = true;
+      package = (
+        pkgs.gvfs.override {
+          gnomeSupport = false;
+          udevSupport = true;
+        }
+      );
     };
 
     pipewire = {
@@ -1913,6 +1926,11 @@ in
       enableRenice = true;
     };
 
+    nautilus-open-any-terminal = {
+      enable = true;
+      terminal = "wezterm";
+    };
+
     bash = {
       vteIntegration = true;
 
@@ -2257,6 +2275,16 @@ in
       );
     };
 
+    evince = {
+      enable = true;
+      package = (
+        pkgs.evince.override {
+          supportMultimedia = true;
+          withLibsecret = true;
+        }
+      );
+    };
+
     ghidra = {
       enable = true;
       package = pkgs.ghidra;
@@ -2419,8 +2447,6 @@ in
       [
         # dart # flutter adds the compatible version
         # gnome-nettool # TODO: Find Alternative
-        # lyto # FIXME: Build Failure
-        # metadata # FIXME: Build Failure
         # reiser4progs # Marked as Broken
         # soundconverter # FIXME: Build Failure
         aapt
@@ -2578,6 +2604,7 @@ in
         fdroidcl
         fdt-viewer
         fdupes
+        ffmpegthumbnailer
         ffpb
         fh
         field-monitor
@@ -2629,6 +2656,7 @@ in
         gitlogue
         glab
         glib
+        glib-networking
         gnome-firmware
         gnome-frog
         gnome-multi-writer
@@ -2681,8 +2709,8 @@ in
         iconic
         iftop
         ifuse
+        imhex
         inetutils
-        inkcut
         inkscape-with-extensions
         inotify-tools
         interception-tools
@@ -2744,6 +2772,7 @@ in
         luminance
         lvm2
         lynis
+        lyto
         lyx
         lzham
         macchanger
@@ -2753,6 +2782,7 @@ in
         mergerfs
         mesa-demos
         meshlab
+        metadata
         metadata-cleaner
         metronome
         mfcuk
@@ -2771,6 +2801,8 @@ in
         mtools
         mysqltuner
         naps2
+        nautilus
+        nautilus-python
         nethogs
         netpeek
         newelle
@@ -2800,7 +2832,6 @@ in
         nwg-drawer
         obexftp
         oha
-        okteta
         onionshare-gui
         openafs
         openai-whisper
@@ -2939,6 +2970,7 @@ in
         tsukae
         ttl
         turnon
+        turtle
         udftools
         uefi-firmware-parser
         ugit
@@ -2993,7 +3025,6 @@ in
         xfsdump
         xfsprogs
         xfstests
-        xhost
         xoscope
         xvidcore
         xz
@@ -3145,25 +3176,6 @@ in
         (writeShellScriptBin "hardinfo2" ''
           exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
         '') # With config.security.sudo.extraRules
-
-        (pkgs.symlinkJoin {
-          name = "krusader-with-konsole";
-          paths = with pkgs; [
-            krusader
-          ];
-
-          buildInputs = with pkgs; [
-            makeWrapper
-          ];
-          postBuild = ''
-            wrapProgram $out/bin/krusader \
-              --prefix PATH : ${
-                pkgs.lib.makeBinPath [
-                  pkgs.kdePackages.konsole
-                ]
-              }
-          '';
-        })
 
         (nwg-displays.override {
           hyprlandSupport = true;
@@ -3350,26 +3362,15 @@ in
       ])
 
       ++ (with kdePackages; [
-        audiocd-kio
-        ffmpegthumbs
         kalgebra
         kalzium
         kcachegrind
         kcharselect
         kclock
         kcolorchooser
-        kdegraphics-mobipocket
-        kdegraphics-thumbnailers
         kdenlive
         kfind
         kget
-        kimageformats
-        kio
-        kio-admin
-        kio-extras
-        kio-extras-kf5
-        kio-fuse
-        kio-zeroconf
         kjournald
         kleopatra
         kmahjongg
@@ -3501,7 +3502,7 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "org.kde.krusader.desktop";
+        "inode/directory" = "org.gnome.Nautilus.desktop";
 
         "text/1d-interleaved-parityfec" = "dev.zed.Zed.desktop";
         "text/cache-manifest" = "dev.zed.Zed.desktop";
@@ -3962,7 +3963,7 @@ in
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop"; # .pptx
         "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop"; # .potx
 
-        "application/pdf" = "org.kde.okular.desktop";
+        "application/pdf" = "org.gnome.Evince.desktop";
 
         "model/stl" = "io.github.nokse22.Exhibit.desktop";
 
@@ -4702,7 +4703,7 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm krusader\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm nautilus\")")
                 ];
               }
               {
@@ -4721,13 +4722,13 @@ in
               {
                 _args = [
                   "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.kde.krusader.desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.gnome.Nautilus.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.kde.krusader.desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.gnome.Nautilus.desktop\")")
                 ];
               }
               {
@@ -6493,27 +6494,31 @@ in
             );
             installRemoteServer = true;
 
-            extraPackages = with pkgs; [
-              arduino-language-server
-              basedpyright
-              bash-language-server
-              css-variables-language-server
-              ctags-lsp
-              docker-compose-language-service
-              dockerfile-language-server
-              flutter
-              kdePackages.okular
-              kotlin-language-server
-              nixd
-              nixfmt
-              postgres-language-server
-              prettier
-              ruff
-              shellcheck
-              shfmt
-              sql-formatter
-              yaml-language-server
-            ];
+            extraPackages =
+              with pkgs;
+              [
+                arduino-language-server
+                basedpyright
+                bash-language-server
+                css-variables-language-server
+                ctags-lsp
+                docker-compose-language-service
+                dockerfile-language-server
+                flutter
+                kotlin-language-server
+                nixd
+                nixfmt
+                postgres-language-server
+                prettier
+                ruff
+                shellcheck
+                shfmt
+                sql-formatter
+                yaml-language-server
+              ]
+              ++ [
+                config.programs.evince.package
+              ];
 
             enableMcpIntegration = true;
 
@@ -6646,7 +6651,6 @@ in
                 hide_hidden = false;
                 sort_mode = "directories_first";
 
-                folder_icons = true;
                 file_icons = true;
                 git_status = true;
                 show_diagnostics = "all";
@@ -6662,7 +6666,6 @@ in
                 dock = "left";
                 button = true;
 
-                folder_icons = true;
                 file_icons = true;
                 git_status = true;
 
@@ -7188,10 +7191,12 @@ in
                       };
 
                       forwardSearch = {
-                        executable = "okular";
+                        executable = "evince-synctex";
                         args = [
-                          "--unique"
-                          "file:%p\#src:%l%f"
+                          "-f"
+                          "%l"
+                          "%p"
+                          "\"texlab -i %f -l %l\""
                         ];
                       };
                     };
