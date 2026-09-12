@@ -718,6 +718,9 @@ in
     tmpfiles.rules = [
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
+      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
+      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
+
       "d /var/lib/swtpm-localca 0750 tss root -"
     ]
     ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
@@ -860,7 +863,7 @@ in
           [
             "hyprlock"
             "login"
-            "ly"
+            "sddm"
             "polkit-1"
             "sshd"
             "su"
@@ -1371,11 +1374,23 @@ in
     displayManager = {
       enable = true;
 
-      ly = {
+      sddm = {
         enable = true;
-        package = pkgs.ly;
+        package = pkgs.qt6Packages.sddm;
 
-        x11Support = config.programs.hyprland.xwayland.enable;
+        wayland = {
+          enable = true;
+          compositor = "kwin";
+        };
+
+        enableHidpi = true;
+
+        autoNumlock = false;
+        autoLogin.relogin = false;
+
+        settings = {
+          Wayland.SessionDir = "/etc/xdg/wayland-sessions/"; # With config.systemd.tmpfiles.rules
+        };
       };
 
       defaultSession = "hyprland-uwsm";
@@ -2619,7 +2634,6 @@ in
         flightgear
         font-manager
         fontfor
-        fontforge-gtk
         fork-cleaner
         freac
         freecad
@@ -2672,7 +2686,6 @@ in
         gpredict
         gpu-viewer
         graphviz
-        greaseweazle
         groovy
         gtk-frdp
         gtk-vnc
@@ -2797,7 +2810,6 @@ in
         moxnotify
         mp3fs
         mslicer
-        mt-st
         mtools
         mysqltuner
         naps2
@@ -2942,7 +2954,6 @@ in
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
-        stenc
         strace
         strace-analyzer
         streamlit
@@ -4023,6 +4034,24 @@ in
     };
 
     plymouth.enable = false; # Done Manually Instead
+
+    sddm = {
+      enable = config.services.displayManager.sddm.enable;
+      assertQt6Sddm = true;
+
+      flavor = config.catppuccin.flavor;
+      accent = config.catppuccin.accent;
+
+      background = "${bgrtPng}";
+
+      font = fontPreferences.sansSerif;
+      fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
+
+      loginBackground = true;
+      userIcon = true;
+
+      clockEnabled = true;
+    };
 
     cursors = {
       enable = config.catppuccin.enable;
