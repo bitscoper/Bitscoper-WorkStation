@@ -310,8 +310,8 @@ in
 
     activationScripts = {
       linkLocales = ''
-        mkdir -p /usr/share/i18n
-        ln -sfn /run/current-system/sw/share/i18n/locales /usr/share/i18n/locales
+        mkdir --parents /usr/share/i18n
+        ln --symbolic --force --no-dereference /run/current-system/sw/share/i18n/locales /usr/share/i18n/locales
       '';
     };
 
@@ -1269,7 +1269,7 @@ in
         pkgs.upower.override {
           withDocs = true;
           withIntrospection = true;
-          withSystemd = true;
+
         }
       );
 
@@ -3057,7 +3057,7 @@ in
           idnSupport = true;
           opensslSupport = true;
           pslSupport = true;
-          rtmpSupport = true;
+
           scpSupport = true;
           websocketSupport = true;
           zlibSupport = true;
@@ -3173,9 +3173,9 @@ in
             withZmq = true;
             withZvbi = true;
           }).overrideAttrs
-          (_: {
-            doCheck = false;
-          })
+            (_: {
+              doCheck = false;
+            })
         )
 
         (guvcview.override {
@@ -3443,6 +3443,8 @@ in
     };
 
     sessionVariables = {
+      EDITOR = "zeditor --wait";
+      VISUAL = "zeditor --wait";
       GIT_EDITOR = "zeditor --wait";
 
       ADW_DISABLE_PORTAL = 1;
@@ -6757,6 +6759,8 @@ in
                 };
 
                 env = {
+                  EDITOR = "zeditor --wait";
+                  VISUAL = "zeditor --wait";
                   GIT_EDITOR = "zeditor --wait";
                 };
               };
@@ -7261,7 +7265,7 @@ in
             # userKeymaps = {
             # };
 
-            defaultEditor = true; # Sets $EDITOR and $VISUAL to `zeditor --wait`
+            defaultEditor = false; # Done Manually Instead
           };
 
           bat = {
