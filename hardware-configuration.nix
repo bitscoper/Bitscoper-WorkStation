@@ -37,6 +37,30 @@
         };
       };
 
+      hardware = {
+        graphics = {
+          extraPackages = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`hardware.graphics.extraPackages`";
+            default = [ ];
+            example = [ ];
+          };
+
+          extraPackages32 = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            internal = false;
+            visible = true;
+            readOnly = false;
+            description = "`hardware.graphics.extraPackages32`";
+            default = [ ];
+            example = [ ];
+          };
+        };
+      };
+
       screen = {
         width = lib.mkOption {
           type = lib.types.int;
@@ -103,27 +127,15 @@
         example = [ ];
       };
 
-      hardware = {
-        graphics = {
-          extraPackages = lib.mkOption {
-            type = lib.types.listOf lib.types.package;
-            internal = false;
-            visible = true;
-            readOnly = false;
-            description = "`hardware.graphics.extraPackages`";
-            default = [ ];
-            example = [ ];
-          };
-
-          extraPackages32 = lib.mkOption {
-            type = lib.types.listOf lib.types.package;
-            internal = false;
-            visible = true;
-            readOnly = false;
-            description = "`hardware.graphics.extraPackages32`";
-            default = [ ];
-            example = [ ];
-          };
+      environment = {
+        sessionVariables = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          internal = false;
+          visible = true;
+          readOnly = false;
+          description = "`config.environment.sessionVariables`";
+          default = [ ];
+          example = [ ];
         };
       };
 
@@ -339,6 +351,22 @@
         vendor = "intel";
       };
 
+      hardware = {
+        graphics = {
+          extraPackages = with pkgs; [
+            intel-compute-runtime
+            intel-gmmlib
+            intel-media-driver
+            libvpl
+            vpl-gpu-rt
+          ];
+
+          extraPackages32 = with pkgs.pkgsi686Linux; [
+            intel-media-driver
+          ];
+        };
+      };
+
       screen = {
         width = 1980;
         height = 1080;
@@ -373,19 +401,13 @@
         "spidev"
       ];
 
-      hardware = {
-        graphics = {
-          extraPackages = with pkgs; [
-            intel-compute-runtime
-            intel-gmmlib
-            intel-media-driver
-            libvpl
-            vpl-gpu-rt
-          ];
+      environment = {
+        sessionVariables = {
+          STEAM_COMPAT_MOUNTS = "/mnt/I_SATA_SSD:/run/current-system/sw/share/nix-ld/lib/";
 
-          extraPackages32 = with pkgs.pkgsi686Linux; [
-            intel-media-driver
-          ];
+          MESA_SHADER_CACHE_DIR = "/mnt/I_SATA_SSD/Games/Cache/Mesa_Shader/";
+          DXVK_STATE_CACHE_PATH = "/mnt/I_SATA_SSD/Games/Cache/DXVK_State/";
+          VKD3D_SHADER_CACHE_PATH = "/mnt/I_SATA_SSD/Games/Cache/VKD3D_Shader/";
         };
       };
 

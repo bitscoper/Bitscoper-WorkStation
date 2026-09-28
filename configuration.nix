@@ -3453,15 +3453,21 @@ in
 
       ADW_DISABLE_PORTAL = 1;
 
+      EGL_PLATFORM = "wayland";
       GDK_BACKEND = "wayland";
       QT_QPA_PLATFORM = "wayland";
       SDL_VIDEODRIVER = "wayland";
+      WINE_DRIVER = "wayland";
       NIXOS_OZONE_WL = 1;
+      ANKI_WAYLAND = 1;
       _JAVA_AWT_WM_NONREPARENTING = "1";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
-    };
+
+      VKD3D_CONFIG = "vkd3d_shader_cache";
+    }
+    // config.specificHardwareConfiguration.environment.sessionVariables;
 
     shellAliases = {
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
@@ -4153,6 +4159,7 @@ in
           "disk"
           "floppy"
           "fwupd-refresh"
+          "gamemode"
           "i2c"
           "input"
           "kvm"
