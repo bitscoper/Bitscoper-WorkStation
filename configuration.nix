@@ -721,6 +721,8 @@ in
       "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
       "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
 
+      "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
+
       "d /var/lib/swtpm-localca 0750 tss root -"
     ]
     ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
@@ -973,7 +975,6 @@ in
         networkmanager-l2tp
         networkmanager-openvpn
         networkmanager-ssh
-        networkmanager-sstp
       ];
 
       ethernet.macAddress = "permanent";
@@ -1938,8 +1939,12 @@ in
 
     gamemode = {
       enable = true;
+      package = pkgs.gamemode;
+
       enableRenice = true;
     };
+
+    gamescope.enable = false;
 
     nautilus-open-any-terminal = {
       enable = true;
@@ -1999,6 +2004,7 @@ in
       libraries =
         options.programs.nix-ld.libraries.default
         ++ (with pkgs; [
+          gamemode.lib
           glib.out
           libsecret
           llvmPackages.stdenv.cc.cc.lib
@@ -2475,7 +2481,6 @@ in
         aeskeyfind
         aide
         aircrack-ng
-        alac
         alsa-plugins
         alsa-utils
         android-backup-extractor
@@ -2678,6 +2683,7 @@ in
         gnumake
         gnused
         gnutar
+        go-mtpfs
         go2tv
         goldendict-ng
         google-lighthouse
@@ -2903,7 +2909,6 @@ in
         qr-backup
         qsstv
         qtrvsim
-        qtscrcpy
         radare2
         raider
         resources
@@ -2923,6 +2928,7 @@ in
         sbomnix
         schroedinger
         scorecard
+        scrcpy
         screen
         sdrangel
         seabird
@@ -2934,7 +2940,6 @@ in
         shellclear
         sherlock
         shortwave
-        simple-mtpfs
         sipvicious
         sleuthkit
         sloc
@@ -2963,7 +2968,6 @@ in
         syft
         symlinks
         tauno-monitor
-        telegram-desktop
         telegraph
         teleprompter
         terminaltexteffects
@@ -5018,7 +5022,7 @@ in
 
               render = {
                 cm_enabled = true;
-                cm_auto_hdr = 1; # 1 = Automatically switch to "cm, hdr" in fullscreen when needed.
+                cm_auto_hdr = 0; # 0 = Off
                 send_content_type = true;
                 new_render_scheduling = true;
                 xp_mode = false;
@@ -5052,7 +5056,7 @@ in
               };
 
               quirks = {
-                prefer_hdr = 2; # 2 = Gamescope Only
+                prefer_hdr = 0; # 0 = Off
               };
 
               dwindle = {
@@ -7402,15 +7406,15 @@ in
             extraPackages =
               with pkgs;
               [
-                gamemode
-                gamescope
                 protontricks
+                umu-launcher
                 vulkan-loader
                 vulkan-tools
                 winetricks
               ]
               ++ [
                 config.home-manager.users.normal.programs.mangohud.package
+                config.programs.gamemode.package
               ];
           };
 
