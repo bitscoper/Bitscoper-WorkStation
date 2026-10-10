@@ -9,16 +9,15 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
-  grubThemeFlake = builtins.getFlake "github:jeslie0/nixos-grub-themes/main";
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
@@ -38,6 +37,7 @@ let
       "36.1"
       "37.0"
       "37.1"
+      # "37.2" # Not Available Yet
       "latest"
     ];
     useGoogleAPIs = false;
@@ -56,6 +56,7 @@ let
     ndkVersions = [
       "28.2.13676358"
       "29.0.14206865"
+      # "30.0.16248370" # Not Available Yet
       "latest"
     ];
 
@@ -488,8 +489,6 @@ in
       verbose = true;
     };
 
-    growPartition = true;
-
     tmp = {
       cleanOnBoot = true;
 
@@ -499,8 +498,16 @@ in
       };
     };
 
-    kexec.enable = false;
-    crashDump.enable = false;
+    kexec.enable = config.boot.crashDump.enable;
+    crashDump = {
+      enable = true;
+
+      reservedMemory = "128M";
+      kernelParams = [
+        "1"
+        "boot.shell_on_fail"
+      ];
+    };
 
     consoleLogLevel = 4; # 4 = KERN_WARNING
 
@@ -800,6 +807,7 @@ in
           useSystemd = true;
         }
       );
+      enablePkexecWrapper = true;
 
       adminIdentities = [
         "unix-group:wheel"
@@ -1369,8 +1377,6 @@ in
       enable = true;
       package = pkgs.zram-generator;
     };
-
-    xserver.enable = false;
 
     displayManager = {
       enable = true;
@@ -1944,8 +1950,6 @@ in
       enableRenice = true;
     };
 
-    gamescope.enable = false;
-
     nautilus-open-any-terminal = {
       enable = true;
       terminal = "wezterm";
@@ -1963,7 +1967,10 @@ in
 
       enableLsColors = true;
 
-      undistractMe.enable = false; # Disabled due to Misbehavior
+      undistractMe = {
+        enable = true;
+        playSound = true;
+      };
 
       # shellAliases = { };
 
@@ -2456,7 +2463,7 @@ in
       config.home-manager.users.normal.programs.bash.package
     ];
 
-    enableAllTerminfo = true;
+    enableAllTerminfo = false; # FIXME: Build Failure
 
     homeBinInPath = true;
     localBinInPath = true;
@@ -2470,6 +2477,7 @@ in
         # gnome-nettool # TODO: Find Alternative
         # reiser4progs # Marked as Broken
         # soundconverter # FIXME: Build Failure
+        # video2x # FIXME: Build Failure
         aapt
         acl
         acpica-tools
@@ -2631,7 +2639,6 @@ in
         file
         fileinfo
         filen-cli
-        filen-desktop
         findutils
         flake-checker
         flare-floss
@@ -2679,6 +2686,7 @@ in
         gnome-firmware
         gnome-frog
         gnome-multi-writer
+        gnss-sdr
         gnugrep
         gnumake
         gnused
@@ -2743,6 +2751,7 @@ in
         kdiff3
         kernel-hardening-checker
         kernelshark
+        kexec-tools
         killall
         kind
         kmod
@@ -2956,6 +2965,7 @@ in
         sshfs
         sshfs-fuse
         sslscan
+        stableNixPackages.filen-desktop
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
@@ -2999,6 +3009,7 @@ in
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
+        updog
         upnp-router-control
         upscayl
         usbip-ssh
@@ -3006,7 +3017,6 @@ in
         util-linux
         valgrind
         valuta
-        video2x
         virt-v2v
         vorbis-tools
         vulnix
@@ -3318,10 +3328,10 @@ in
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
+        # gnudisassembler # FIXME: Build Failure
         findcrypt
         ghidra-delinker-extension
         ghidra-firmware-utils
-        gnudisassembler
         kaiju
         lightkeeper
         machinelearning
@@ -3417,8 +3427,6 @@ in
         write
         xxd
       ]);
-
-    wordlist.enable = false;
 
     pathsToLink = [
       "/share/applications"
@@ -4160,6 +4168,7 @@ in
           "floppy"
           "fwupd-refresh"
           "gamemode"
+          "gpsd"
           "i2c"
           "input"
           "kvm"
@@ -4263,8 +4272,6 @@ in
           hinting = pkgs.lib.optionals config.fonts.fontconfig.hinting.enable config.fonts.fontconfig.hinting.style;
           subpixelRendering = config.fonts.fontconfig.subpixel.rgba;
         };
-
-        xsession.enable = config.services.xserver.enable;
 
         wayland.windowManager.hyprland = {
           enable = config.programs.hyprland.enable;
@@ -6935,10 +6942,6 @@ in
               agent_buffer_font_family = fontPreferences.monospace;
               agent_buffer_font_size = builtins.floor (designFactor * 2.0);
 
-              markdown_preview_font_family = fontPreferences.sansSerif;
-              markdown_preview_code_font_family = fontPreferences.monospace;
-              markdown_preview_font_size = builtins.floor (designFactor * 2.0);
-
               mouse_wheel_zoom = true;
 
               cursor_shape = "bar";
@@ -7611,7 +7614,7 @@ in
         manual = {
           manpages.enable = true;
           html.enable = true;
-          json.enable = false;
+          json.enable = false; # Not Needed
         };
       }
     ];
