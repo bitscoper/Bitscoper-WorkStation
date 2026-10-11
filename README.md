@@ -36,4 +36,4 @@ nix-shell -p gitFull \
 - I commit multiple changes in a single commit.
 - I write commit messages in Title Case and past tense, leaving out articles to keep them concise while still showing details.
 - I previously reuploaded the repository to clean up the commit history and later deleted some commits.
-- I later PGP-signed all my commits, so they show later dates.
+- I later [PGP](https://github.com/bitscoper/bitscoper#pgp-public-key)-signed all my commits, so they show later dates.
