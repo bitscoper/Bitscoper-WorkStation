@@ -2474,6 +2474,8 @@ in
       with pkgs;
       [
         # dart # flutter adds the compatible version
+        # exhibit # FIXME: Build Failure
+        # freecad # FIXME: Build Failure
         # gnome-nettool # TODO: Find Alternative
         # reiser4progs # Marked as Broken
         # soundconverter # FIXME: Build Failure
@@ -2623,7 +2625,6 @@ in
         etherape
         evtest-qt
         exfatprogs
-        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -2648,7 +2649,6 @@ in
         fontfor
         fork-cleaner
         freac
-        freecad
         freerouting
         fritzing
         fuse-overlayfs

@@ -4,7 +4,7 @@
 
 My NixOS Configuration
 
-[![No AI](https://raw.githubusercontent.com/nuxy/no-ai-badge/master/badge.svg)](https://github.com/bitscoper/Bitscoper-WorkStation#notes)
+[![No AI](https://raw.githubusercontent.com/nuxy/no-ai-badge/master/badge.svg)](#notes)
 
 </div>
 
@@ -32,6 +32,8 @@ nix-shell -p gitFull \
 
 ## Notes
 
+- I only use AI to search for alternatives and possibilities during brainstorming. AI-generated code from contributors is also not allowed.
+- I commit multiple changes in a single commit.
 - I write commit messages in Title Case and past tense, leaving out articles to keep them concise while still showing details.
-- I reuploaded the repository to clean up the commit history, but this is unlikely to happen again.
-- I later PGP-signed all my commits, so they show a later date.
+- I previously reuploaded the repository to clean up the commit history and later deleted some commits.
+- I later PGP-signed all my commits, so they show later dates.
