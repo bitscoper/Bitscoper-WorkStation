@@ -219,7 +219,7 @@ in
       allowUnfree = true;
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        "ventoy-gtk3-1.1.17"
+        "ventoy-gtk3-1.1.18"
       ];
 
       android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
@@ -2307,6 +2307,9 @@ in
       enable = true;
       package = pkgs.firefox-devedition;
 
+      nativeMessagingHosts.packages =
+        config.home-manager.users.normal.programs.chromium.nativeMessagingHosts;
+
       languagePacks = [
         "en-US"
       ];
@@ -2362,6 +2365,12 @@ in
 
             "FirefoxColor@mozilla.com" = {
               install_url = linkFormat "firefox-color";
+              installation_mode = "normal_installed";
+              updates_disabled = false;
+            };
+
+            "keepassxc-browser@keepassxc.org" = {
+              install_url = linkFormat "keepassxc-browser";
               installation_mode = "normal_installed";
               updates_disabled = false;
             };
@@ -3542,6 +3551,16 @@ in
         xxd
       ]);
 
+    wordlist = {
+      enable = true;
+      lists = {
+        WORDLISTS = [
+          "${config.home-manager.users.normal.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
+          # (builtins.toFile "extra-wordlist" '''')
+        ];
+      };
+    };
+
     pathsToLink = [
       "/share/applications"
       "/share/i18n"
@@ -4426,6 +4445,8 @@ in
 
                     hl.exec_cmd("uwsm-app -- moxnotify")
                     hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
+
+                    hl.exec_cmd("uwsm-app -- keepassxc --minimized")
                   end
                 '')
               ];
@@ -4896,14 +4917,38 @@ in
               }
               {
                 _args = [
+                  "SUPER + K"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.keepassxc.KeePassXC.desktop\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + K"
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
+                ];
+              }
+              {
+                _args = [
                   "SUPER + W"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- chromium-browser.desktop\")")
                 ];
               }
               {
                 _args = [
-                  "SUPER + ALT + W"
+                  "SUPER + SHIFT + W"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"chromium-browser --incognito\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + W"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- firefox-devedition.desktop\")")
+                ];
+              }
+              {
+                _args = [
+                  "SUPER + ALT + SHIFT + W"
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
                 ];
               }
               {
@@ -5861,6 +5906,21 @@ in
             };
           };
 
+          keepassxc = {
+            enable = true;
+            package = (
+              pkgs.keepassxc.override {
+                withKeePassBrowser = true;
+                withKeePassBrowserPasskeys = true;
+                withKeePassFDOSecrets = true;
+                withKeePassKeeShare = true;
+                withKeePassNetworking = true;
+                withKeePassSSHAgent = true;
+                withKeePassYubiKey = true;
+              }
+            );
+          };
+
           waybar = {
             enable = true;
             package = config.programs.waybar.package;
@@ -6065,7 +6125,7 @@ in
                   tooltip = true;
                   tooltip-format = "Capacity: {capacity}%\nPower: {power} W\n{timeTo}\nCycles: {cycles}\nHealth: {health}%";
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 "group/cpu-and-load-and-temperature" = {
@@ -6089,7 +6149,7 @@ in
 
                   tooltip = true;
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 load = {
@@ -6099,7 +6159,7 @@ in
 
                   tooltip = true;
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 temperature = {
@@ -6118,7 +6178,7 @@ in
                   tooltip = true;
                   tooltip-format = "{temperatureF}°F\n{temperatureK}K";
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 "group/memory-and-disk" = {
@@ -6142,7 +6202,7 @@ in
                   tooltip = true;
                   tooltip-format = "Used RAM: {used} GiB ({percentage}%)\nUsed Swap: {swapUsed} GiB ({swapPercentage}%)\nAvailable RAM: {avail} GiB\nAvailable Swap: {swapAvail} GiB";
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 disk = {
@@ -6155,7 +6215,7 @@ in
                   tooltip = true;
                   tooltip-format = "Total: {specific_total} GB\nUsed: {specific_used} GB ({percentage_used}%)\nFree: {specific_free} GB ({percentage_free}%)";
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 network = {
@@ -6173,7 +6233,7 @@ in
                   tooltip-format-ethernet = "Interface: {ifname}\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation= {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
                   tooltip-format-wifi = "Interface: {ifname}\nESSID: {essid}\nFrequency: {frequency} GHz\nStrength: {signaldBm} dBm ({signalStrength}%)\nGateway: {gwaddr}\nSubnet Mask: {netmask}\nCIDR Notation: {cidr}\nIP Address: {ipaddr}\nUp Speed: {bandwidthUpBytes}\nDown Speed: {bandwidthDownBytes}\nTotal Speed: {bandwidthTotalBytes}";
 
-                  on-click = "uwsm-app -- net.nokyan.Resources.desktop";
+                  on-click = "uwsm-app -- org.gnome.Resources.desktop";
                 };
 
                 "group/clock-and-user" = {
@@ -7005,7 +7065,6 @@ in
                 enabled = true;
 
                 dock = "right";
-                sidebar_side = "right";
                 flexible = true;
                 button = true;
 
@@ -7406,6 +7465,10 @@ in
             enable = true;
             package = pkgs.ungoogled-chromium;
 
+            nativeMessagingHosts = [
+              config.home-manager.users.normal.programs.keepassxc.package
+            ];
+
             dictionaries = with pkgs.hunspellDictsChromium; [
               en_US
             ];
@@ -7471,6 +7534,12 @@ in
                 }) # "Decentraleyes"
 
                 (createExtensionFromStore {
+                  id = "oboonakemofpalcgghocfoadofidjkkk";
+                  version = "1.10.4.1";
+                  sha256 = "sha256:0kih8qkfqpxif5pf9p1zxw28fvmncp1ylc3dpfp197lvyfdcv9md";
+                }) # "KeePassXC-Browser"
+
+                (createExtensionFromStore {
                   id = "cnojnbdhbhnkbcieeekonklommdnndci";
                   version = "8.5.4";
                   sha256 = "sha256:09j1a79rzcqa2jgslb1c002nq603vbzp8z2zcl78xrqh82ng37nf";
@@ -7478,7 +7547,7 @@ in
 
                 (createExtensionFromStore {
                   id = "mpiodijhokgodhhofbcjdecpffjipkle";
-                  version = "1.24.1";
+                  version = "1.31.2";
                   sha256 = "sha256:126nmmm371n4mcywqqjm3raad54pwwpzkc3xha448iabfcxazphn";
                 }) # "SingleFile"
 
@@ -7490,7 +7559,7 @@ in
 
                 (createExtensionFromStore {
                   id = "ddkjiahejlhfcafbddmgiahcphecmpfh";
-                  version = "2026.907.2003";
+                  version = "2026.1012.1545";
                   sha256 = "sha256:07xbrdpha0h1q7iyjjjsapy8xzalw0il6blwi27aln0y49ypsjd2";
                 }) # "uBlock Origin Lite"
 
@@ -7505,6 +7574,8 @@ in
           firefox = {
             enable = config.programs.firefox.enable;
             package = config.programs.firefox.package;
+
+            nativeMessagingHosts = config.home-manager.users.normal.programs.chromium.nativeMessagingHosts;
 
             languagePacks = config.programs.firefox.languagePacks;
 
