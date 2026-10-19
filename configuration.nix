@@ -1035,7 +1035,7 @@ in
   time = {
     hardwareClockInLocalTime = false;
 
-    timeZone = null;
+    timeZone = null; # Null = Imparative
   };
 
   i18n = {
@@ -1874,6 +1874,58 @@ in
         </logging>
         <server-id>${config.networking.fqdn}</server-id>
       ''; # <loglevel>2</loglevel> = Warn
+    };
+
+    jellyfin = {
+      enable = true;
+      package = pkgs.jellyfin;
+
+      forceEncodingConfig = true;
+
+      transcoding = {
+        h264Crf = true;
+        h265Crf = true;
+
+        enableSubtitleExtraction = true;
+        enableToneMapping = false;
+
+        enableHardwareEncoding = true;
+
+        hardwareEncodingCodecs = {
+          av1 = true;
+          hevc = true;
+        };
+
+        hardwareDecodingCodecs = {
+          av1 = true;
+          h264 = true;
+          hevc = true;
+          hevc10bit = true;
+          hevcRExt10bit = true;
+          hevcRExt12bit = true;
+          mpeg2 = true;
+          vc1 = true;
+          vp8 = true;
+          vp9 = true;
+        };
+
+        deleteSegments = true;
+
+        encodingPreset = "auto";
+        throttleTranscoding = false;
+        threadCount = null; # Null = Automatic Detection
+        maxConcurrentStreams = null; # Null = Limited by Hardware
+      };
+
+      hardwareAcceleration = {
+        enable = false;
+        type = "vaapi";
+      };
+
+      user = "jellyfin";
+      group = "jellyfin";
+
+      openFirewall = true;
     };
 
     ollama = {
@@ -3023,7 +3075,6 @@ in
         profile-cleaner
         progress
         protocol
-        proton-pass-cli
         proton-vpn
         proton-vpn-cli
         protonmail-export
@@ -3530,6 +3581,26 @@ in
         marble
         ocean-sound-theme
         step
+      ])
+
+      ++ (with linphonePackages; [
+        bc-decaf
+        bc-ispell
+        bc-mbedtls
+        bc-soci
+        bc-zxing-cpp
+        bctoolbox
+        bcunit
+        belcard
+        belle-sip
+        belr
+        bzrtp
+        liblinphone
+        lime
+        linphone-desktop
+        mediastreamer2
+        msopenh264
+        ortp
       ])
 
       ++ (with unixtools; [
@@ -4304,6 +4375,7 @@ in
           "gpsd"
           "i2c"
           "input"
+          "jellyfin"
           "kvm"
           "libvirtd"
           "lp"
@@ -4374,7 +4446,11 @@ in
 
           # sessionSearchVariables = { };
 
-          # activation = { };
+          activation = {
+            permitJellyfin = ''
+              ${pkgs.acl}/bin/setfacl --modify user:jellyfin:--x $HOME
+            '';
+          };
 
           enableDebugInfo = config.environment.enableDebugInfo;
 
