@@ -9,14 +9,14 @@
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
@@ -422,15 +422,15 @@ in
     kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
 
     extraModulePackages = with config.boot.kernelPackages; [
+      # openafs # FIXME: Build Failure
+      # v4l2loopback # FIXME: Collision
       apfs
       bcachefs
       cpupower
       mm-tools
-      openafs
       tmon
       turbostat
       usbip
-      v4l2loopback
       zfs_2_4
     ];
 
@@ -1782,7 +1782,7 @@ in
       );
 
       enableTCPIP = true;
-      enableJIT = false; # FIXME: Build Failure
+      enableJIT = true;
 
       settings = pkgs.lib.mkForce {
         jit = true;
@@ -2502,7 +2502,7 @@ in
         }
       );
 
-      enableVirtualCamera = true;
+      enableVirtualCamera = false; # Done Manually Instead
 
       plugins = with pkgs.obs-studio-plugins; [
         obs-3d-effect
@@ -2633,7 +2633,7 @@ in
       config.home-manager.users.normal.programs.bash.package
     ];
 
-    enableAllTerminfo = false; # FIXME: Build Failure
+    enableAllTerminfo = true;
 
     homeBinInPath = true;
     localBinInPath = true;
@@ -2643,12 +2643,18 @@ in
     systemPackages =
       with pkgs;
       [
+        # audacity # FIXME: Build Failure
         # dart # flutter adds the compatible version
-        # exhibit # FIXME: Build Failure
-        # freecad # FIXME: Build Failure
+        # gearlever # FIXME: Build Failure
+        # gerbolyze # FIXME: Build Failure
         # gnome-nettool # TODO: Find Alternative
+        # iaito # FIXME: Build Failure
+        # morphosis # FIXME: Build Failure
+        # naps2 # FIXME: Build Failure
+        # newelle # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
+        # sbomnix # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
         # video2x # FIXME: Build Failure
         aapt
@@ -2684,7 +2690,6 @@ in
         asciinema-agg
         asciiquarium-transparent
         asnmap
-        audacity
         audio-sharing
         autopsy
         avbroot
@@ -2796,6 +2801,7 @@ in
         etherape
         evtest-qt
         exfatprogs
+        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -2811,6 +2817,7 @@ in
         file
         fileinfo
         filen-cli
+        filen-desktop
         findutils
         flake-checker
         flare-floss
@@ -2820,6 +2827,7 @@ in
         fontfor
         fork-cleaner
         freac
+        freecad
         freerouting
         fritzing
         fuse-overlayfs
@@ -2831,10 +2839,8 @@ in
         gcc
         gcr_4
         gdb
-        gearlever
         geeqie
         genealogos-cli
-        gerbolyze
         gh
         gh-contribs
         gh-skyline # Generates STL File
@@ -2903,7 +2909,6 @@ in
         hyprwayland-scanner
         hyprwire
         i2c-tools
-        iaito
         iconic
         iftop
         ifuse
@@ -2992,19 +2997,16 @@ in
         mixxx
         mlocate
         monkeys-audio
-        morphosis
         mousam
         moxnotify
         mp3fs
         mslicer
         mtools
         mysqltuner
-        naps2
         nautilus
         nautilus-python
         nethogs
         netpeek
-        newelle
         newsflash
         nilfs-utils
         ninja
@@ -3105,7 +3107,6 @@ in
         satellite
         sbc
         sbom2dot
-        sbomnix
         schroedinger
         scorecard
         scrcpy
@@ -3136,7 +3137,6 @@ in
         sshfs
         sshfs-fuse
         sslscan
-        stableNixPackages.filen-desktop
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
@@ -3502,10 +3502,10 @@ in
       ++ config.xdg.portal.extraPortals
 
       ++ (with ghidra-extensions; [
-        # gnudisassembler # FIXME: Build Failure
         findcrypt
         ghidra-delinker-extension
         ghidra-firmware-utils
+        gnudisassembler
         kaiju
         lightkeeper
         machinelearning
@@ -4994,13 +4994,13 @@ in
               {
                 _args = [
                   "SUPER + K"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.keepassxc.KeePassXC.desktop\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.keepassxc.KeePassXC.desktop\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + K"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
                 ];
               }
               {
