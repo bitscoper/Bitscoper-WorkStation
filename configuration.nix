@@ -2138,13 +2138,6 @@ in
 
     usbtop.enable = true;
 
-    television = {
-      enable = true;
-      package = pkgs.television;
-
-      enableBashIntegration = true;
-    };
-
     nano.enable = false;
 
     bat = {
@@ -2694,6 +2687,7 @@ in
         autopsy
         avbroot
         avrdude
+        backgroundremover
         bada-bib
         bcachefs-tools
         binary
@@ -2731,6 +2725,7 @@ in
         clang_22
         clapgrep
         clinfo
+        cliphist
         cloc
         cloneit
         cmake
@@ -2753,7 +2748,6 @@ in
         ctagsWrapped
         cups-pk-helper
         cups-printers
-        cursor-clip
         curtail
         cve-bin-tool
         cyclonedx-cli
@@ -3685,8 +3679,6 @@ in
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
       bind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/bind >/dev/null";
 
-      commands = "uwsm-app -- wezterm start --always-new-process -- bash -ic 'cmd=\$(compgen -c | sort -u | tv); [ -n \"\\$cmd\" ] && eval \"\\$cmd\"; exec bash -i'";
-
       clean_optimise_upgrade = "sudo nh clean all && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
       clean_repair_optimise_upgrade = "sudo nh clean all && sudo nix-store --verify --check-contents --repair && sudo nix-store --optimise && sudo nixos-rebuild switch --upgrade-all --refresh --install-bootloader";
     };
@@ -4520,7 +4512,8 @@ in
                     hl.exec_cmd("dbus-update-activation-environment --systemd --all") -- Fixes the Soteria Service Not Starting
 
                     hl.exec_cmd("uwsm-app -- moxnotify")
-                    hl.exec_cmd("uwsm-app -- cursor-clip --daemon")
+                    hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
+                    hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
 
                     hl.exec_cmd("uwsm-app -- keepassxc --minimized")
                   end
@@ -4956,7 +4949,7 @@ in
               {
                 _args = [
                   "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- cursor-clip\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu | cliphist decode | wl-copy\")")
                 ];
               }
 
@@ -4969,7 +4962,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_raw(\"bash -ic 'commands'\")") # Alias Requires Interactive Shell
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu); [ -n \\\"$cmd\\\" ] && uwsm-app -- wezterm start --always-new-process -- bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -6746,11 +6739,59 @@ in
             );
           };
 
-          television = {
-            enable = config.programs.television.enable;
-            package = config.programs.television.package;
+          wofi = {
+            enable = true;
+            package = pkgs.wofi;
 
-            enableBashIntegration = config.programs.television.enableBashIntegration;
+            settings = {
+              normal_window = false;
+              layer = "overlay";
+              location = "center";
+
+              gtk_dark = true;
+              columns = 1;
+              dynamic_lines = false;
+              height = "50%";
+              width = "25%";
+              hide_scroll = false;
+
+              hide_search = false;
+              prompt = "Search";
+              show_all = true;
+              allow_markup = true;
+              allow_images = true;
+              image_size = 32;
+              no_actions = true;
+
+              insensitive = true;
+
+              single_click = true;
+
+              term = "wezterm";
+            };
+
+            style = ''
+              window {
+                border-radius: ${pkgs.lib.toString designFactor}px;
+              }
+
+              #outer-box {
+                padding: 16px;
+              }
+
+              #inner-box {
+                margin-top: 16px;
+              }
+
+              #entry {
+                margin-top: 4px;
+                margin-bottom: 4px;
+              }
+
+              #img {
+                margin-right: 4px;
+              }
+            '';
           };
 
           keychain.enable = !config.programs.gnupg.agent.enable;
@@ -7830,13 +7871,6 @@ in
             accent = config.catppuccin.accent;
 
             enableRounded = true;
-          };
-
-          television = {
-            enable = config.programs.television.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
           };
 
           vivid = {
