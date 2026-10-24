@@ -19,6 +19,7 @@ let
   #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
+  flylineFlake = builtins.getFlake "github:HalFrgrd/flyline";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -155,6 +156,7 @@ in
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
+    flylineFlake.nixosModules.default
     catppuccinThemeFlake.nixosModules.catppuccin
 
     ./hardware-configuration.nix
@@ -2015,8 +2017,6 @@ in
         package = pkgs.bash-completion;
       };
 
-      blesh.enable = true;
-
       enableLsColors = true;
 
       undistractMe = {
@@ -2039,22 +2039,7 @@ in
       # logout = '''';
     };
 
-    starship = {
-      enable = true;
-      package = pkgs.starship;
-
-      interactiveOnly = true;
-
-      presets = [
-        "nerd-font-symbols"
-      ];
-
-      settings = {
-        follow_symlinks = true;
-
-        add_newline = false;
-      };
-    };
+    flyline.enable = true;
 
     nix-ld = {
       enable = true;
@@ -4962,7 +4947,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu); [ -n \\\"$cmd\\\" ] && uwsm-app -- wezterm start --always-new-process -- bash -ic \\\"$cmd; bash -i\\\"\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu); [ -n \\\"$cmd\\\" ] && uwsm-app -- wezterm start --always-new-process -- bash -c \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -6647,6 +6632,20 @@ in
             enableVteIntegration = config.programs.bash.vteIntegration;
             enableCompletion = config.programs.bash.completion.enable;
 
+            shellOptions = [
+              "autocd"
+              "checkhash"
+              "checkjobs"
+              "checkwinsize"
+              "cmdhist"
+              "dotglob"
+              "extglob"
+              "globstar"
+              "gnu_errfmt"
+              "histappend"
+              "lithist"
+            ];
+
             # sessionVariables = { };
 
             shellAliases = config.programs.bash.shellAliases;
@@ -6655,21 +6654,11 @@ in
 
             initExtra = ''
               export LS_COLORS="$(${config.home-manager.users.normal.programs.vivid.package}/bin/vivid generate ${config.home-manager.users.normal.programs.vivid.activeTheme})"
+
+              export PROMPT_RULER=$'\e[38;2;69;71;90m─\e[0m'
             '';
 
             # logoutExtra = '''';
-          };
-
-          starship = {
-            enable = config.programs.starship.enable;
-            package = config.programs.starship.package;
-
-            enableBashIntegration = true;
-
-            enableInteractive = config.programs.starship.interactiveOnly;
-
-            presets = config.programs.starship.presets;
-            settings = config.programs.starship.settings;
           };
 
           nix-index = {
@@ -7855,12 +7844,6 @@ in
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
-          };
-
-          starship = {
-            enable = config.programs.starship.enable;
-
-            flavor = config.catppuccin.flavor;
           };
 
           fcitx5 = {
