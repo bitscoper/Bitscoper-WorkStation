@@ -19,7 +19,6 @@ let
   #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  flylineFlake = builtins.getFlake "github:HalFrgrd/flyline";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
 
   # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
@@ -156,7 +155,6 @@ in
 
   imports = [
     homeManagerFlake.nixosModules.home-manager
-    flylineFlake.nixosModules.default
     catppuccinThemeFlake.nixosModules.catppuccin
 
     ./hardware-configuration.nix
@@ -190,7 +188,7 @@ in
       # trusted-public-keys = [ ];
 
       cores = 0; # 0 = All
-      # max-jobs = 1;
+      max-jobs = 1;
     };
 
     gc.automatic = !config.programs.nh.enable;
@@ -482,13 +480,10 @@ in
       ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-configuration.nix
 
       systemd = {
-        enable = true;
         package = config.systemd.package;
       };
 
       network.enable = true;
-
-      verbose = true;
     };
 
     tmp = {
@@ -1698,26 +1693,31 @@ in
         }
       );
 
-      ipv4 = true;
-      ipv6 = true;
-
       nssmdns4 = true;
       nssmdns6 = true;
 
       wideArea = false;
 
-      publish = {
-        enable = true;
+      settings = {
+        server = {
+          use-ipv4 = true;
+          use-ipv6 = true;
 
-        domain = true;
-        addresses = true;
-        workstation = true;
-        hinfo = true;
-        userServices = true;
+          domain-name = config.networking.domain;
+          host-name = config.networking.hostName;
+        };
+
+        publish = {
+          disable-publishing = false;
+
+          publish-domain = true;
+          publish-addresses = true;
+          publish-workstation = true;
+          publish-hinfo = true;
+
+          disable-user-service-publishing = false;
+        };
       };
-
-      domainName = config.networking.domain;
-      hostName = config.networking.hostName;
 
       openFirewall = true;
     };
@@ -2006,7 +2006,7 @@ in
 
     nautilus-open-any-terminal = {
       enable = true;
-      terminal = "wezterm";
+      terminal = "contour";
     };
 
     bash = {
@@ -2038,8 +2038,6 @@ in
 
       # logout = '''';
     };
-
-    flyline.enable = true;
 
     nix-ld = {
       enable = true;
@@ -2625,6 +2623,7 @@ in
         # dart # flutter adds the compatible version
         # gearlever # FIXME: Build Failure
         # gerbolyze # FIXME: Build Failure
+        # gnome-frog # FIXME: Build Failure
         # gnome-nettool # TODO: Find Alternative
         # iaito # FIXME: Build Failure
         # morphosis # FIXME: Build Failure
@@ -2721,6 +2720,7 @@ in
         compsize
         concessio
         constrict
+        contour
         coreutils-full
         coulomb
         cpio
@@ -2818,7 +2818,6 @@ in
         gcc
         gcr_4
         gdb
-        geeqie
         genealogos-cli
         gh
         gh-contribs
@@ -2840,7 +2839,6 @@ in
         glib
         glib-networking
         gnome-firmware
-        gnome-frog
         gnome-multi-writer
         gnss-sdr
         gnugrep
@@ -2949,6 +2947,7 @@ in
         llvm_22
         logtop
         lorem
+        loupe
         lsb-release
         lshw
         lsof
@@ -3692,7 +3691,7 @@ in
 
       settings = {
         default = [
-          "org.wezfurlong.wezterm.desktop"
+          "org.contourterminal.Contour.desktop"
         ];
       };
     };
@@ -3814,91 +3813,91 @@ in
         "text/xml" = "dev.zed.Zed.desktop";
         "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
-        "image/aces" = "org.geeqie.Geeqie.desktop";
-        "image/apng" = "org.geeqie.Geeqie.desktop";
-        "image/avci" = "org.geeqie.Geeqie.desktop";
-        "image/avcs" = "org.geeqie.Geeqie.desktop";
-        "image/avif" = "org.geeqie.Geeqie.desktop";
-        "image/bmp" = "org.geeqie.Geeqie.desktop";
-        "image/cgm" = "org.geeqie.Geeqie.desktop";
-        "image/dicom-rle" = "org.geeqie.Geeqie.desktop";
-        "image/dpx" = "org.geeqie.Geeqie.desktop";
-        "image/emf" = "org.geeqie.Geeqie.desktop";
-        "image/fits" = "org.geeqie.Geeqie.desktop";
-        "image/g3fax" = "org.geeqie.Geeqie.desktop";
-        "image/gif" = "org.geeqie.Geeqie.desktop";
-        "image/heic-sequence" = "org.geeqie.Geeqie.desktop";
-        "image/heic" = "org.geeqie.Geeqie.desktop";
-        "image/heif-sequence" = "org.geeqie.Geeqie.desktop";
-        "image/heif" = "org.geeqie.Geeqie.desktop";
-        "image/hej2k" = "org.geeqie.Geeqie.desktop";
-        "image/hsj2" = "org.geeqie.Geeqie.desktop";
-        "image/ief" = "org.geeqie.Geeqie.desktop";
-        "image/j2c" = "org.geeqie.Geeqie.desktop";
-        "image/jaii" = "org.geeqie.Geeqie.desktop";
-        "image/jais" = "org.geeqie.Geeqie.desktop";
-        "image/jls" = "org.geeqie.Geeqie.desktop";
-        "image/jp2" = "org.geeqie.Geeqie.desktop";
-        "image/jpeg" = "org.geeqie.Geeqie.desktop";
-        "image/jph" = "org.geeqie.Geeqie.desktop";
-        "image/jphc" = "org.geeqie.Geeqie.desktop";
-        "image/jpm" = "org.geeqie.Geeqie.desktop";
-        "image/jpx" = "org.geeqie.Geeqie.desktop";
-        "image/jxl" = "org.geeqie.Geeqie.desktop";
-        "image/jxr" = "org.geeqie.Geeqie.desktop";
-        "image/jxrA" = "org.geeqie.Geeqie.desktop";
-        "image/jxrS" = "org.geeqie.Geeqie.desktop";
-        "image/jxs" = "org.geeqie.Geeqie.desktop";
-        "image/jxsc" = "org.geeqie.Geeqie.desktop";
-        "image/jxsi" = "org.geeqie.Geeqie.desktop";
-        "image/jxss" = "org.geeqie.Geeqie.desktop";
-        "image/ktx" = "org.geeqie.Geeqie.desktop";
-        "image/ktx2" = "org.geeqie.Geeqie.desktop";
-        "image/naplps" = "org.geeqie.Geeqie.desktop";
-        "image/png" = "org.geeqie.Geeqie.desktop";
-        "image/prs.btif" = "org.geeqie.Geeqie.desktop";
-        "image/prs.pti" = "org.geeqie.Geeqie.desktop";
-        "image/pwg-raster" = "org.geeqie.Geeqie.desktop";
-        "image/svg+xml" = "org.geeqie.Geeqie.desktop";
-        "image/t38" = "org.geeqie.Geeqie.desktop";
-        "image/tiff-fx" = "org.geeqie.Geeqie.desktop";
-        "image/tiff" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.adobe.photoshop" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.blockfact.facti" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.clip" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.cns.inf2" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.dece.graphic" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.djvu" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.dvb.subtitle" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.dwg" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.dxf" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.fastbidsheet" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.fpx" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.fst" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.microsoft.icon" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.mix" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.mozilla.apng" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.ms-modi" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.net-fpx" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.pco.b16" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.radiance" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.sealed.png" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.svf" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.tencent.tap" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.valve.source.texture" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.wap.wbmp" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.xiff" = "org.geeqie.Geeqie.desktop";
-        "image/vnd.zbrush.pcx" = "org.geeqie.Geeqie.desktop";
-        "image/webp" = "org.geeqie.Geeqie.desktop";
-        "image/wmf" = "org.geeqie.Geeqie.desktop";
-        "image/x-emf" = "org.geeqie.Geeqie.desktop";
-        "image/x-wmf" = "org.geeqie.Geeqie.desktop";
+        "image/aces" = "org.gnome.Loupe.desktop";
+        "image/apng" = "org.gnome.Loupe.desktop";
+        "image/avci" = "org.gnome.Loupe.desktop";
+        "image/avcs" = "org.gnome.Loupe.desktop";
+        "image/avif" = "org.gnome.Loupe.desktop";
+        "image/bmp" = "org.gnome.Loupe.desktop";
+        "image/cgm" = "org.gnome.Loupe.desktop";
+        "image/dicom-rle" = "org.gnome.Loupe.desktop";
+        "image/dpx" = "org.gnome.Loupe.desktop";
+        "image/emf" = "org.gnome.Loupe.desktop";
+        "image/fits" = "org.gnome.Loupe.desktop";
+        "image/g3fax" = "org.gnome.Loupe.desktop";
+        "image/gif" = "org.gnome.Loupe.desktop";
+        "image/heic-sequence" = "org.gnome.Loupe.desktop";
+        "image/heic" = "org.gnome.Loupe.desktop";
+        "image/heif-sequence" = "org.gnome.Loupe.desktop";
+        "image/heif" = "org.gnome.Loupe.desktop";
+        "image/hej2k" = "org.gnome.Loupe.desktop";
+        "image/hsj2" = "org.gnome.Loupe.desktop";
+        "image/ief" = "org.gnome.Loupe.desktop";
+        "image/j2c" = "org.gnome.Loupe.desktop";
+        "image/jaii" = "org.gnome.Loupe.desktop";
+        "image/jais" = "org.gnome.Loupe.desktop";
+        "image/jls" = "org.gnome.Loupe.desktop";
+        "image/jp2" = "org.gnome.Loupe.desktop";
+        "image/jpeg" = "org.gnome.Loupe.desktop";
+        "image/jph" = "org.gnome.Loupe.desktop";
+        "image/jphc" = "org.gnome.Loupe.desktop";
+        "image/jpm" = "org.gnome.Loupe.desktop";
+        "image/jpx" = "org.gnome.Loupe.desktop";
+        "image/jxl" = "org.gnome.Loupe.desktop";
+        "image/jxr" = "org.gnome.Loupe.desktop";
+        "image/jxrA" = "org.gnome.Loupe.desktop";
+        "image/jxrS" = "org.gnome.Loupe.desktop";
+        "image/jxs" = "org.gnome.Loupe.desktop";
+        "image/jxsc" = "org.gnome.Loupe.desktop";
+        "image/jxsi" = "org.gnome.Loupe.desktop";
+        "image/jxss" = "org.gnome.Loupe.desktop";
+        "image/ktx" = "org.gnome.Loupe.desktop";
+        "image/ktx2" = "org.gnome.Loupe.desktop";
+        "image/naplps" = "org.gnome.Loupe.desktop";
+        "image/png" = "org.gnome.Loupe.desktop";
+        "image/prs.btif" = "org.gnome.Loupe.desktop";
+        "image/prs.pti" = "org.gnome.Loupe.desktop";
+        "image/pwg-raster" = "org.gnome.Loupe.desktop";
+        "image/svg+xml" = "org.gnome.Loupe.desktop";
+        "image/t38" = "org.gnome.Loupe.desktop";
+        "image/tiff-fx" = "org.gnome.Loupe.desktop";
+        "image/tiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
+        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
+        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
+        "image/vnd.clip" = "org.gnome.Loupe.desktop";
+        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
+        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
+        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
+        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
+        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
+        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
+        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
+        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.fst" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
+        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
+        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
+        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
+        "image/vnd.mix" = "org.gnome.Loupe.desktop";
+        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
+        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
+        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
+        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
+        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
+        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
+        "image/vnd.svf" = "org.gnome.Loupe.desktop";
+        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
+        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
+        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
+        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
+        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
+        "image/webp" = "org.gnome.Loupe.desktop";
+        "image/wmf" = "org.gnome.Loupe.desktop";
+        "image/x-emf" = "org.gnome.Loupe.desktop";
+        "image/x-wmf" = "org.gnome.Loupe.desktop";
 
         "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
         "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
@@ -4941,20 +4940,20 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term wezterm -fm nautilus\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term contour -fm nautilus\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu); [ -n \\\"$cmd\\\" ] && uwsm-app -- wezterm start --always-new-process -- bash -c \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --cache-file=/dev/null --prompt='Search Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -c \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
               {
                 _args = [
                   "SUPER + T"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- wezterm start --always-new-process\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.contourterminal.Contour.desktop\")")
                 ];
               }
               {
@@ -5785,7 +5784,7 @@ in
               program_options = {
                 menu = "nested";
 
-                terminal = "uwsm-app -- wezterm start --always-new-process --cwd";
+                terminal = "uwsm-app -- contour working-directory";
                 file_manager = "uwsm-app -- xdg-open";
 
                 password_cache = 5; # 5 Minutes
@@ -6601,20 +6600,6 @@ in
             '';
           };
 
-          wezterm = {
-            enable = true;
-            package = pkgs.wezterm;
-
-            enableBashIntegration = true;
-
-            settings = {
-              hide_tab_bar_if_only_one_tab = true;
-
-              font = pkgs.lib.generators.mkLuaInline ''wezterm.font("${fontPreferences.monospace}")'';
-              font_size = builtins.floor (designFactor * 1.5);
-            };
-          };
-
           vivid = {
             enable = true;
             package = pkgs.vivid;
@@ -6756,7 +6741,7 @@ in
 
               single_click = true;
 
-              term = "wezterm";
+              term = "contour";
             };
 
             style = ''
@@ -7837,13 +7822,6 @@ in
             accent = config.catppuccin.accent;
 
             mode = "prependImport";
-          };
-
-          wezterm = {
-            enable = config.home-manager.users.normal.programs.wezterm.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
           };
 
           fcitx5 = {
