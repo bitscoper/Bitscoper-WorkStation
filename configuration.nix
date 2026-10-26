@@ -4976,7 +4976,7 @@ in
               {
                 _args = [
                   "SUPER + SPACE"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu | cliphist decode | wl-copy\")")
+                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu --prompt='Search Clipboard' --cache-file=/dev/null 2>/dev/null | cliphist decode | wl-copy\")")
                 ];
               }
 
@@ -4989,7 +4989,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --cache-file=/dev/null --prompt='Search Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --prompt='Search Commands' --cache-file=/dev/null 2>/dev/null); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -5470,8 +5470,40 @@ in
               enable = true;
 
               source = pkgs.writeText "contour/contour.yml" ''
-                ui_style: native
+                spawn_new_process: true
+                gui_config_locked: false
+                live_config: true # live: true
+
+                platform_plugin: auto
+
+                renderer:
+                  backend: vulkan
+
+                images:
+                 good_image_protocol: true
+                 sixel_scrolling: true
+
+                grapheme_clustering: true
+                reflow_on_resize: true
+                text_scaling_method: rerasterize
+
+                window_control_style: auto
                 tab_bar_visibility: Multiple
+                tab_bar_position: Top
+                ui_style: native
+                theme: dark
+                box_arc_style: round
+                git_drawings:
+                  branch_style: thin
+                  arc_style: round
+                  merge_commit_style: bullet
+
+                tab_switch_on_horizontal_wheel: true
+                hyperlink_hover_tooltip: true
+                on_mouse_selection: CopyToSelectionClipboard
+
+                accessibility_announcements: true
+                accessibility_caret_reporting: true
 
                 ui_font_family: ${fontPreferences.sansSerif}
 
@@ -5507,22 +5539,80 @@ in
 
                 profiles:
                   main:
-                    status_line:
-                      display: none
+                    pixel_reporting: Device
 
-                    cursor:
-                      shape: bar
+                    input_method_editor: true
+
+                    permissions:
+                      capture_buffer: ask
+                      change_font: ask
+                      display_host_writable_statusline: ask
 
                     margins:
-                      horizontal: 10
-                      vertical: 10
+                      horizontal: ${pkgs.lib.toString (builtins.floor designFactor)}
+                      vertical: ${pkgs.lib.toString (builtins.floor designFactor)}
+                    show_title_bar: true
+                    status_line:
+                      display: none
+                      position: Bottom
+                    scrollbar:
+                      position: Right
+                      hide_in_alt_screen: false
+                    sticky_header:
+                      mode: scrolled
+                    cursor:
+                      shape: bar
+                      blinking: true
+                    blink_style: smooth
+                    hyperlink_decoration:
+                      normal: dotted-underline
+                      hover: underline
+
+                    size_indicator_on_resize: true
+                    screen_transition: fade
+                    mouse:
+                      hide_while_typing: false
+                    history:
+                      auto_scroll_on_update: true
+                    smooth_scrolling: true
+                    momentum_scrolling: true
+                    highlight_word_and_matches_on_double_click: true
+                    copy_command_preserve_multiline: true
+
+                    bell:
+                      sound: "default"
+                      volume: 1 # 1 = Loudest
+                      alert: true
+
+                    font:
+                      locator: Native
+                      strict_spacing: true
+
+                      builtin_box_drawing: false
+                      text_shaping:
+                        engine: Native
+                      render_mode: Gray
+
+                      regular:
+                        family: ${fontPreferences.monospace}
+                        slant: Normal
+                        weight: Regular
+                        features: []
+
+                      emoji: ${fontPreferences.emoji}
+
+                    background:
+                      blur: false
+                      opacity: 1.0
 
                     colors: "catppuccin_mocha"
+                    draw_bold_text_with_bright_colors: true
 
                     shell: /run/current-system/sw/bin/bash
                     arguments: []
-
                     initial_working_directory: "~"
+
+                default_profile_name: main
               '';
 
               target = "contour/contour.yml";
@@ -6848,7 +6938,7 @@ in
               columns = 1;
               dynamic_lines = false;
               height = "50%";
-              width = "25%";
+              width = "50%";
               hide_scroll = false;
 
               hide_search = false;
@@ -6856,7 +6946,7 @@ in
               show_all = true;
               allow_markup = true;
               allow_images = true;
-              image_size = 32;
+              image_size = builtins.floor (designFactor * 3);
               no_actions = true;
 
               insensitive = true;
@@ -6867,25 +6957,32 @@ in
             };
 
             style = ''
+              @define-color surface2 #585b70; /* Catppuccin Mocha */
+
+              * {
+                font-family: ${fontPreferences.sansSerif};
+              }
+
               window {
+                border: 1px solid @surface2;
                 border-radius: ${pkgs.lib.toString designFactor}px;
               }
 
               #outer-box {
-                padding: 16px;
+                padding: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
               }
 
               #inner-box {
-                margin-top: 16px;
+                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
               }
 
               #entry {
-                margin-top: 4px;
-                margin-bottom: 4px;
+                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
               }
 
               #img {
-                margin-right: 4px;
+                margin-right: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
               }
             '';
           };
