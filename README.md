@@ -21,7 +21,7 @@ sudo nix-channel --list
 
 sudo nix-channel --update && sudo nix-env -u --always
 
-nix-shell -p gitFull --run 'sudo nixos-rebuild boot --refresh --install-bootloader --option experimental-features "nix-command flakes"' --max-jobs=1
+nix-shell -p gitFull --run 'sudo nixos-rebuild boot --option experimental-features "nix-command flakes"' --refresh --install-bootloader --max-jobs=1
 ```
 
 ## Notes

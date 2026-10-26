@@ -237,7 +237,7 @@ in
 
                 rm -f $out/logo.png
                 sed -i '/# Logo image/,+5d' $out/theme.txt
-              ''; # installPhase Runs postInstall
+              '';
             });
       })
 
@@ -255,9 +255,17 @@ in
 
                 sed -i 's/VerticalAlignment=.*/VerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
                 sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
-              ''; # installPhase Runs postInstall
+              '';
             });
       })
+
+      (final: previous: {
+        contour = previous.contour.overrideAttrs (oldAttrs: {
+          postPatch = (oldAttrs.postPatch or "") + ''
+            substituteInPlace src/contour/qml/TerminalPane.qml --replace-fail 'border.color: "#3daee9"' 'border.color: "#1e1e2e"'
+          '';
+        });
+      }) # Blends the Border Color of Active Pane with the Background Color (Catppuccin Mocha) to Hide
 
       (final: previous: {
         coreutils-full = previous.coreutils-full.override {
@@ -267,12 +275,46 @@ in
       })
 
       (final: previous: {
+        ghost-sh = final.stdenv.mkDerivation {
+          pname = "ghost-sh";
+          version = "main";
+
+          src = final.fetchFromGitHub {
+            owner = "h-jangra";
+            repo = "Ghost.sh";
+            rev = "main";
+            sha256 = "sha256-YOvlVtMlniaXEUtxI8kzW7j2jg6sk+ZKLtXP3ufq7fw=";
+          };
+
+          nativeBuildInputs = [
+            final.zig.hook
+          ];
+
+          zigBuildFlags = [
+            "-Doptimize=ReleaseFast"
+          ];
+
+          installPhase = ''
+            runHook preInstall
+
+            install -Dm755 zig-out/bin/ghost $out/bin/ghost
+            install -Dm644 ghost.sh $out/share/ghost/ghost.sh
+
+            substituteInPlace $out/share/ghost/ghost.sh --replace-fail '_GHOST_BIN="$(dirname "''${BASH_SOURCE[0]}")/ghost"' "_GHOST_BIN=\"$out/bin/ghost\""
+            substituteInPlace $out/share/ghost/ghost.sh --replace-fail 'if ! command -v "$_GHOST_BIN" >/dev/null 2>&1 || [[ ! -t 0 || ! -t 1 || ! -r /dev/tty ]]; then' 'if false; then'
+
+            runHook postInstall
+          '';
+        };
+      })
+
+      (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
           printingSupport = true;
         };
       })
 
-      (final: prev: {
+      (final: previous: {
         rtcqs = final.python3.pkgs.buildPythonApplication rec {
           pname = "rtcqs";
           version = "0.6.2";
@@ -2824,6 +2866,7 @@ in
         gh-skyline # Generates STL File
         gh2md
         ghatm
+        ghost-sh # From config.nixpkgs.overlays
         ghrepo-stats
         gimp-with-plugins
         gist
@@ -4946,7 +4989,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --cache-file=/dev/null --prompt='Search Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -c \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --cache-file=/dev/null --prompt='Search Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -5423,6 +5466,80 @@ in
           };
 
           configFile = {
+            "contour/contour.yml" = {
+              enable = true;
+
+              source = pkgs.writeText "contour/contour.yml" ''
+                ui_style: native
+                tab_bar_visibility: Multiple
+
+                ui_font_family: ${fontPreferences.sansSerif}
+
+                color_schemes:
+                  catppuccin_mocha:
+                    default:
+                      background: "#1E1E2E" # Base
+                      foreground: "#CDD6F4" # Text
+
+                    cursor:
+                      default: "#F5E0DC" # Rosewater
+                      text: "#1E1E2E" # Base
+
+                    normal:
+                      black: "#45475A" # Surface1
+                      red: "#F38BA8" # Red
+                      green: "#A6E3A1" # Green
+                      yellow: "#F9E2AF" # Yellow
+                      blue: "#89B4FA" # Blue
+                      magenta: "#F5C2E7" # Pink
+                      cyan: "#94E2D5" # Teal
+                      white: "#BAC2DE" # Subtext1
+
+                    bright:
+                      black: "#585B70" # Surface2
+                      red: "#F38BA8" # Red
+                      green: "#A6E3A1" # Green
+                      yellow: "#F9E2AF" # Yellow
+                      blue: "#89B4FA" # Blue
+                      magenta: "#F5C2E7" # Pink
+                      cyan: "#94E2D5" # Teal
+                      white: "#A6ADC8" # Subtext0
+
+                profiles:
+                  main:
+                    status_line:
+                      display: none
+
+                    cursor:
+                      shape: bar
+
+                    margins:
+                      horizontal: 10
+                      vertical: 10
+
+                    colors: "catppuccin_mocha"
+
+                    shell: /run/current-system/sw/bin/bash
+                    arguments: []
+
+                    initial_working_directory: "~"
+              '';
+
+              target = "contour/contour.yml";
+              executable = null;
+            };
+
+            "contour/settings.yml" = {
+              enable = true;
+
+              source = pkgs.writeText "contour/settings.yml" ''
+                {}
+              '';
+
+              target = "contour/settings.yml";
+              executable = null;
+            };
+
             "mimeapps.list" = {
               force = true;
             };
@@ -6618,6 +6735,7 @@ in
             enableCompletion = config.programs.bash.completion.enable;
 
             shellOptions = [
+              "-extdebug"
               "autocd"
               "checkhash"
               "checkjobs"
@@ -6640,7 +6758,11 @@ in
             initExtra = ''
               export LS_COLORS="$(${config.home-manager.users.normal.programs.vivid.package}/bin/vivid generate ${config.home-manager.users.normal.programs.vivid.activeTheme})"
 
-              export PROMPT_RULER=$'\e[38;2;69;71;90m─\e[0m'
+              export _GHOST_BIN="${pkgs.ghost-sh}/bin/ghost"
+
+              if [[ -f "${pkgs.ghost-sh}/share/ghost/ghost.sh" ]]; then
+                source "${pkgs.ghost-sh}/share/ghost/ghost.sh"
+              fi
             '';
 
             # logoutExtra = '''';
