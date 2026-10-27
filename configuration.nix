@@ -19,80 +19,119 @@ let
   #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
-  catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix";
+  androidSDKCompositionFlake = builtins.getFlake "github:tadfisher/android-nixpkgs/stable";
+  catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix/main";
 
-  # p="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for t in packages images addons extras licenses; do sh "$p" "$t"; done
-  androidComposition = pkgs.androidenv.composeAndroidPackages {
-    numLatestPlatformVersions = 1;
-    platformVersions = [
-      "28"
-      "29"
-      "30"
-      "31"
-      "32"
-      "33"
-      "34"
-      "35"
-      "36"
-      "36.1"
-      "37.0"
-      "37.1"
-      # "37.2" # Not Available Yet
-      "latest"
-    ];
-    useGoogleAPIs = false;
-    useGoogleTVAddOns = false;
+  # package="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for type in packages images addons extras licenses; do sh "$package" "$type"; done
+  # androidSDKComposition = pkgs.androidenv.composeAndroidPackages {
+  #   numLatestPlatformVersions = 1;
+  #   platformVersions = [
+  #     "28"
+  #     "29"
+  #     "30"
+  #     "31"
+  #     "32"
+  #     "33"
+  #     "34"
+  #     "35"
+  #     "36"
+  #     "36.1"
+  #     "37.0"
+  #     "37.1"
+  #     "latest"
+  #   ];
+  #   useGoogleAPIs = false;
+  #   useGoogleTVAddOns = false;
+  #
+  #   platformToolsVersion = "latest";
+  #   buildToolsVersions = [
+  #     "35.0.0"
+  #     "36.0.0"
+  #     "36.1.0"
+  #     "37.0.0"
+  #     "latest"
+  #   ];
+  #
+  #   includeNDK = true;
+  #   ndkVersions = [
+  #     "28.2.13676358"
+  #     "29.0.14206865"
+  #     "latest"
+  #   ];
+  #
+  #   cmdLineToolsVersion = "latest";
+  #   toolsVersion = "latest";
+  #
+  #   includeCmake = true;
+  #   cmakeVersions = [
+  #     "3.22.1"
+  #     "4.1.2"
+  #     "latest"
+  #   ];
+  #
+  #   includeExtras = [
+  #     "extras;google;auto"
+  #     "extras;google;simulators"
+  #   ];
+  #
+  #   includeEmulator = true;
+  #   emulatorVersion = "latest";
+  #
+  #   includeSystemImages = false; # Disabled Because It Includes All from platformVersions
+  #   systemImageTypes = [
+  #     "default"
+  #   ];
+  #   abiVersions =
+  #     pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "x86_64-linux") [
+  #       "x86_64"
+  #     ]
+  #     ++ pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "aarch64-linux") [
+  #       "arm64-v8a"
+  #       "armeabi-v7a"
+  #     ];
+  #
+  #   includeSources = false;
+  # };
 
-    platformToolsVersion = "latest";
-    buildToolsVersions = [
-      "35.0.0"
-      "36.0.0"
-      "36.1.0"
-      "37.0.0"
-      "latest"
-    ];
+  androidSDKCompositionFromTadFisher =
+    androidSDKCompositionFlake.sdk.${config.nixpkgs.hostPlatform.system}
+      (
+        sdkPkgs: with sdkPkgs; [
+          build-tools-35-0-0
+          build-tools-36-0-0
+          build-tools-36-1-0
+          build-tools-37-0-0
 
-    includeNDK = true;
-    ndkVersions = [
-      "28.2.13676358"
-      "29.0.14206865"
-      # "30.0.16248370" # Not Available Yet
-      "latest"
-    ];
+          cmake-3-22-1
+          cmake-4-1-2
 
-    cmdLineToolsVersion = "latest";
-    toolsVersion = "latest";
+          cmdline-tools-latest
 
-    includeCmake = true;
-    cmakeVersions = [
-      "3.22.1"
-      "4.1.2"
-      "latest"
-    ];
+          emulator
 
-    includeExtras = [
-      "extras;google;auto"
-      "extras;google;simulators"
-    ];
+          ndk-28-2-13676358
+          ndk-29-0-14206865
+          ndk-30-0-16248370
 
-    includeEmulator = true;
-    emulatorVersion = "latest";
+          platform-tools
 
-    includeSystemImages = false; # Disabled because it includes all from platformVersions
-    systemImageTypes = [
-      "default" # Vanilla
-    ];
-    abiVersions =
-      pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "x86_64-linux") [
-        "x86_64"
-      ]
-      ++ pkgs.lib.optionals (config.nixpkgs.hostPlatform.system == "aarch64-linux") [
-        "arm64-v8a"
-        "armeabi-v7a"
-      ];
+          platforms-android-28
+          platforms-android-29
+          platforms-android-30
+          platforms-android-31
+          platforms-android-32
+          platforms-android-33
+          platforms-android-34
+          platforms-android-35
+          platforms-android-36
+          platforms-android-36-1
+          platforms-android-37-0
+          platforms-android-37-1
+          platforms-android-37-2
 
-    includeSources = false;
-  };
+          system-images-android-37-0-google-apis-playstore-x86-64
+        ] # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
+      );
 
   fontPreferences = {
     monospace = "NotoMono Nerd Font Mono";
@@ -131,17 +170,10 @@ let
         ];
       }
       ''
-        magick BMP:${bgrtBmp} \
-          -fuzz 16% \
-          -transparent black \
-          -background "#1e1e2e" \
-          -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> \
-          -gravity center \
-          -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} \
-          $out
+        magick BMP:${bgrtBmp} -fuzz 16% -transparent black -background "#1e1e2e" -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> -gravity center -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} $out
       '';
   # It assumes that the background of BGRT is black and that 16% fuzz is sufficient.
-  # Catppuccin Mocha: "Base" #1e1e2e
+  # #1e1e2e: Base of Catppuccin Mocha
 
   transparent_1x1_png_file = builtins.fetchurl {
     url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
@@ -222,7 +254,8 @@ in
         "ventoy-gtk3-1.1.18"
       ];
 
-      android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
+      # android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
+      androidSDKCompositionFromTadFisher.accept_license = config.nixpkgs.config.allowUnfree;
     };
 
     overlays = [
@@ -265,7 +298,7 @@ in
             substituteInPlace src/contour/qml/TerminalPane.qml --replace-fail 'border.color: "#3daee9"' 'border.color: "#1e1e2e"'
           '';
         });
-      }) # Blends the Border Color of Active Pane with the Background Color (Catppuccin Mocha) to Hide
+      }) # Blends the Hardcoded Border Color of Active Pane with the Background Color (Base of Catppuccin Mocha) to Hide
 
       (final: previous: {
         coreutils-full = previous.coreutils-full.override {
@@ -279,11 +312,10 @@ in
           pname = "ghost-sh";
           version = "main";
 
-          src = final.fetchFromGitHub {
-            owner = "h-jangra";
-            repo = "Ghost.sh";
-            rev = "main";
-            sha256 = "sha256-YOvlVtMlniaXEUtxI8kzW7j2jg6sk+ZKLtXP3ufq7fw=";
+          src = fetchGit {
+            url = "https://github.com/h-jangra/Ghost.sh.git";
+            ref = "main";
+            submodules = true;
           };
 
           nativeBuildInputs = [
@@ -306,7 +338,7 @@ in
             runHook postInstall
           '';
         };
-      })
+      }) # Addition
 
       (final: previous: {
         hardinfo2 = previous.hardinfo2.override {
@@ -573,7 +605,7 @@ in
   powerManagement = {
     enable = true;
 
-    cpuFreqGovernor = "performance"; # Makes Power Profiles Daemon Ignored
+    cpuFreqGovernor = "performance";
     scsiLinkPolicy = "max_performance";
 
     # powerUpCommands = '''';
@@ -677,7 +709,7 @@ in
 
           ReverseServiceDiscovery = true;
           NameResolving = true;
-          RemoteNameRequestRetryDelay = 60; # 1 Minute
+          RemoteNameRequestRetryDelay = 60; # 60 Seconds
           RefreshDiscovery = true;
           TemporaryTimeout = 0; # 0 = Disabled
 
@@ -1974,7 +2006,7 @@ in
 
     ollama = {
       enable = true;
-      package = pkgs.ollama-cpu; # Or pkgs.ollama-vulkan Or pkgs.ollama
+      package = pkgs.ollama-cpu;
 
       syncModels = false;
 
@@ -2069,13 +2101,8 @@ in
       # shellAliases = { };
 
       # loginShellInit = '''';
-
       # shellInit = '''';
-
-      interactiveShellInit = ''
-        PROMPT_COMMAND="history -a"
-      '';
-
+      # interactiveShellInit = '''';
       # promptInit = '''';
 
       # logout = '''';
@@ -2425,7 +2452,7 @@ in
               install_url = linkFormat "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-git";
               installation_mode = "normal_installed";
               updates_disabled = false;
-            }; # Hardcoded ID for Catppuccin Mocha Lavender
+            }; # Hardcoded Identifier for Catppuccin Mocha Lavender
 
             "jid1-BoFifL9Vbdl2zQ@jetpack" = {
               install_url = linkFormat "decentraleyes";
@@ -2863,7 +2890,7 @@ in
         genealogos-cli
         gh
         gh-contribs
-        gh-skyline # Generates STL File
+        gh-skyline
         gh2md
         ghatm
         ghost-sh # From config.nixpkgs.overlays
@@ -3490,8 +3517,9 @@ in
       ]
 
       ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        androidComposition.androidsdk # Custom Composition
-        megasync # OSS
+        # androidSDKComposition.androidsdk
+        androidSDKCompositionFromTadFisher
+        megasync # Open Source
         rar
         unrar
 
@@ -3674,9 +3702,11 @@ in
       PAGER = "bat";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
-      ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
-      ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk-bundle";
+      # ANDROID_HOME = "${androidSDKComposition.androidsdk}/libexec/android-sdk/";
+      # ANDROID_SDK_ROOT = "${androidSDKComposition.androidsdk}/libexec/android-sdk/";
+
+      ANDROID_HOME = "${androidSDKCompositionFromTadFisher}/share/android-sdk/";
+      ANDROID_SDK_ROOT = "${androidSDKCompositionFromTadFisher}/share/android-sdk/";
     };
 
     sessionVariables = {
@@ -3711,11 +3741,8 @@ in
     };
 
     # extraInit = '''';
-
     # loginShellInit = '''';
-
     # shellInit = '''';
-
     # interactiveShellInit = '''';
 
     enableDebugInfo = false;
@@ -3744,7 +3771,7 @@ in
       extraPortals = [
         config.home-manager.users.normal.services.gnome-keyring.package
         pkgs.xdg-desktop-portal-gtk
-      ]; # config.programs.hyprland.portalPackage adds xdg-desktop-portal-hyprland to it.
+      ]; # config.programs.hyprland.portalPackage adds pkgs.xdg-desktop-portal-hyprland to it.
 
       xdgOpenUsePortal = true;
     };
@@ -4244,7 +4271,7 @@ in
         "x-scheme-handler/http" = "chromium-browser.desktop";
         "x-scheme-handler/https" = "chromium-browser.desktop";
 
-        "x-scheme-handler/mailto" = "electron-mail.desktop"; # TODO: Find Alternative
+        "x-scheme-handler/mailto" = "electron-mail.desktop"; # FIXME: Find Alternative
       };
     };
   };
@@ -4528,7 +4555,7 @@ in
                 position = "auto";
                 transform = 0;
                 scale = 1;
-              } # Default
+              }
             ];
 
             on = {
@@ -4976,7 +5003,7 @@ in
               {
                 _args = [
                   "SUPER + SPACE"
-                  (lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu --prompt='Search Clipboard' --cache-file=/dev/null 2>/dev/null | cliphist decode | wl-copy\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu --prompt='Search Clipboard' --cache-file=/dev/null 2>/dev/null | cliphist decode | wl-copy\")")
                 ];
               }
 
@@ -5051,7 +5078,7 @@ in
                 _args = [
                   "XF86Mail"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- electron-mail\")")
-                ]; # TODO: Find Alternative
+                ]; # FIXME: Find Alternative
               }
               {
                 _args = [
@@ -5175,7 +5202,7 @@ in
                   tap_to_click = true;
 
                   tap_and_drag = true;
-                  drag_3fg = 1; # 1 = 3 Fingers # 2 = 4 Fingers
+                  drag_3fg = 1; # 1 = 3 Fingers
                   drag_lock = 2; # 2 = Enabled Sticky
 
                   natural_scroll = true;
@@ -5510,32 +5537,32 @@ in
                 color_schemes:
                   catppuccin_mocha:
                     default:
-                      background: "#1E1E2E" # Base
-                      foreground: "#CDD6F4" # Text
+                      background: "#1e1e2e" # Base
+                      foreground: "#cdd6f4" # Text
 
                     cursor:
-                      default: "#F5E0DC" # Rosewater
-                      text: "#1E1E2E" # Base
+                      default: "#f5e0dc" # Rosewater
+                      text: "#1e1e2e" # Base
 
                     normal:
-                      black: "#45475A" # Surface1
-                      red: "#F38BA8" # Red
-                      green: "#A6E3A1" # Green
-                      yellow: "#F9E2AF" # Yellow
-                      blue: "#89B4FA" # Blue
-                      magenta: "#F5C2E7" # Pink
-                      cyan: "#94E2D5" # Teal
-                      white: "#BAC2DE" # Subtext1
+                      black: "#45475a" # Surface 1
+                      red: "#f38ba8" # Red
+                      green: "#a6e3a1" # Green
+                      yellow: "#f9e2af" # Yellow
+                      blue: "#89b4fa" # Blue
+                      magenta: "#f5c2e7" # Pink
+                      cyan: "#94e2d5" # Teal
+                      white: "#bac2de" # Subtext 1
 
                     bright:
-                      black: "#585B70" # Surface2
-                      red: "#F38BA8" # Red
-                      green: "#A6E3A1" # Green
-                      yellow: "#F9E2AF" # Yellow
-                      blue: "#89B4FA" # Blue
-                      magenta: "#F5C2E7" # Pink
-                      cyan: "#94E2D5" # Teal
-                      white: "#A6ADC8" # Subtext0
+                      black: "#585b70" # Surface 2
+                      red: "#f38ba8" # Red
+                      green: "#a6e3a1" # Green
+                      yellow: "#f9e2af" # Yellow
+                      blue: "#89b4fa" # Blue
+                      magenta: "#f5c2e7" # Pink
+                      cyan: "#94e2d5" # Teal
+                      white: "#a6adc8" # Subtext 0
 
                 profiles:
                   main:
@@ -5581,7 +5608,7 @@ in
 
                     bell:
                       sound: "default"
-                      volume: 1 # 1 = Loudest
+                      volume: 1 # 1 = Maximum
                       alert: true
 
                     font:
@@ -5669,15 +5696,24 @@ in
               enable = true;
 
               source = pkgs.writeText "nwg-bar.css" ''
+                /* Catppuccin Mocha */
+                @define-color crust rgb(17, 17, 27);
+                @define-color surface0 rgb(49, 50, 68);
+                @define-color surface2 rgb(88, 91, 112);
+                @define-color text rgb(205, 214, 244);
+
+                * {
+                  font-family: ${fontPreferences.sansSerif};
+                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
+                }
+
                 window {
-                  border: 1px solid rgb(88, 91, 112);
+                  border: 1px solid @surface2;
                   border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
                 #bar {
                   margin: ${pkgs.lib.toString (builtins.floor (designFactor * 4.0))}px;
-                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
-                  font-family: ${fontPreferences.sansSerif};
                 }
 
                 button,
@@ -5685,7 +5721,7 @@ in
                   box-shadow: none;
                   border-style: none;
                   background: none;
-                  color: rgb(205, 214, 244);
+                  color: @text;
                 }
 
                 button {
@@ -5693,20 +5729,17 @@ in
                   padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
-                button:hover {
-                  background-color: rgb(49, 50, 68);
-                }
-
+                button:hover,
                 button:focus {
-                  background-color: rgb(49, 50, 68);
+                  background-color: @surface0;
                 }
 
                 grid {
-                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6.0))}px rgb(49, 50, 68);
+                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6.0))}px @surface0;
                   border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                  background-color: rgb(17, 17, 27);
+                  background-color: @crust;
                   padding: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                }''; # Catppuccin Mocha: "Surface 2" rgb(88, 91, 112), "Text" rgb(205, 214, 244), "Surface 0" rgb(49, 50, 68), "Crust" rgb(17, 17, 27)
+                }'';
 
               target = "nwg-bar/style.css";
               executable = null;
@@ -6848,8 +6881,9 @@ in
             initExtra = ''
               export LS_COLORS="$(${config.home-manager.users.normal.programs.vivid.package}/bin/vivid generate ${config.home-manager.users.normal.programs.vivid.activeTheme})"
 
-              export _GHOST_BIN="${pkgs.ghost-sh}/bin/ghost"
+              export PROMPT_COMMAND="history -a"
 
+              export _GHOST_BIN="${pkgs.ghost-sh}/bin/ghost"
               if [[ -f "${pkgs.ghost-sh}/share/ghost/ghost.sh" ]]; then
                 source "${pkgs.ghost-sh}/share/ghost/ghost.sh"
               fi
@@ -6957,7 +6991,8 @@ in
             };
 
             style = ''
-              @define-color surface2 #585b70; /* Catppuccin Mocha */
+               /* Catppuccin Mocha */
+              @define-color surface2 #585b70;
 
               * {
                 font-family: ${fontPreferences.sansSerif};
