@@ -141,7 +141,7 @@ let
   };
 
   tlsCertificateFiles =
-    pkgs.runCommand "generate_tls_certificate"
+    pkgs.runCommand "generate_tls_certificate_files"
       {
         CN = config.networking.fqdn;
       }
@@ -163,7 +163,7 @@ let
   };
 
   bgrtPng =
-    pkgs.runCommand "BGRT.png"
+    pkgs.runCommand "generate_bgrt_png_file"
       {
         nativeBuildInputs = with pkgs; [
           imagemagickBig
@@ -264,8 +264,8 @@ in
           (previous.catppuccin-grub.override {
             flavor = config.catppuccin.flavor;
           }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
+            (oldAttributes: {
+              postInstall = (oldAttributes.postInstall or "") + ''
                 cp ${bgrtPng} $out/background.png
 
                 rm -f $out/logo.png
@@ -279,8 +279,8 @@ in
           (previous.catppuccin-plymouth.override {
             variant = config.catppuccin.flavor;
           }).overrideAttrs
-            (old: {
-              postInstall = (old.postInstall or "") + ''
+            (oldAttributes: {
+              postInstall = (oldAttributes.postInstall or "") + ''
                 THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
                 mkdir -p $THEME_DIRECTORY
 
@@ -293,8 +293,8 @@ in
       })
 
       (final: previous: {
-        contour = previous.contour.overrideAttrs (oldAttrs: {
-          postPatch = (oldAttrs.postPatch or "") + ''
+        contour = previous.contour.overrideAttrs (oldAttributes: {
+          postPatch = (oldAttributes.postPatch or "") + ''
             substituteInPlace src/contour/qml/TerminalPane.qml --replace-fail 'border.color: "#3daee9"' 'border.color: "#1e1e2e"'
           '';
         });
@@ -345,6 +345,101 @@ in
           printingSupport = true;
         };
       })
+
+      (final: previous: {
+        nwg-bar = previous.nwg-bar.overrideAttrs (oldAttributes: {
+          nativeBuildInputs =
+            (oldAttributes.nativeBuildInputs or [
+            ]
+            )
+            ++ [
+              final.python3
+            ];
+
+          postPatch = (oldAttributes.postPatch or "") + ''
+            python3 - <<'PY'
+            from pathlib import Path
+
+            path = Path("main.go")
+            lines = path.read_text().splitlines(keepends=True)
+
+            start = next(
+              (
+                i
+                for i, line in enumerate(lines)
+                if "createPixbuf(" in line and "b.Icon" in line
+              ),
+              None,
+            )
+
+            if start is None:
+              raise SystemExit("Could not locate the icon-loading statement in main.go of nwg-bar!")
+
+            end = next(
+              (
+                i
+                for i in range(start + 1, len(lines))
+                if "SetImage(img)" in lines[i]
+              ),
+              None,
+            )
+
+            if end is None:
+              raise SystemExit("Could not locate SetImage(img) after the icon-loading statement of nwg-bar!")
+
+            indent = lines[start][
+              :len(lines[start]) - len(lines[start].lstrip())
+            ]
+
+            replacement = [
+              indent + "var img *gtk.Image\n",
+              indent + 'if strings.HasPrefix(b.Icon, "/") {\n',
+              indent + "\tpixbuf, err := createPixbuf(b.Icon, *imgSize)\n",
+              indent + "\tif err == nil {\n",
+              indent + "\t\timg, _ = gtk.ImageNewFromPixbuf(pixbuf)\n",
+              indent + "\t} else {\n",
+              indent + '\t\timg, _ = gtk.ImageNewFromIconName("image-missing", gtk.ICON_SIZE_INVALID)\n',
+              indent + "\t}\n",
+              indent + "} else {\n",
+              indent + "\timg, _ = gtk.ImageNewFromIconName(b.Icon, gtk.ICON_SIZE_DIALOG)\n",
+              indent + "}\n",
+              indent + "button.SetImage(img)\n",
+            ]
+
+            lines[start:end + 1] = replacement
+            path.write_text("".join(lines))
+            PY
+          '';
+
+          postInstall = (oldAttributes.postInstall or "") + ''
+            for icon in system-lock-screen.svg system-log-out.svg system-shutdown.svg system-reboot.svg
+            do
+              file="$out/share/nwg-bar/images/$icon"
+
+              if grep -q "fill:#ffffff" "$file"; then
+                substituteInPlace "$file" --replace-fail "fill:#ffffff" "fill:currentColor"
+              fi
+
+              if grep -q "fill:#fff" "$file"; then
+                substituteInPlace "$file" --replace-fail "fill:#fff" "fill:currentColor"
+              fi
+            done
+          '';
+        });
+      }) # Enables currentColor
+
+      (final: previous: {
+        nwg-drawer = previous.nwg-drawer.overrideAttrs (oldAttributes: {
+          postPatch = (oldAttributes.postPatch or "") + ''
+            substituteInPlace tools.go \
+              --replace-fail 'exec.LookPath("uwsm")' 'exec.LookPath("uwsm-app")' \
+              --replace-fail 'exec.Command("uwsm", append([]string{"app", "--"}, cParts...)...)' 'exec.Command("uwsm-app", append([]string{"--"}, cParts...)...)' \
+              --replace-fail 'Unable to find uwsm, running command directly' 'Unable to find uwsm-app, running command directly'
+
+            substituteInPlace main.go --replace-fail "or uwsm app -- (with 'uwsm' for Universal Wayland Session Manager) to launch programs" "or uwsm-app -- (with 'uwsm' for Universal Wayland Session Manager) to launch programs"
+          '';
+        });
+      }) # Replaces Slower `uwsm app` with Faster `uwsm-app`
 
       (final: previous: {
         rtcqs = final.python3.pkgs.buildPythonApplication rec {
@@ -749,20 +844,6 @@ in
           RSSISamplingPeriod = "0x00";
         };
       };
-    };
-
-    sane = {
-      enable = true;
-      backends-package = (
-        pkgs.sane-backends.override {
-          withSystemd = true;
-        }
-      );
-      # extraBackends = with pkgs; [
-      # ];
-      snapshot = false;
-
-      openFirewall = true;
     };
 
     rtl-sdr = {
@@ -1596,63 +1677,6 @@ in
       alsa.enable = !config.services.pipewire.jack.enable;
     };
 
-    printing = {
-      enable = true;
-      package = (
-        pkgs.cups.override {
-          enableSystemd = true;
-        }
-      );
-
-      drivers = with pkgs; [
-        (gutenprint.override {
-          cupsSupport = true;
-        })
-        gutenprint-bin
-      ];
-
-      cups-pdf.enable = false;
-
-      listenAddresses = [
-        "*:631"
-      ];
-
-      allowFrom = [
-        "all"
-      ];
-
-      browsing = true;
-      webInterface = true;
-
-      defaultShared = true;
-      startWhenNeeded = true;
-
-      extraConf = ''
-        DefaultLanguage en
-        ServerName ${config.networking.fqdn}
-        ServerAlias *
-        ServerTokens Full
-        ServerAdmin root@${config.networking.fqdn}
-        BrowseLocalProtocols all
-        BrowseWebIF On
-        HostNameLookups On
-        AccessLogLevel config
-        AutoPurgeJobs Yes
-        PreserveJobHistory Off
-        PreserveJobFiles Off
-        DirtyCleanInterval 30
-        LogTimeFormat standard
-      '';
-
-      logLevel = "warn";
-
-      openFirewall = true;
-    };
-    ipp-usb.enable = true;
-    system-config-printer.enable = true;
-
-    saned.enable = true;
-
     gpsd = {
       enable = true;
 
@@ -2280,10 +2304,6 @@ in
               remember-recent-files = false;
             };
 
-            "org/gnome/desktop/sound" = {
-              theme-name = "ocean";
-            };
-
             "org/gnome/desktop/wm/preferences" = {
               button-layout = "appmenu:minimize,maximize,close";
             };
@@ -2388,8 +2408,6 @@ in
 
       indicator = true;
     };
-
-    system-config-printer.enable = true;
 
     virt-manager = {
       enable = true;
@@ -2688,21 +2706,23 @@ in
     systemPackages =
       with pkgs;
       [
-        # audacity # FIXME: Build Failure
+        # darling-dmg # FIXME: Build Failure
         # dart # flutter adds the compatible version
         # gearlever # FIXME: Build Failure
         # gerbolyze # FIXME: Build Failure
         # gnome-frog # FIXME: Build Failure
         # gnome-nettool # TODO: Find Alternative
+        # guestfs-tools # FIXME: Build Failure
         # iaito # FIXME: Build Failure
         # morphosis # FIXME: Build Failure
-        # naps2 # FIXME: Build Failure
         # newelle # FIXME: Build Failure
+        # onionshare-gui # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
         # sbomnix # FIXME: Build Failure
         # soundconverter # FIXME: Build Failure
         # video2x # FIXME: Build Failure
+        # virt-v2v # FIXME: Build Failure
         aapt
         acl
         acpica-tools
@@ -2800,8 +2820,6 @@ in
         cryptsetup
         cscope
         ctagsWrapped
-        cups-pk-helper
-        cups-printers
         curtail
         cve-bin-tool
         cyclonedx-cli
@@ -2809,7 +2827,6 @@ in
         d-spy
         daemon
         darktable
-        darling-dmg
         davfs2
         dbeaver-bin # To Use the GTK Theme: Window > Preferences > "User Interface" > Appearance > Uncheck "Enable theming"
         dconf-editor
@@ -2875,7 +2892,6 @@ in
         fontfor
         fork-cleaner
         freac
-        freecad
         freerouting
         fritzing
         fuse-overlayfs
@@ -2928,7 +2944,6 @@ in
         gtk-frdp
         gtk-vnc
         gtkhash
-        guestfs-tools
         gzip
         halftone
         hashes
@@ -3034,7 +3049,6 @@ in
         megacmd
         mergerfs
         mesa-demos
-        meshlab
         metadata
         metadata-cleaner
         metronome
@@ -3048,7 +3062,6 @@ in
         mousam
         moxnotify
         mp3fs
-        mslicer
         mtools
         mysqltuner
         nautilus
@@ -3081,7 +3094,6 @@ in
         nwg-drawer
         obexftp
         oha
-        onionshare-gui
         openafs
         openai-whisper
         openapv
@@ -3120,7 +3132,6 @@ in
         pods
         poop # POOP = Performance Optimizer Observation Platform
         powershell
-        printrun # Printerface, Pronsole
         procps
         profile-cleaner
         progress
@@ -3138,6 +3149,8 @@ in
         qemu-utils
         qr-backup
         qsstv
+        qt5.qtwayland
+        qt6.qtwayland
         qtrvsim
         radare2
         raider
@@ -3239,7 +3252,6 @@ in
         util-linux
         valgrind
         valuta
-        virt-v2v
         vorbis-tools
         vulnix
         wafw00f
@@ -3428,10 +3440,6 @@ in
           hyprlandSupport = true;
         })
 
-        (orca-slicer.override {
-          withSystemd = true;
-        })
-
         (p7zip.override {
           enableUnfree = config.nixpkgs.config.allowUnfree; # Includes RAR
         })
@@ -3534,7 +3542,6 @@ in
       ++ config.fonts.packages
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
-      ++ config.hardware.sane.extraBackends
       ++ config.home-manager.users.normal.programs.lutris.extraPackages
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.i18n.inputMethod.fcitx5.addons
@@ -3543,7 +3550,6 @@ in
       ++ config.programs.nix-ld.libraries
       ++ config.programs.obs-studio.plugins
       ++ config.services.pipewire.extraLv2Packages
-      ++ config.services.printing.drivers
       ++ config.services.udev.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
       ++ config.virtualisation.podman.extraRuntimes
@@ -3617,7 +3623,6 @@ in
         kclock
         kcolorchooser
         kdenlive
-        kfind
         kget
         kjournald
         kleopatra
@@ -3626,10 +3631,8 @@ in
         kmouth
         kontrast
         kshisen
-        kubrick
+        kwave
         marble
-        ocean-sound-theme
-        step
       ])
 
       ++ (with linphonePackages; [
@@ -3676,7 +3679,7 @@ in
       lists = {
         WORDLISTS = [
           "${config.home-manager.users.normal.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
-          # (builtins.toFile "extra-wordlist" '''')
+          # (pkgs.writeText "extra-wordlist.txt" '''')
         ];
       };
     };
@@ -4425,7 +4428,6 @@ in
           "kvm"
           "libvirtd"
           "lp"
-          "lpadmin"
           "networkmanager"
           "nm-openvpn"
           "pipewire"
@@ -4433,7 +4435,6 @@ in
           "podman"
           "qemu-libvirtd"
           "render"
-          "scanner"
           "systemd-journal"
           "tape"
           "tty"
@@ -4455,7 +4456,7 @@ in
     useGlobalPkgs = true;
     useUserPackages = true;
 
-    backupFileExtension = "old";
+    backupFileExtension = "bak";
 
     sharedModules = [
       catppuccinThemeFlake.homeModules.catppuccin
@@ -5010,7 +5011,7 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -closebtn none -c 8 -g ${config.home-manager.users.normal.gtk.theme.name} -i ${config.home-manager.users.normal.gtk.iconTheme.name} -pbuseicontheme -lang en -k -wm uwsm -term contour -fm nautilus\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term contour -nofs -fm nautilus\")")
                 ];
               }
               {
@@ -5496,7 +5497,7 @@ in
             "contour/contour.yml" = {
               enable = true;
 
-              source = pkgs.writeText "contour/contour.yml" ''
+              source = pkgs.writeText "contour.yml" ''
                 spawn_new_process: true
                 gui_config_locked: false
                 live_config: true # live: true
@@ -5649,7 +5650,7 @@ in
             "contour/settings.yml" = {
               enable = true;
 
-              source = pkgs.writeText "contour/settings.yml" ''
+              source = pkgs.writeText "contour-settings.yml" ''
                 {}
               '';
 
@@ -5669,22 +5670,22 @@ in
                   {
                     "label": "_Lock",
                     "exec": "loginctl lock-session",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-lock-screen.svg"
+                    "icon": "system-lock-screen-symbolic"
                   },
                   {
                     "label": "_Exit",
                     "exec": "uwsm stop",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-log-out.svg"
+                    "icon": "system-log-out-symbolic"
                   },
                   {
                     "label": "_Shutdown",
                     "exec": "systemctl -i poweroff",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-shutdown.svg"
+                    "icon": "system-shutdown-symbolic"
                   },
                   {
                     "label": "_Reboot",
                     "exec": "systemctl reboot",
-                    "icon": "${pkgs.nwg-bar}/share/nwg-bar/images/system-reboot.svg"
+                    "icon": "system-reboot-symbolic"
                   }
                 ]''; # FIXME: hyprshutdown Does Not Work
 
@@ -5697,10 +5698,36 @@ in
 
               source = pkgs.writeText "nwg-bar.css" ''
                 /* Catppuccin Mocha */
-                @define-color crust rgb(17, 17, 27);
-                @define-color surface0 rgb(49, 50, 68);
-                @define-color surface2 rgb(88, 91, 112);
-                @define-color text rgb(205, 214, 244);
+                @define-color rosewater #f5e0dc;
+                @define-color flamingo #f2cdcd;
+                @define-color pink #f5c2e7;
+                @define-color mauve #cba6f7;
+                @define-color red #f38ba8;
+                @define-color maroon #eba0ac;
+                @define-color peach #fab387;
+                @define-color yellow #f9e2af;
+                @define-color green #a6e3a1;
+                @define-color teal #94e2d5;
+                @define-color sky #89dceb;
+                @define-color sapphire #74c7ec;
+                @define-color blue #89b4fa;
+                @define-color lavender #b4befe;
+
+                @define-color text #cdd6f4;
+                @define-color subtext1 #bac2de;
+                @define-color subtext0 #a6adc8;
+
+                @define-color overlay2 #9399b2;
+                @define-color overlay1 #7f849c;
+                @define-color overlay0 #6c7086;
+
+                @define-color surface2 #585b70;
+                @define-color surface1 #45475a;
+                @define-color surface0 #313244;
+
+                @define-color base #1e1e2e;
+                @define-color mantle #181825;
+                @define-color crust #11111b;
 
                 * {
                   font-family: ${fontPreferences.sansSerif};
@@ -5719,7 +5746,7 @@ in
                 button,
                 image {
                   box-shadow: none;
-                  border-style: none;
+                  border: none;
                   background: none;
                   color: @text;
                 }
@@ -5732,16 +5759,96 @@ in
                 button:hover,
                 button:focus {
                   background-color: @surface0;
+                  color: @lavender;
+                }
+
+                button:hover image,
+                button:focus image {
+                  color: @lavender;
                 }
 
                 grid {
                   box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6.0))}px @surface0;
                   border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                  background-color: @crust;
+                  background-color: @base;
                   padding: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }'';
 
               target = "nwg-bar/style.css";
+              executable = null;
+            };
+
+            "nwg-drawer/style.css" = {
+              enable = true;
+
+              source = pkgs.writeText "nwg-drawer.css" ''
+                /* Catppuccin Mocha */
+                @define-color rosewater #f5e0dc;
+                @define-color flamingo #f2cdcd;
+                @define-color pink #f5c2e7;
+                @define-color mauve #cba6f7;
+                @define-color red #f38ba8;
+                @define-color maroon #eba0ac;
+                @define-color peach #fab387;
+                @define-color yellow #f9e2af;
+                @define-color green #a6e3a1;
+                @define-color teal #94e2d5;
+                @define-color sky #89dceb;
+                @define-color sapphire #74c7ec;
+                @define-color blue #89b4fa;
+                @define-color lavender #b4befe;
+
+                @define-color text #cdd6f4;
+                @define-color subtext1 #bac2de;
+                @define-color subtext0 #a6adc8;
+
+                @define-color overlay2 #9399b2;
+                @define-color overlay1 #7f849c;
+                @define-color overlay0 #6c7086;
+
+                @define-color surface2 #585b70;
+                @define-color surface1 #45475a;
+                @define-color surface0 #313244;
+
+                @define-color base #1e1e2e;
+                @define-color mantle #181825;
+                @define-color crust #11111b;
+
+                * {
+                  font-family: ${fontPreferences.sansSerif};
+                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
+                }
+
+                window {
+                  background-color: @base;
+                  color: @text;
+                }
+
+                entry {
+                  border: 1px solid @surface2;
+                  background-color: @mantle;
+                }
+
+                button,
+                image {
+                  box-shadow: none;
+                  border: none;
+                  background: none;
+                }
+
+                button:hover,
+                button:focus {
+                  background: @surface0;
+                  color: @lavender;
+                }
+
+                #pinned-box {
+                  border-bottom: 1px solid @surface1;
+                  padding-bottom: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                }
+              '';
+
+              target = "nwg-drawer/style.css";
               executable = null;
             };
           };
@@ -6992,10 +7099,40 @@ in
 
             style = ''
                /* Catppuccin Mocha */
-              @define-color surface2 #585b70;
+               @define-color rosewater #f5e0dc;
+               @define-color flamingo #f2cdcd;
+               @define-color pink #f5c2e7;
+               @define-color mauve #cba6f7;
+               @define-color red #f38ba8;
+               @define-color maroon #eba0ac;
+               @define-color peach #fab387;
+               @define-color yellow #f9e2af;
+               @define-color green #a6e3a1;
+               @define-color teal #94e2d5;
+               @define-color sky #89dceb;
+               @define-color sapphire #74c7ec;
+               @define-color blue #89b4fa;
+               @define-color lavender #b4befe;
+
+               @define-color text #cdd6f4;
+               @define-color subtext1 #bac2de;
+               @define-color subtext0 #a6adc8;
+
+               @define-color overlay2 #9399b2;
+               @define-color overlay1 #7f849c;
+               @define-color overlay0 #6c7086;
+
+               @define-color surface2 #585b70;
+               @define-color surface1 #45475a;
+               @define-color surface0 #313244;
+
+               @define-color base #1e1e2e;
+               @define-color mantle #181825;
+               @define-color crust #11111b;
 
               * {
                 font-family: ${fontPreferences.sansSerif};
+                font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
               }
 
               window {
