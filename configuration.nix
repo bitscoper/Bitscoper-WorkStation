@@ -129,7 +129,7 @@ let
           platforms-android-37-1
           platforms-android-37-2
 
-          system-images-android-37-0-google-apis-playstore-x86-64
+          system-images-android-37-0-default-x86-64
         ] # https://github.com/tadfisher/android-nixpkgs/tree/main/channels/
       );
 
@@ -140,15 +140,48 @@ let
     emoji = "Noto Color Emoji";
   };
 
+  bgrtBmpFile = builtins.path {
+    path = "/sys/firmware/acpi/bgrt/image";
+    name = "bgrt.bmp";
+  };
+  themedBgrtPngFile =
+    pkgs.runCommand "Themed_BGRT.png"
+      {
+        nativeBuildInputs = with pkgs; [
+          imagemagickBig
+        ];
+      }
+      ''
+        magick BMP:${bgrtBmpFile} \
+          -fuzz 16% \
+          -transparent black \
+          -background "#1e1e2e" \
+          -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> \
+          -gravity center \
+          -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} \
+          $out
+      '';
+  # It assumes that the background color of BGRT is black and that 16% fuzz is sufficient.
+  # #1e1e2e: Base of Catppuccin Mocha
+
+  wallpaper = builtins.fetchurl {
+    url = "https://raw.githubusercontent.com/Shavanced/ame-quattro/refs/heads/main/backgrounds/21330483-catppuccin-mocha.png";
+  };
+
+  designFactor = 8.0;
+  transitionDuration = 500; # 500 Milliseconds
+
   tlsCertificateFiles =
-    pkgs.runCommand "generate_tls_certificate_files"
+    pkgs.runCommand "TLS_Certificate_Files"
       {
         CN = config.networking.fqdn;
       }
       ''
         mkdir -p $out
+
         ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/private.key
         ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/private.key -out $out/certificate.crt -days 36500 -subj "/CN=$CN"
+
         cat $out/private.key $out/certificate.crt > $out/concatenated.pem
         cp $out/certificate.crt $out/ca.crt
       '';
@@ -156,31 +189,6 @@ let
   tlsCertificateFile = "${tlsCertificateFiles}/certificate.crt";
   tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
   tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
-
-  bgrtBmp = builtins.path {
-    path = "/sys/firmware/acpi/bgrt/image";
-    name = "bgrt.bmp";
-  };
-
-  bgrtPng =
-    pkgs.runCommand "generate_bgrt_png_file"
-      {
-        nativeBuildInputs = with pkgs; [
-          imagemagickBig
-        ];
-      }
-      ''
-        magick BMP:${bgrtBmp} -fuzz 16% -transparent black -background "#1e1e2e" -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> -gravity center -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} $out
-      '';
-  # It assumes that the background of BGRT is black and that 16% fuzz is sufficient.
-  # #1e1e2e: Base of Catppuccin Mocha
-
-  transparent_1x1_png_file = builtins.fetchurl {
-    url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
-  };
-
-  designFactor = 8.0;
-  transitionDuration = 500; # 500 Milliseconds
 in
 {
   _class = "nixos";
@@ -266,7 +274,7 @@ in
           }).overrideAttrs
             (oldAttributes: {
               postInstall = (oldAttributes.postInstall or "") + ''
-                cp ${bgrtPng} $out/background.png
+                cp ${themedBgrtPngFile} $out/background.png
 
                 rm -f $out/logo.png
                 sed -i '/# Logo image/,+5d' $out/theme.txt
@@ -284,7 +292,7 @@ in
                 THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
                 mkdir -p $THEME_DIRECTORY
 
-                cp ${bgrtPng} $THEME_DIRECTORY/background.png
+                cp ${themedBgrtPngFile} $THEME_DIRECTORY/background.png
 
                 sed -i 's/VerticalAlignment=.*/VerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
                 sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
@@ -514,7 +522,7 @@ in
         splashMode = "normal";
 
         theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
-        splashImage = pkgs.lib.mkForce "${bgrtPng}";
+        splashImage = pkgs.lib.mkForce "${themedBgrtPngFile}";
 
         configurationLimit = 100;
         extraEntriesBeforeNixOS = false;
@@ -687,7 +695,9 @@ in
 
       font = "${config.home-manager.users.normal.gtk.font.package}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
 
-      logo = transparent_1x1_png_file; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
+      logo = builtins.fetchurl {
+        url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
+      }; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
 
       showDelay = 0;
 
@@ -742,8 +752,6 @@ in
       enable = true;
       group = "i2c";
     };
-
-    alsa.enable = !config.services.pipewire.alsa.enable;
 
     graphics = {
       enable = true;
@@ -1161,6 +1169,7 @@ in
 
       allowedTCPPorts = [
         config.home-manager.users.normal.services.wayvnc.settings.port
+        config.services.icecast.listen.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
@@ -1385,8 +1394,6 @@ in
       };
     };
 
-    automatic-timezoned.enable = !config.services.tzupdate.enable;
-
     tzupdate = {
       enable = true;
       package = pkgs.tzupdate;
@@ -1473,9 +1480,6 @@ in
 
       logEvents = false;
     };
-
-    power-profiles-daemon.enable = !config.powerManagement.enable;
-    tlp.enable = !config.powerManagement.enable;
 
     thermald = {
       enable = true;
@@ -1669,12 +1673,6 @@ in
       };
 
       raopOpenFirewall = true;
-    };
-
-    pulseaudio.enable = !config.services.pipewire.pulse.enable;
-    jack = {
-      jackd.enable = !config.services.pipewire.jack.enable;
-      alsa.enable = !config.services.pipewire.jack.enable;
     };
 
     gpsd = {
@@ -1948,7 +1946,7 @@ in
       hostname = config.networking.fqdn;
       listen = {
         address = "0.0.0.0";
-        port = 17101;
+        port = 11111;
       };
 
       admin = {
@@ -2130,6 +2128,23 @@ in
       # promptInit = '''';
 
       # logout = '''';
+    };
+
+    starship = {
+      enable = true;
+      package = pkgs.starship;
+
+      interactiveOnly = true;
+
+      presets = [
+        "nerd-font-symbols"
+      ];
+
+      settings = {
+        follow_symlinks = true;
+
+        add_newline = false;
+      };
     };
 
     nix-ld = {
@@ -2711,7 +2726,6 @@ in
         # gearlever # FIXME: Build Failure
         # gerbolyze # FIXME: Build Failure
         # gnome-frog # FIXME: Build Failure
-        # gnome-nettool # TODO: Find Alternative
         # guestfs-tools # FIXME: Build Failure
         # iaito # FIXME: Build Failure
         # morphosis # FIXME: Build Failure
@@ -2738,6 +2752,7 @@ in
         alsa-utils
         android-backup-extractor
         android-tools
+        angryipscanner
         ansilove
         apfs-fuse
         apfsprogs
@@ -2924,6 +2939,7 @@ in
         glab
         glib
         glib-networking
+        gnome-characters
         gnome-firmware
         gnome-multi-writer
         gnss-sdr
@@ -2944,6 +2960,7 @@ in
         gtk-frdp
         gtk-vnc
         gtkhash
+        gucharmap
         gzip
         halftone
         hashes
@@ -3063,11 +3080,11 @@ in
         moxnotify
         mp3fs
         mtools
+        mtr-gui # mtr --gtk
         mysqltuner
         nautilus
         nautilus-python
         nethogs
-        netpeek
         newsflash
         nilfs-utils
         ninja
@@ -3619,7 +3636,6 @@ in
         kalgebra
         kalzium
         kcachegrind
-        kcharselect
         kclock
         kcolorchooser
         kdenlive
@@ -4315,7 +4331,7 @@ in
       flavor = config.catppuccin.flavor;
       accent = config.catppuccin.accent;
 
-      background = "${bgrtPng}";
+      background = wallpaper;
 
       font = fontPreferences.sansSerif;
       fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
@@ -5397,7 +5413,7 @@ in
 
                 get =
                   key:
-                  pkgs.runCommand "get_${key}_from_cpu-x_desktop_file" { } ''
+                  pkgs.runCommand "${key}_from_CPU-X_Desktop_File" { } ''
                     ${pkgs.python3}/bin/python3 - << 'EOF' > $out
                     import configparser
 
@@ -5434,7 +5450,7 @@ in
 
                 get =
                   key:
-                  pkgs.runCommand "get_${key}_from_hardinfo2_desktop_file" { } ''
+                  pkgs.runCommand "${key}_from_Hardinfo2_Desktop_File" { } ''
                     ${pkgs.python3}/bin/python3 - << 'EOF' > $out
                     import configparser
 
@@ -5504,6 +5520,9 @@ in
 
                 platform_plugin: auto
 
+                osc_context:
+                  enabled: true
+
                 renderer:
                   backend: vulkan
 
@@ -5521,6 +5540,16 @@ in
                 ui_style: native
                 theme: dark
                 box_arc_style: round
+                gutter:
+                  line_numbers: false
+                  timestamps: false
+                  user_marks: false
+                  exit_status: false
+                  bold_on_hover: false
+                folding:
+                  enabled: false
+                  show_markers: false
+                  auto_collapse_on_new_command: false
                 git_drawings:
                   branch_style: thin
                   arc_style: round
@@ -5712,26 +5741,22 @@ in
                 @define-color sapphire #74c7ec;
                 @define-color blue #89b4fa;
                 @define-color lavender #b4befe;
-
                 @define-color text #cdd6f4;
                 @define-color subtext1 #bac2de;
                 @define-color subtext0 #a6adc8;
-
                 @define-color overlay2 #9399b2;
                 @define-color overlay1 #7f849c;
                 @define-color overlay0 #6c7086;
-
                 @define-color surface2 #585b70;
                 @define-color surface1 #45475a;
                 @define-color surface0 #313244;
-
                 @define-color base #1e1e2e;
                 @define-color mantle #181825;
                 @define-color crust #11111b;
 
                 * {
                   font-family: ${fontPreferences.sansSerif};
-                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
+                  font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 }
 
                 window {
@@ -5797,26 +5822,22 @@ in
                 @define-color sapphire #74c7ec;
                 @define-color blue #89b4fa;
                 @define-color lavender #b4befe;
-
                 @define-color text #cdd6f4;
                 @define-color subtext1 #bac2de;
                 @define-color subtext0 #a6adc8;
-
                 @define-color overlay2 #9399b2;
                 @define-color overlay1 #7f849c;
                 @define-color overlay0 #6c7086;
-
                 @define-color surface2 #585b70;
                 @define-color surface1 #45475a;
                 @define-color surface0 #313244;
-
                 @define-color base #1e1e2e;
                 @define-color mantle #181825;
                 @define-color crust #11111b;
 
                 * {
                   font-family: ${fontPreferences.sansSerif};
-                  font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
+                  font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 }
 
                 window {
@@ -5825,6 +5846,7 @@ in
                 }
 
                 entry {
+                  margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor * 3.0))}px;
                   border: 1px solid @surface2;
                   background-color: @mantle;
                 }
@@ -6106,8 +6128,6 @@ in
             grabKeyboardAndMouse = true;
           };
 
-          ssh-agent.enable = !config.programs.gnupg.agent.enable;
-
           easyeffects = {
             enable = true;
             package = pkgs.easyeffects;
@@ -6170,7 +6190,7 @@ in
               wallpaper = {
                 monitor = "";
                 recursive = true;
-                path = "${bgrtPng}";
+                path = wallpaper;
                 fit_mode = "cover";
               };
             };
@@ -6229,7 +6249,7 @@ in
               background = [
                 {
                   monitor = ""; # "" = All
-                  path = "${bgrtPng}";
+                  path = wallpaper;
                 }
               ];
 
@@ -6999,6 +7019,17 @@ in
             # logoutExtra = '''';
           };
 
+          starship = {
+            enable = config.programs.starship.enable;
+            package = config.programs.starship.package;
+
+            enableBashIntegration = true;
+            enableInteractive = config.programs.starship.interactiveOnly;
+
+            presets = config.programs.starship.presets;
+            settings = config.programs.starship.settings;
+          };
+
           nix-index = {
             enable = config.programs.nix-index.enable;
             package = config.programs.nix-index.package;
@@ -7087,7 +7118,7 @@ in
               show_all = true;
               allow_markup = true;
               allow_images = true;
-              image_size = builtins.floor (designFactor * 3);
+              image_size = builtins.floor (designFactor * 3.0);
               no_actions = true;
 
               insensitive = true;
@@ -7113,26 +7144,22 @@ in
                @define-color sapphire #74c7ec;
                @define-color blue #89b4fa;
                @define-color lavender #b4befe;
-
                @define-color text #cdd6f4;
                @define-color subtext1 #bac2de;
                @define-color subtext0 #a6adc8;
-
                @define-color overlay2 #9399b2;
                @define-color overlay1 #7f849c;
                @define-color overlay0 #6c7086;
-
                @define-color surface2 #585b70;
                @define-color surface1 #45475a;
                @define-color surface0 #313244;
-
                @define-color base #1e1e2e;
                @define-color mantle #181825;
                @define-color crust #11111b;
 
               * {
                 font-family: ${fontPreferences.sansSerif};
-                font-size: ${pkgs.lib.toString (builtins.floor designFactor * 2.0)}px;
+                font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
               }
 
               window {
@@ -7141,25 +7168,23 @@ in
               }
 
               #outer-box {
-                padding: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                padding: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
               }
 
               #inner-box {
-                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor * 2))}px;
+                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
               }
 
               #entry {
-                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
-                margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
+                margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
               }
 
               #img {
-                margin-right: ${pkgs.lib.toString (builtins.floor (designFactor / 2))}px;
+                margin-right: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
               }
             '';
           };
-
-          keychain.enable = !config.programs.gnupg.agent.enable;
 
           gpg = {
             enable = true;
@@ -8213,6 +8238,12 @@ in
             accent = config.catppuccin.accent;
 
             mode = "prependImport";
+          };
+
+          starship = {
+            enable = config.programs.starship.enable;
+
+            flavor = config.catppuccin.flavor;
           };
 
           fcitx5 = {
