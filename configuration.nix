@@ -9,14 +9,14 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   androidSDKCompositionFlake = builtins.getFlake "github:tadfisher/android-nixpkgs/stable";
@@ -448,25 +448,6 @@ in
           '';
         });
       }) # Replaces Slower `uwsm app` with Faster `uwsm-app`
-
-      (final: previous: {
-        rtcqs = final.python3.pkgs.buildPythonApplication rec {
-          pname = "rtcqs";
-          version = "0.6.2";
-          format = "pyproject";
-
-          pythonRuntimeDepsCheckHook = "true";
-
-          buildInputs = [
-            final.python3.pkgs.setuptools
-          ];
-
-          src = final.fetchPypi {
-            inherit pname version;
-            hash = "sha256-DfeV9kGhdMf6hZ1iNJ0L3HUn7m8c1gRK5cjtJNUAvJI=";
-          };
-        };
-      }) # Addition
     ];
   };
 
@@ -607,7 +588,6 @@ in
       mm-tools
       tmon
       turbostat
-      usbip
       zfs_2_4
     ];
 
@@ -2561,12 +2541,6 @@ in
       );
     };
 
-    ghidra = {
-      enable = true;
-      package = pkgs.ghidra;
-      gdb = true;
-    };
-
     obs-studio = {
       enable = true;
       package = (
@@ -2721,22 +2695,10 @@ in
     systemPackages =
       with pkgs;
       [
-        # darling-dmg # FIXME: Build Failure
         # dart # flutter adds the compatible version
-        # gearlever # FIXME: Build Failure
-        # gerbolyze # FIXME: Build Failure
-        # gnome-frog # FIXME: Build Failure
-        # guestfs-tools # FIXME: Build Failure
-        # iaito # FIXME: Build Failure
-        # morphosis # FIXME: Build Failure
         # newelle # FIXME: Build Failure
-        # onionshare-gui # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
-        # sbomnix # FIXME: Build Failure
-        # soundconverter # FIXME: Build Failure
-        # video2x # FIXME: Build Failure
-        # virt-v2v # FIXME: Build Failure
         aapt
         acl
         acpica-tools
@@ -2745,7 +2707,6 @@ in
         actionlint
         addlicense
         aegisub
-        aeskeyfind
         aide
         aircrack-ng
         alsa-plugins
@@ -2765,14 +2726,12 @@ in
         arduino-ide
         arduino-ota
         arj
-        ascii
         ascii-draw
         asciinema
         asciinema-agg
         asciiquarium-transparent
         asnmap
         audio-sharing
-        autopsy
         avbroot
         avrdude
         backgroundremover
@@ -2780,9 +2739,6 @@ in
         bcachefs-tools
         binary
         bindfs
-        binutils
-        binwalk
-        bitwarden-cli
         blanket
         bleachbit
         bluez-alsa
@@ -2792,16 +2748,13 @@ in
         btrfs-assistant
         btrfs-heatmap
         btrfs-progs
-        bump
         bustle
         butt
-        bytecode-viewer
         bzip3
         calligraphy
         carburetor
         cartero
         cavasik
-        cdrkit
         celt
         censor
         certbot-full
@@ -2816,7 +2769,7 @@ in
         cliphist
         cloc
         cloneit
-        cmake
+        cloudflared
         codeowners
         codevis
         colorgrind
@@ -2830,11 +2783,8 @@ in
         cpio
         cramfsprogs
         crlfuzz
-        cron
         crow-translate
         cryptsetup
-        cscope
-        ctagsWrapped
         curtail
         cve-bin-tool
         cyclonedx-cli
@@ -2863,18 +2813,15 @@ in
         door-knocker
         dosfstools
         dot2tex
-        dpkg
         dtui
         dvb-apps
         e2fsprogs
-        ebook2cw
         efibootmgr
         efivar
         egypt
         elf-dissector
         eloquent
         emblem
-        enumerepo
         envfs
         erofs-utils
         esptool
@@ -2896,7 +2843,6 @@ in
         field-monitor
         file
         fileinfo
-        filen-cli
         filen-desktop
         findutils
         flake-checker
@@ -2905,8 +2851,6 @@ in
         flightgear
         font-manager
         fontfor
-        fork-cleaner
-        freac
         freerouting
         fritzing
         fuse-overlayfs
@@ -2917,7 +2861,6 @@ in
         gawk
         gcc
         gcr_4
-        gdb
         genealogos-cli
         gh
         gh-contribs
@@ -2927,7 +2870,6 @@ in
         ghost-sh # From config.nixpkgs.overlays
         ghrepo-stats
         gimp-with-plugins
-        gist
         git-big-picture
         git-filter-repo
         git-open
@@ -2956,7 +2898,6 @@ in
         gpredict
         gpu-viewer
         graphviz
-        groovy
         gtk-frdp
         gtk-vnc
         gtkhash
@@ -2971,7 +2912,6 @@ in
         hfsutils
         hieroglyphic
         horizon-eda
-        host
         hstsparser
         httpdirfs
         hw-probe
@@ -2985,11 +2925,8 @@ in
         hyprshutdown
         hyprtoolkit
         hyprutils
-        hyprwayland-scanner
         hyprwire
         i2c-tools
-        iconic
-        iftop
         ifuse
         imagemagickBig
         imhex
@@ -3008,7 +2945,6 @@ in
         kernel-hardening-checker
         kernelshark
         kexec-tools
-        killall
         kind
         kmod
         kotlin
@@ -3025,10 +2961,10 @@ in
         letterpress
         lha
         libaom
-        libarchive
         libde265
         libfreeaptx
-        libhsts
+        libheif.bin
+        libheif.out
         libilbc
         libimobiledevice
         liblc3
@@ -3051,7 +2987,6 @@ in
         lorem
         loupe
         lsb-release
-        lshw
         lsof
         lsscsi
         luminance
@@ -3063,10 +2998,8 @@ in
         macchanger
         mailcap
         mdns-scanner
-        megacmd
         mergerfs
         mesa-demos
-        metadata
         metadata-cleaner
         metronome
         mfcuk
@@ -3074,7 +3007,6 @@ in
         millisecond
         minikube
         mixxx
-        mlocate
         monkeys-audio
         mousam
         moxnotify
@@ -3093,18 +3025,14 @@ in
         nix-health
         nix-info
         nix-query-tree-viewer
-        nixmate
         nixoscope
         nixpkgs-reviewFull
-        nmap
         noaa-apt
         nocturne
         normcap
         ntfs2btrfs
         ntfs3g
         ntfsprogs-plus
-        numactl
-        numatop
         nurl
         nvme-cli
         nwg-bar
@@ -3118,7 +3046,6 @@ in
         openh264
         openjpeg
         openobex
-        openpgp-card-tools
         openssl
         orbvis
         otree
@@ -3128,11 +3055,9 @@ in
         pana
         paper-clip
         parallel-full
-        parted
         pbzx
         pciutils
         pdfarranger
-        pe-bear
         peazip
         pev
         pg_top
@@ -3154,10 +3079,7 @@ in
         progress
         protocol
         proton-vpn
-        proton-vpn-cli
-        protonmail-export
         protonup-qt
-        ps
         psmisc
         pwvucontrol
         qalculate-gtk
@@ -3166,18 +3088,14 @@ in
         qemu-utils
         qr-backup
         qsstv
-        qt5.qtwayland
-        qt6.qtwayland
         qtrvsim
-        radare2
         raider
+        rdap
         resources
         rp-pppoe
         rpi-imager
-        rpm
         rpmextract
         rt-tests
-        rtcqs # From config.nixpkgs.overlays
         rtl-sdr-librtlsdr
         rubyPackages.cocoapods
         runme
@@ -3188,31 +3106,22 @@ in
         schroedinger
         scorecard
         scrcpy
-        screen
         sdrangel
         seabird
         seer # seergdb
         selectdefaultapplication
         semver-tool
-        sequoia-sq
         share-preview
-        shellclear
         sherlock
-        shortwave
-        sipvicious
         sleuthkit
-        sloc
         smag
-        smartmontools
         sof-tools
         songrec
-        sox
         spectre-meltdown-checker
         speedtest
         spytrap-adb
         squashfuse
         srain
-        sshfs
         sshfs-fuse
         sslscan
         stdenv.cc.libc.out # Includes Locales
@@ -3234,37 +3143,26 @@ in
         teleprompter
         terminaltexteffects
         texliveFull
-        texlivePackages.latexmk
         time
         tpm2-tools
-        traceroute
         traitor
         tree
         treegen
         trueseeing
         trufflehog
-        trustymail
         tsukae
-        ttl
         turnon
-        turtle
         udftools
-        uefi-firmware-parser
         ugit
-        unar
         unarc
         undollar
-        unhide
         unhide-gui
-        uni2ascii
-        unionfs-fuse
         universal-android-debloater # uad-ng
         unix-privesc-check
         unzip
         updog
         upnp-router-control
         upscayl
-        usbip-ssh
         usbutils
         util-linux
         valgrind
@@ -3272,23 +3170,18 @@ in
         vorbis-tools
         vulnix
         wafw00f
-        wavemon
         wayback-machine-archiver
         wayback_machine_downloader
         waycheck
         waydroid-helper
-        wayland-scanner
         wayland-utils
-        waylevel
         wayscriber
-        webcamize
         webfont-bundler
         websocat
         wev
         whatfiles
         which
         whois
-        whosthere
         wildcard
         windowtolayer
         wl-clipboard
@@ -3304,7 +3197,6 @@ in
         xoscope
         xvidcore
         xz
-        yara-x
         yuview
         zenity
         zenmap
@@ -3532,59 +3424,9 @@ in
           withLibpsl = true;
           withOpenssl = true;
         })
-
-        config.hardware.firmware
-        config.home-manager.users.normal.services.udiskie.package
-        config.programs.gnupg.agent.pinentryPackage
-        config.programs.nix-index.package
-        config.programs.nm-applet.package # Also Provides nm-connection-editor
-        config.services.phpfpm.phpPackage
       ]
 
-      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        # androidSDKComposition.androidsdk
-        androidSDKCompositionFromTadFisher
-        megasync # Open Source
-        rar
-        unrar
-
-        (ventoy-full-gtk.override {
-          withExt4 = true;
-          withNtfs = true;
-          withXfs = true;
-        })
-      ]
-
-      ++ config.boot.extraModulePackages
-      ++ config.fonts.packages
-      ++ config.hardware.graphics.extraPackages
-      ++ config.hardware.graphics.extraPackages32
-      ++ config.home-manager.users.normal.programs.lutris.extraPackages
-      ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
-      ++ config.i18n.inputMethod.fcitx5.addons
-      ++ config.networking.networkmanager.plugins
-      ++ config.programs.bat.extraPackages
-      ++ config.programs.nix-ld.libraries
-      ++ config.programs.obs-studio.plugins
-      ++ config.services.pipewire.extraLv2Packages
-      ++ config.services.udev.packages
-      ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
-      ++ config.virtualisation.podman.extraRuntimes
-      ++ config.xdg.portal.configPackages
-      ++ config.xdg.portal.extraPortals
-
-      ++ (with ghidra-extensions; [
-        findcrypt
-        ghidra-delinker-extension
-        ghidra-firmware-utils
-        gnudisassembler
-        kaiju
-        lightkeeper
-        machinelearning
-        ret-sync
-      ])
-
-      ++ (with gst_all_1; [
+      ++ (with pkgs.gst_all_1; [
         (gst-libav.override {
           enableDocumentation = config.documentation.enable;
         })
@@ -3632,7 +3474,7 @@ in
         })
       ])
 
-      ++ (with kdePackages; [
+      ++ (with pkgs.kdePackages; [
         kalgebra
         kalzium
         kcachegrind
@@ -3651,7 +3493,7 @@ in
         marble
       ])
 
-      ++ (with linphonePackages; [
+      ++ (with pkgs.linphonePackages; [
         bc-decaf
         bc-ispell
         bc-mbedtls
@@ -3671,7 +3513,7 @@ in
         ortp
       ])
 
-      ++ (with unixtools; [
+      ++ (with pkgs.unixtools; [
         arp
         column
         fdisk
@@ -3688,7 +3530,69 @@ in
         whereis
         write
         xxd
-      ]);
+      ])
+
+      ++ [
+        config.hardware.firmware
+        config.home-manager.users.normal.services.udiskie.package
+        config.programs.gnupg.agent.pinentryPackage
+        config.programs.nix-index.package
+        config.programs.nm-applet.package # Also Provides nm-connection-editor
+        config.services.phpfpm.phpPackage
+      ]
+
+      ++ config.boot.extraModulePackages
+      ++ config.fonts.packages
+      ++ config.hardware.graphics.extraPackages
+      ++ config.hardware.graphics.extraPackages32
+      ++ config.home-manager.users.normal.programs.lutris.extraPackages
+      ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
+      ++ config.i18n.inputMethod.fcitx5.addons
+      ++ config.networking.networkmanager.plugins
+      ++ config.programs.bat.extraPackages
+      ++ config.programs.nix-ld.libraries
+      ++ config.programs.obs-studio.plugins
+      ++ config.services.pipewire.extraLv2Packages
+      ++ config.services.udev.packages
+      ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
+      ++ config.virtualisation.podman.extraRuntimes
+      ++ config.xdg.portal.configPackages
+      ++ config.xdg.portal.extraPortals
+
+      ++ (with stableNixPackages; [
+        darling-dmg
+        gearlever
+        gerbolyze
+        gnome-frog
+        guestfs-tools
+        morphosis
+        onionshare-gui
+        sbomnix
+        soundconverter
+        video2x
+        virt-v2v
+
+        (cutter.withPlugins (plugins: [
+          plugins.rz-ghidra
+        ]))
+      ]) # FIXME: Build Failure When Using the Unstable Channel
+
+      ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
+        with pkgs;
+        [
+          # androidSDKComposition.androidsdk
+          androidSDKCompositionFromTadFisher
+          megasync # Open Source
+          rar
+          unrar
+
+          (ventoy-full-gtk.override {
+            withExt4 = true;
+            withNtfs = true;
+            withXfs = true;
+          })
+        ]
+      );
 
     wordlist = {
       enable = true;
@@ -3703,6 +3607,7 @@ in
     pathsToLink = [
       "/share/applications"
       "/share/i18n"
+      "/share/thumbnailers"
       "/share/xdg-desktop-portal"
     ];
 
