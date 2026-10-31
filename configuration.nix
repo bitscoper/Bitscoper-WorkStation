@@ -164,12 +164,12 @@ let
   # It assumes that the background color of BGRT is black and that 16% fuzz is sufficient.
   # #1e1e2e: Base of Catppuccin Mocha
 
-  wallpaper = builtins.fetchurl {
+  wallpaperFile = builtins.fetchurl {
     url = "https://raw.githubusercontent.com/Shavanced/ame-quattro/refs/heads/main/backgrounds/21330483-catppuccin-mocha.png";
   };
 
   designFactor = 8.0;
-  transitionDuration = 500; # 500 Milliseconds
+  transitionDuration = 400; # 400 Milliseconds
 
   tlsCertificateFiles =
     pkgs.runCommand "TLS_Certificate_Files"
@@ -259,6 +259,7 @@ in
       allowUnfree = true;
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
+        "mbedtls-3.6.1-unstable-2025-08-11"
         "ventoy-gtk3-1.1.18"
       ];
 
@@ -2919,7 +2920,6 @@ in
         hyprgraphics
         hyprland-protocols
         hyprland-qt-support
-        hyprland-qtutils
         hyprmag
         hyprshot
         hyprshutdown
@@ -4236,7 +4236,7 @@ in
       flavor = config.catppuccin.flavor;
       accent = config.catppuccin.accent;
 
-      background = wallpaper;
+      background = wallpaperFile;
 
       font = fontPreferences.sansSerif;
       fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
@@ -5018,7 +5018,7 @@ in
 
                 layout = "dwindle";
 
-                gaps_in = builtins.floor (designFactor / 2.0);
+                gaps_in = builtins.floor (designFactor / 4.0);
                 gaps_out = {
                   top = builtins.floor (designFactor / 2.0);
                   right = builtins.floor (designFactor / 2.0);
@@ -5327,7 +5327,6 @@ in
                     parser.read("${desktopFile}")
                     value = parser.get("Desktop Entry", "${key}", fallback="")
                     print(value)
-
                     EOF
                   '';
               in
@@ -5364,7 +5363,6 @@ in
                     parser.read("${desktopFile}")
                     value = parser.get("Desktop Entry", "${key}", fallback="")
                     print(value)
-
                     EOF
                   '';
               in
@@ -5621,7 +5619,8 @@ in
                     "exec": "systemctl reboot",
                     "icon": "system-reboot-symbolic"
                   }
-                ]''; # FIXME: hyprshutdown Does Not Work
+                ]
+              ''; # FIXME: hyprshutdown Does Not Work
 
               target = "nwg-bar/bar.json";
               executable = null;
@@ -5666,24 +5665,20 @@ in
 
                 window {
                   border: 1px solid @surface2;
-                  border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                }
-
-                #bar {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor * 4.0))}px;
-                }
-
-                button,
-                image {
-                  box-shadow: none;
-                  border: none;
-                  background: none;
+                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
+                  background-color: @base;
                   color: @text;
                 }
 
                 button {
-                  margin: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
+                  margin: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                  box-shadow: none;
+                  border: none;
+                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
+                  background: none;
                   padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                  padding-bottom: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
+                  transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
                 }
 
                 button:hover,
@@ -5692,17 +5687,18 @@ in
                   color: @lavender;
                 }
 
+                button image {
+                  box-shadow: none;
+                  border: none;
+                  background: none;
+                  transition: color ${pkgs.lib.toString transitionDuration}ms;
+                }
+
                 button:hover image,
                 button:focus image {
                   color: @lavender;
                 }
-
-                grid {
-                  box-shadow: 0 0 ${pkgs.lib.toString (builtins.floor (designFactor * 6.0))}px @surface0;
-                  border-radius: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                  background-color: @base;
-                  padding: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                }'';
+              '';
 
               target = "nwg-bar/style.css";
               executable = null;
@@ -5756,11 +5752,16 @@ in
                   background-color: @mantle;
                 }
 
-                button,
-                image {
+                #pinned-box {
+                  border-bottom: 1px solid @surface1;
+                  padding-bottom: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                }
+
+                button {
                   box-shadow: none;
                   border: none;
                   background: none;
+                  transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
                 }
 
                 button:hover,
@@ -5769,9 +5770,10 @@ in
                   color: @lavender;
                 }
 
-                #pinned-box {
-                  border-bottom: 1px solid @surface1;
-                  padding-bottom: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                image {
+                  box-shadow: none;
+                  border: none;
+                  background: none;
                 }
               '';
 
@@ -5780,7 +5782,18 @@ in
             };
           };
 
-          # dataFile = { };
+          dataFile = {
+            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
+              enable = true;
+
+              source = builtins.fetchurl {
+                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
+              };
+
+              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
+              executable = null;
+            };
+          };
 
           # stateFile = { };
 
@@ -6095,7 +6108,7 @@ in
               wallpaper = {
                 monitor = "";
                 recursive = true;
-                path = wallpaper;
+                path = wallpaperFile;
                 fit_mode = "cover";
               };
             };
@@ -6154,7 +6167,7 @@ in
               background = [
                 {
                   monitor = ""; # "" = All
-                  path = wallpaper;
+                  path = wallpaperFile;
                 }
               ];
 
@@ -6185,7 +6198,7 @@ in
                   text_align = "center";
                   font_family = fontPreferences.sansSerif;
                   font_size = builtins.floor (designFactor * 1.5);
-                  color = "\$text";
+                  color = "\$lavender";
                   text = "\$FPRINTPROMPT";
                 }
               ];
@@ -6211,7 +6224,7 @@ in
 
                   hide_input = false;
                   font_family = fontPreferences.sansSerif;
-                  font_color = "\$text";
+                  font_color = "\$lavender";
                   placeholder_text = "Enter Password for $DESC";
                   dots_center = true;
                   dots_rounding = -1;
@@ -6219,11 +6232,11 @@ in
                   fade_on_empty = true;
 
                   invert_numlock = false;
-                  capslock_color = "\$peach";
-                  numlock_color = "\$peach";
-                  bothlock_color = "\$peach";
+                  capslock_color = "\$mauve";
+                  numlock_color = "\$mauve";
+                  bothlock_color = "\$mauve";
 
-                  check_color = "\$lavender";
+                  check_color = "\$blue";
                   fail_color = "\$red";
                   fail_text = "$FAIL <b>($ATTEMPTS)</b>";
                 }
@@ -6693,6 +6706,7 @@ in
               window#waybar {
                 border: none;
                 background-color: transparent;
+                color: @lavender;
               }
 
               .modules-right > widget:last-child > #workspaces {
@@ -6717,15 +6731,13 @@ in
               #clock,
               #user,
               #systemd-failed-units,
-              #gamemode,
-              #window {
+              #gamemode {
                 border: 1px solid @surface1;
                 border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                background-color: @crust;
+                background-color: @mantle;
                 padding: ${
                   pkgs.lib.toString (builtins.floor (designFactor / 4.0))
                 }px ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                color: @text;
               }
 
               #idle_inhibitor,
@@ -6737,12 +6749,33 @@ in
                 margin-left: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
               }
 
+              #backlight,
+              #cpu,
+              #load,
+              #temperature,
+              #memory,
+              #disk,
+              #clock,
+              #user {
+                transition: background-color ${pkgs.lib.toString transitionDuration}ms;
+              }
+
+              #idle_inhibitor,
+              #wireplumber,
+              #bluetooth,
+              #battery,
+              #network,
+              #systemd-failed-units,
+              #gamemode {
+                transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
+              }
+
               #idle_inhibitor.deactivated {
-                color: @text;
+                color: @lavender;
               }
 
               #idle_inhibitor.activated {
-                color: @green;
+                color: @blue;
               }
 
               #wireplumber.muted,
@@ -6760,29 +6793,35 @@ in
               #bluetooth.on,
               #bluetooth.discoverable,
               #bluetooth.pairable {
-                color: @text;
+                color: @lavender;
               }
 
               #bluetooth.discovering,
               #bluetooth.connected {
-                color: @green;
+                color: @blue;
               }
 
-              #battery.plugged,
-              #battery.full {
-                color: @text;
+              #battery.critical {
+                color: @red;
+              }
+
+              #battery.warning {
+                color: @mauve;
               }
 
               #battery.charging {
-                color: @green;
+                color: @blue;
               }
 
-              #battery.warning,
+              #battery.full,
+              #battery.plugged {
+                color: @lavender;
+              }
+
               #temperature.warning {
-                color: @peach;
+                color: @mauve;
               }
 
-              #battery.critical,
               #temperature.critical {
                 color: @red;
               }
@@ -6795,79 +6834,107 @@ in
 
               #network.etherenet,
               #network.wifi {
-                color: @text;
-              }
-
-              #systemd-failed-units.ok {
-                color: @text;
+                color: @lavender;
               }
 
               #systemd-failed-units.degraded {
                 color: @red;
               }
 
+              #systemd-failed-units.ok {
+                color: @lavender;
+              }
+
               #gamemode.running {
-                color: @green;
-              }
-
-              #workspaces,
-              #taskbar,
-              #tray {
-                background-color: transparent;
-              }
-
-              button {
-                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4.0))}px;
-                border: 1px solid @surface1;
-                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                background-color: @crust;
-                padding: 0px;
-                color: @text;
-              }
-
-              button * {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
-              }
-
-              button.active {
                 color: @blue;
               }
 
-              button:hover {
-                background-color: @mantle;
+              #backlight:hover,
+              #idle_inhibitor:hover,
+              #wireplumber:hover,
+              #bluetooth:hover,
+              #battery:hover,
+              #cpu:hover,
+              #load:hover,
+              #temperature:hover,
+              #memory:hover,
+              #disk:hover,
+              #network:hover,
+              #clock:hover,
+              #user:hover,
+              #systemd-failed-units:hover,
+              #gamemode:hover {
+                background-color: @surface0;
               }
 
-              #window label {
-                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
-                font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
+              #workspaces,
+              #taskbar {
+                background-color: transparent;
+              }
+
+              #workspaces button,
+              #taskbar button {
+                margin: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4.0))}px 0px ${
+                  pkgs.lib.toString (builtins.floor (designFactor / 4.0))
+                }px;
+                border: 1px solid @surface1;
+                border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
+                background-color: @mantle;
+                padding: 0px;
+                transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
+              }
+
+              #workspaces button {
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px 0px ${
+                  pkgs.lib.toString (builtins.floor (designFactor / 2.0))
+                }px;
+              }
+
+              button * {
+                padding: 0px ${pkgs.lib.toString (builtins.floor (designFactor / 4))}px;
+              }
+
+              #workspaces button.active,
+              #taskbar button.active {
+                color: @blue;
+              }
+
+              #workspaces button:hover,
+              #taskbar button:hover {
+                background-color: @surface0;
+              }
+
+              #tray {
+                background-color: transparent;
               }
 
               #tray > widget {
                 border: 1px solid @surface1;
                 border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                background-color: @crust;
-                color: @text;
+                background-color: @mantle;
+                transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
               }
 
-              #tray image {
-                padding: 0px ${pkgs.lib.toString (builtins.floor designFactor)}px;
-              }
-
-              #tray > .passive {
+              #tray > widget.passive {
+                color: @lavender;
                 -gtk-icon-effect: dim;
               }
 
-              #tray > .active {
-                color: @lavender;
+              #tray > widget.active {
+                color: @blue;
               }
 
-              #tray > .needs-attention {
-                background-color: @green;
+              #tray > widget.needs-attention {
+                color: @mauve;
                 -gtk-icon-effect: highlight;
               }
 
               #tray > widget:hover {
-                background-color: @mantle;
+                background-color: @surface0;
+              }
+
+              #tray image {
+                padding: 0px ${pkgs.lib.toString (builtins.floor designFactor)}px 0px ${pkgs.lib.toString (builtins.floor designFactor)}px;
               }
             '';
           };
