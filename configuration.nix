@@ -263,6 +263,10 @@ in
         "ventoy-gtk3-1.1.18"
       ];
 
+      problems.handlers = {
+        "gtk+".broken = "warn"; # For Lutris Only
+      };
+
       # android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
       androidSDKCompositionFromTadFisher.accept_license = config.nixpkgs.config.allowUnfree;
     };
@@ -1235,7 +1239,7 @@ in
       };
 
       enableGtk3 = true;
-      enableGtk2 = true;
+      enableGtk2 = false;
     };
   };
 
@@ -4425,20 +4429,20 @@ in
           stateVersion = config.system.stateVersion;
         };
 
-        i18n = {
-          inputMethod = {
-            enable = config.i18n.inputMethod.enable;
-
-            type = config.i18n.inputMethod.type;
-            fcitx5 = {
-              addons = config.i18n.inputMethod.fcitx5.addons;
-              waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
-
-              systemd.enable = true;
-              ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
-            };
-          };
-        };
+        # i18n = {
+        #   inputMethod = {
+        #     enable = config.i18n.inputMethod.enable;
+        #
+        #     type = config.i18n.inputMethod.type;
+        #     fcitx5 = {
+        #       addons = config.i18n.inputMethod.fcitx5.addons;
+        #       waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
+        #
+        #       systemd.enable = true;
+        #       ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
+        #     };
+        #   };
+        # }; # FIXME: Build Failure
 
         fonts.fontconfig = {
           enable = config.fonts.fontconfig.enable;
@@ -4925,7 +4929,9 @@ in
               {
                 _args = [
                   "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | wofi --dmenu --prompt='Search Clipboard' --cache-file=/dev/null 2>/dev/null | cliphist decode | wl-copy\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | rofi -dmenu -sync -markup -markup-rows -font '${fontPreferences.sansSerif} ${
+                    pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+                  }' -window-title 'Clipboard' -p 'Clipboard' -ellipsize-mode middle -global-kb -click-to-exit -i -disable-history | cliphist decode | wl-copy\")")
                 ];
               }
 
@@ -4938,7 +4944,9 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | wofi --dmenu --prompt='Search Commands' --cache-file=/dev/null 2>/dev/null); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -markup -markup-rows -font '${fontPreferences.sansSerif} ${
+                    pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+                  }' -window-title 'Commands' -p 'Commands' -ellipsize-mode middle -global-kb -click-to-exit -i -disable-history); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -5209,7 +5217,6 @@ in
                 exit_window_retains_fullscreen = false;
 
                 focus_on_activate = true;
-                layers_hog_keyboard_focus = true;
 
                 always_follow_on_dnd = true;
 
@@ -5219,6 +5226,10 @@ in
                 middle_click_paste = true;
 
                 font_family = fontPreferences.sansSerif;
+              };
+
+              layers = {
+                layers_hog_keyboard_focus = true;
               };
 
               binds = {
@@ -5287,7 +5298,7 @@ in
 
                 precise_mouse_move = true;
               };
-            }; # Sorted from "General" to "Quirks" according to Wiki/Configuring/Basics/Variables.
+            }; # Sorted from "General" to "Quirks" according to the "Configuring > Core > Config options" Page.
 
           };
 
@@ -5666,19 +5677,24 @@ in
                 window {
                   border: 1px solid @surface2;
                   border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                  background-color: @base;
-                  color: @text;
+                  /* background-color: @base; */
+                  background-color: rgba(30, 30, 46, 0.99);
                 }
 
                 button {
-                  margin: ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                  margin: ${pkgs.lib.toString (builtins.floor designFactor)}px ${pkgs.lib.toString (builtins.floor designFactor)}px ${pkgs.lib.toString (builtins.floor designFactor)}px 0px;
                   box-shadow: none;
                   border: none;
                   border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                  background: none;
+                  background-color: @mantle;
                   padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                   padding-bottom: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
+                  color: @text;
                   transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
+                }
+
+                button:first-child {
+                  margin-left: ${pkgs.lib.toString (builtins.floor designFactor)}px;
                 }
 
                 button:hover,
@@ -5690,7 +5706,8 @@ in
                 button image {
                   box-shadow: none;
                   border: none;
-                  background: none;
+                  background-color: transparent;
+                  color: @text;
                   transition: color ${pkgs.lib.toString transitionDuration}ms;
                 }
 
@@ -6249,12 +6266,12 @@ in
             package = (
               pkgs.keepassxc.override {
                 withKeePassBrowser = true;
-                withKeePassBrowserPasskeys = true;
+                withKeePassDocs = true;
                 withKeePassFDOSecrets = true;
-                withKeePassKeeShare = true;
+                withKeePassMinimal = false;
                 withKeePassNetworking = true;
-                withKeePassSSHAgent = true;
-                withKeePassYubiKey = true;
+                withKeePassSSHAgent = !config.programs.gnupg.agent.enable;
+                withKeePassX11 = config.programs.hyprland.xwayland.enable;
               }
             );
           };
@@ -6706,7 +6723,6 @@ in
               window#waybar {
                 border: none;
                 background-color: transparent;
-                color: @lavender;
               }
 
               .modules-right > widget:last-child > #workspaces {
@@ -6738,6 +6754,7 @@ in
                 padding: ${
                   pkgs.lib.toString (builtins.floor (designFactor / 4.0))
                 }px ${pkgs.lib.toString (builtins.floor designFactor)}px;
+                color: @lavender;
               }
 
               #idle_inhibitor,
@@ -6881,6 +6898,7 @@ in
                 border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 background-color: @mantle;
                 padding: 0px;
+                color: @lavender;
                 transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
               }
 
@@ -6912,6 +6930,7 @@ in
                 border: 1px solid @surface1;
                 border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
                 background-color: @mantle;
+                color: @lavender;
                 transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
               }
 
@@ -7069,93 +7088,240 @@ in
             );
           };
 
-          wofi = {
+          rofi = {
             enable = true;
-            package = pkgs.wofi;
+            package = (
+              pkgs.rofi.override {
+                rofi-unwrapped = (
+                  pkgs.rofi-unwrapped.override {
+                    waylandSupport = true;
+                    x11Support = config.programs.hyprland.xwayland.enable;
+                  }
+                );
 
-            settings = {
-              normal_window = false;
-              layer = "overlay";
-              location = "center";
-
-              gtk_dark = true;
-              columns = 1;
-              dynamic_lines = false;
-              height = "50%";
-              width = "50%";
-              hide_scroll = false;
-
-              hide_search = false;
-              prompt = "Search";
-              show_all = true;
-              allow_markup = true;
-              allow_images = true;
-              image_size = builtins.floor (designFactor * 3.0);
-              no_actions = true;
-
-              insensitive = true;
-
-              single_click = true;
-
-              term = "contour";
-            };
-
-            style = ''
-               /* Catppuccin Mocha */
-               @define-color rosewater #f5e0dc;
-               @define-color flamingo #f2cdcd;
-               @define-color pink #f5c2e7;
-               @define-color mauve #cba6f7;
-               @define-color red #f38ba8;
-               @define-color maroon #eba0ac;
-               @define-color peach #fab387;
-               @define-color yellow #f9e2af;
-               @define-color green #a6e3a1;
-               @define-color teal #94e2d5;
-               @define-color sky #89dceb;
-               @define-color sapphire #74c7ec;
-               @define-color blue #89b4fa;
-               @define-color lavender #b4befe;
-               @define-color text #cdd6f4;
-               @define-color subtext1 #bac2de;
-               @define-color subtext0 #a6adc8;
-               @define-color overlay2 #9399b2;
-               @define-color overlay1 #7f849c;
-               @define-color overlay0 #6c7086;
-               @define-color surface2 #585b70;
-               @define-color surface1 #45475a;
-               @define-color surface0 #313244;
-               @define-color base #1e1e2e;
-               @define-color mantle #181825;
-               @define-color crust #11111b;
-
-              * {
-                font-family: ${fontPreferences.sansSerif};
-                font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
+                symlink-dmenu = true;
               }
+            );
+            # plugins = with pkgs; [
+            # ];
 
-              window {
-                border: 1px solid @surface2;
-                border-radius: ${pkgs.lib.toString designFactor}px;
-              }
+            theme =
+              let
+                makeLiteral = value: {
+                  _type = "literal";
+                  inherit value;
+                };
+              in
+              {
+                "*" = {
+                  # Catppuccin Mocha
+                  rosewater = makeLiteral "#f5e0dc";
+                  flamingo = makeLiteral "#f2cdcd";
+                  pink = makeLiteral "#f5c2e7";
+                  mauve = makeLiteral "#cba6f7";
+                  red = makeLiteral "#f38ba8";
+                  maroon = makeLiteral "#eba0ac";
+                  peach = makeLiteral "#fab387";
+                  yellow = makeLiteral "#f9e2af";
+                  green = makeLiteral "#a6e3a1";
+                  teal = makeLiteral "#94e2d5";
+                  sky = makeLiteral "#89dceb";
+                  sapphire = makeLiteral "#74c7ec";
+                  blue = makeLiteral "#89b4fa";
+                  lavender = makeLiteral "#b4befe";
+                  text = makeLiteral "#cdd6f4";
+                  subtext1 = makeLiteral "#bac2de";
+                  subtext0 = makeLiteral "#a6adc8";
+                  overlay2 = makeLiteral "#9399b2";
+                  overlay1 = makeLiteral "#7f849c";
+                  overlay0 = makeLiteral "#6c7086";
+                  surface2 = makeLiteral "#585b70";
+                  surface1 = makeLiteral "#45475a";
+                  surface0 = makeLiteral "#313244";
+                  base = makeLiteral "#1e1e2e";
+                  mantle = makeLiteral "#181825";
+                  crust = makeLiteral "#11111b";
 
-              #outer-box {
-                padding: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-              }
+                  background-color = makeLiteral "@base";
+                  text-color = makeLiteral "@text";
+                };
 
-              #inner-box {
-                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-              }
+                window = {
+                  border = makeLiteral "1px";
+                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
+                  border-color = makeLiteral "@surface2";
+                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
+                };
 
-              #entry {
-                margin-top: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
-                margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
-              }
+                mainbox = {
+                  border = makeLiteral "0px";
+                  padding = makeLiteral "0px";
+                };
 
-              #img {
-                margin-right: ${pkgs.lib.toString (builtins.floor (designFactor / 2.0))}px;
-              }
-            '';
+                inputbar = {
+                  margin = makeLiteral "0px 0px ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px 0px";
+                  border = makeLiteral "1px";
+                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
+                  border-color = makeLiteral "@surface2";
+                  background-color = makeLiteral "@mantle";
+                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                  spacing = makeLiteral "0px";
+                  children = map makeLiteral [
+                    "prompt"
+                    "textbox-prompt-colon"
+                    "entry"
+                    "num-filtered-rows"
+                    "textbox-num-sep"
+                    "num-rows"
+                    "case-indicator"
+                  ];
+                };
+
+                prompt = {
+                  background-color = makeLiteral "@mantle";
+                  spacing = makeLiteral "0px";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                textbox-prompt-colon = {
+                  expand = false;
+                  margin = makeLiteral "0px 0.3000em 0.0000em 0.0000em";
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@lavender";
+                  str = ":";
+                };
+
+                entry = {
+                  background-color = makeLiteral "@mantle";
+                  spacing = makeLiteral "0px";
+                  placeholder-color = makeLiteral "@overlay0";
+                  placeholder = "Search";
+                  cursor = makeLiteral "text";
+                };
+
+                num-filtered-rows = {
+                  expand = false;
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                textbox-num-sep = {
+                  expand = false;
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@lavender";
+                  str = "/";
+                };
+
+                num-rows = {
+                  expand = false;
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                case-indicator = {
+                  background-color = makeLiteral "@mantle";
+                  spacing = makeLiteral "0px";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                message = {
+                  margin = makeLiteral "0px 0px ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px 0px";
+                  border = makeLiteral "0px";
+                  padding = makeLiteral "0px";
+                };
+
+                textbox = {
+                  horizontal-align = makeLiteral "0.5";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                listview = {
+                  fixed-height = makeLiteral "0px";
+                  border = makeLiteral "0px";
+                  scrollbar = true;
+                  padding = makeLiteral "0px";
+                  spacing = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                };
+
+                element = {
+                  border = makeLiteral "0px";
+                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
+                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                  spacing = makeLiteral "0px";
+                  cursor = makeLiteral "pointer";
+                };
+
+                "element normal.normal" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@text";
+                };
+
+                "element normal.urgent" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@red";
+                };
+
+                "element normal.active" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@blue";
+                };
+
+                "element alternate.normal" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@text";
+                };
+
+                "element alternate.urgent" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@red";
+                };
+
+                "element alternate.active" = {
+                  background-color = makeLiteral "@mantle";
+                  text-color = makeLiteral "@blue";
+                };
+
+                "element selected.normal" = {
+                  background-color = makeLiteral "@surface0";
+                  text-color = makeLiteral "@lavender";
+                };
+
+                "element selected.urgent" = {
+                  background-color = makeLiteral "@surface0";
+                  text-color = makeLiteral "@red";
+                };
+
+                "element selected.active" = {
+                  background-color = makeLiteral "@surface0";
+                  text-color = makeLiteral "@blue";
+                };
+
+                element-icon = {
+                  background-color = makeLiteral "transparent";
+                  size = makeLiteral "1.0000em";
+                  text-color = makeLiteral "inherit";
+                  cursor = makeLiteral "inherit";
+                };
+
+                element-text = {
+                  background-color = makeLiteral "transparent";
+                  text-color = makeLiteral "inherit";
+                  cursor = makeLiteral "inherit";
+                  highlight = makeLiteral "inherit";
+                };
+
+                scrollbar = {
+                  width = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                  border = makeLiteral "1px";
+                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                  border-color = makeLiteral "@surface1";
+                  background-color = makeLiteral "@mantle";
+                  padding = makeLiteral "0px";
+                  handle-width = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
+                  handle-color = makeLiteral "@lavender";
+                  cursor = makeLiteral "pointer";
+                };
+              };
           };
 
           gpg = {
@@ -8084,7 +8250,7 @@ in
               pkgs.lutris.override {
                 steamSupport = config.nixpkgs.config.allowUnfree;
               }
-            );
+            ); # FIXME: Build Failure When Using the Unstable Channel
 
             extraPackages =
               with pkgs;
@@ -8233,6 +8399,8 @@ in
 
             flavor = config.catppuccin.flavor;
           };
+
+          rofi.enable = false; # Manually Done Instead
 
           zed = {
             enable = config.home-manager.users.normal.programs.zed-editor.enable;
