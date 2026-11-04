@@ -111,7 +111,7 @@ let
                 ln -s ${pkgs.ninja}/bin/ninja "$pkgBase/bin/ninja"
               '';
             };
-          }))
+          })) # Fixes Error
           cmake-4-1-2
 
           cmdline-tools-latest
@@ -2709,7 +2709,6 @@ in
     systemPackages =
       with pkgs;
       [
-        # dart # flutter adds the compatible version
         # newelle # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
@@ -6268,21 +6267,6 @@ in
             };
           };
 
-          keepassxc = {
-            enable = true;
-            package = (
-              pkgs.keepassxc.override {
-                withKeePassBrowser = true;
-                withKeePassDocs = true;
-                withKeePassFDOSecrets = true;
-                withKeePassMinimal = false;
-                withKeePassNetworking = true;
-                withKeePassSSHAgent = !config.programs.gnupg.agent.enable;
-                withKeePassX11 = config.programs.hyprland.xwayland.enable;
-              }
-            );
-          };
-
           waybar = {
             enable = true;
             package = config.programs.waybar.package;
@@ -6725,6 +6709,7 @@ in
               * {
                 font-family: ${fontPreferences.sansSerif};
                 font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
+                font-weight: 500; /* Medium */
               }
 
               window#waybar {
@@ -6965,16 +6950,6 @@ in
             '';
           };
 
-          vivid = {
-            enable = true;
-            package = pkgs.vivid;
-
-            enableBashIntegration = true;
-
-            colorMode = "24-bit";
-            activeTheme = "catppuccin-${config.catppuccin.flavor}";
-          };
-
           bash = {
             enable = true;
             package = pkgs.bashInteractive;
@@ -7028,6 +7003,30 @@ in
             settings = config.programs.starship.settings;
           };
 
+          dircolors.enable = !config.home-manager.users.normal.programs.vivid.enable;
+
+          vivid = {
+            enable = true;
+            package = pkgs.vivid;
+
+            enableBashIntegration = true;
+
+            colorMode = "24-bit";
+            activeTheme = "catppuccin-${config.catppuccin.flavor}";
+          };
+
+          kubecolor = {
+            enable = true;
+            package = pkgs.kubecolor;
+
+            enableAlias = true;
+
+            settings = {
+              kubectl = pkgs.lib.getExe pkgs.kubectl;
+              preset = "dark";
+            };
+          };
+
           nix-index = {
             enable = config.programs.nix-index.enable;
             package = config.programs.nix-index.package;
@@ -7036,8 +7035,6 @@ in
           };
 
           command-not-found.enable = config.programs.command-not-found.enable;
-
-          dircolors.enable = !config.home-manager.users.normal.programs.vivid.enable;
 
           direnv = {
             enable = config.programs.direnv.enable;
@@ -7052,23 +7049,6 @@ in
 
             silent = config.programs.direnv.silent;
           };
-
-          # gradle = {
-          #   enable = true;
-          #   package = pkgs.gradle;
-          # }; # flutter adds the compatible version
-
-          matplotlib = {
-            enable = true;
-
-            config = {
-              axes = {
-                grid = true;
-              };
-            };
-          };
-
-          # texlive = { };
 
           fastfetch = {
             enable = true;
@@ -7353,6 +7333,27 @@ in
               };
           };
 
+          bat = {
+            enable = config.programs.bat.enable;
+            package = config.programs.bat.package;
+            extraPackages = config.programs.bat.extraPackages;
+          };
+
+          keepassxc = {
+            enable = true;
+            package = (
+              pkgs.keepassxc.override {
+                withKeePassBrowser = true;
+                withKeePassDocs = true;
+                withKeePassFDOSecrets = true;
+                withKeePassMinimal = false;
+                withKeePassNetworking = true;
+                withKeePassSSHAgent = !config.programs.gnupg.agent.enable;
+                withKeePassX11 = config.programs.hyprland.xwayland.enable;
+              }
+            );
+          };
+
           gpg = {
             enable = true;
             package = config.programs.gnupg.package;
@@ -7376,10 +7377,6 @@ in
             gpgsmSettings = {
               with-key-data = true;
             };
-          };
-
-          mcp = {
-            enable = true;
           };
 
           zed-editor = {
@@ -8129,10 +8126,75 @@ in
             defaultEditor = false; # Done Manually Instead
           };
 
-          bat = {
-            enable = config.programs.bat.enable;
-            package = config.programs.bat.package;
-            extraPackages = config.programs.bat.extraPackages;
+          mcp = {
+            enable = true;
+
+            servers = {
+              fetch = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-fetch}/bin/mcp-server-fetch";
+              };
+
+              firefox = {
+                enabled = true;
+
+                command = "${pkgs.firefox-devtools-mcp}/bin/firefox-devtools-mcp";
+                args = [
+                  "--firefox-path"
+                  "${pkgs.firefox-devedition}/bin/firefox-devedition"
+                  "--tool-preset"
+                  "developer"
+                ];
+              };
+
+              git = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-git}/bin/mcp-server-git";
+              };
+
+              kubernetes = {
+                enabled = true;
+
+                command = "${pkgs.mcp-k8s-go}/bin/mcp-k8s-go";
+              };
+
+              nixos = {
+                enabled = true;
+
+                command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+              };
+
+              sequential-thinking = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-sequential-thinking}/bin/mcp-server-sequential-thinking";
+              };
+
+              time = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-time}/bin/mcp-server-time";
+              };
+            };
+          };
+
+          opencode = {
+            enable = true;
+            package = pkgs.opencode;
+
+            enableMcpIntegration = true;
+          };
+
+          matplotlib = {
+            enable = true;
+
+            config = {
+              axes = {
+                grid = true;
+              };
+            };
           };
 
           chromium = {
@@ -8254,18 +8316,6 @@ in
             languagePacks = config.programs.firefox.languagePacks;
 
             policies = config.programs.firefox.policies;
-          };
-
-          kubecolor = {
-            enable = true;
-            package = pkgs.kubecolor;
-
-            enableAlias = true;
-
-            settings = {
-              kubectl = pkgs.lib.getExe pkgs.kubectl;
-              preset = "dark";
-            };
           };
 
           mangohud = {
@@ -8407,12 +8457,6 @@ in
             mode = "prependImport";
           };
 
-          starship = {
-            enable = config.programs.starship.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
           fcitx5 = {
             enable = config.catppuccin.fcitx5.enable;
             apply = true;
@@ -8423,6 +8467,12 @@ in
             enableRounded = true;
           };
 
+          starship = {
+            enable = config.programs.starship.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
+
           vivid = {
             enable = config.catppuccin.enable;
 
@@ -8430,6 +8480,12 @@ in
           };
 
           rofi.enable = false; # Manually Done Instead
+
+          bat = {
+            enable = config.programs.bat.enable;
+
+            flavor = config.catppuccin.flavor;
+          };
 
           zed = {
             enable = config.home-manager.users.normal.programs.zed-editor.enable;
@@ -8446,8 +8502,8 @@ in
             italics = false;
           };
 
-          bat = {
-            enable = config.programs.bat.enable;
+          opencode = {
+            enable = config.home-manager.users.normal.programs.opencode.enable;
 
             flavor = config.catppuccin.flavor;
           };
