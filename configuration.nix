@@ -102,7 +102,16 @@ let
           build-tools-36-1-0
           build-tools-37-0-0
 
-          cmake-3-22-1
+          (cmake-3-22-1.overrideAttrs (oldAttributes: {
+            passthru = (oldAttributes.passthru or { }) // {
+              installSdk = ((oldAttributes.passthru or { }).installSdk or "") + ''
+                chmod u+w "$pkgBase/bin/"
+
+                rm -f "$pkgBase/bin/ninja"
+                ln -s ${pkgs.ninja}/bin/ninja "$pkgBase/bin/ninja"
+              '';
+            };
+          }))
           cmake-4-1-2
 
           cmdline-tools-latest
@@ -3208,6 +3217,15 @@ in
         zip
         zizmor
 
+        (cmakeWithGui.override {
+          buildDocs = true;
+          isMinimalBuild = false;
+          useOpenSSL = true;
+          uiToolkits = [
+            "qt5"
+          ];
+        })
+
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
@@ -4198,8 +4216,6 @@ in
 
         "x-scheme-handler/http" = "chromium-browser.desktop";
         "x-scheme-handler/https" = "chromium-browser.desktop";
-
-        "x-scheme-handler/mailto" = "electron-mail.desktop"; # FIXME: Find Alternative
       };
     };
   };
@@ -4929,9 +4945,7 @@ in
               {
                 _args = [
                   "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | rofi -dmenu -sync -markup -markup-rows -font '${fontPreferences.sansSerif} ${
-                    pkgs.lib.toString (builtins.floor (designFactor * 1.5))
-                  }' -window-title 'Clipboard' -p 'Clipboard' -ellipsize-mode middle -global-kb -click-to-exit -i -disable-history | cliphist decode | wl-copy\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | rofi -dmenu -sync -window-title 'Clipboard' -p 'Clipboard' | cliphist decode | wl-copy\")")
                 ];
               }
 
@@ -4944,9 +4958,7 @@ in
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -markup -markup-rows -font '${fontPreferences.sansSerif} ${
-                    pkgs.lib.toString (builtins.floor (designFactor * 1.5))
-                  }' -window-title 'Commands' -p 'Commands' -ellipsize-mode middle -global-kb -click-to-exit -i -disable-history); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -5003,12 +5015,6 @@ in
                   "SUPER + ALT + SHIFT + W"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
                 ];
-              }
-              {
-                _args = [
-                  "XF86Mail"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- electron-mail\")")
-                ]; # FIXME: Find Alternative
               }
               {
                 _args = [
@@ -5429,6 +5435,7 @@ in
 
               source = pkgs.writeText "contour.yml" ''
                 spawn_new_process: true
+                remember_window_position: false
                 gui_config_locked: false
                 live_config: true # live: true
 
@@ -5536,7 +5543,7 @@ in
                       blinking: true
                     blink_style: smooth
                     hyperlink_decoration:
-                      normal: dotted-underline
+                      mode: hover
                       hover: underline
 
                     size_indicator_on_resize: true
@@ -7105,6 +7112,27 @@ in
             # plugins = with pkgs; [
             # ];
 
+            settings = {
+              modes = "run";
+
+              font = "${fontPreferences.sansSerif} ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}";
+              show-icons = false; # For dmenu
+              icon-theme = config.home-manager.users.normal.gtk.iconTheme.name;
+
+              global-kb = true;
+              steal-focus = true;
+              click-to-exit = true;
+              hover-select = true;
+
+              case-sensitive = false;
+              fixed-num-lines = true;
+              sort = true;
+              cycle = true;
+
+              disable-history = true;
+              terminal = "contour";
+            };
+
             theme =
               let
                 makeLiteral = value: {
@@ -7297,6 +7325,7 @@ in
                 };
 
                 element-icon = {
+                  margin = makeLiteral "0px ${pkgs.lib.toString (builtins.floor designFactor)} 0px 0px";
                   background-color = makeLiteral "transparent";
                   size = makeLiteral "1.0000em";
                   text-color = makeLiteral "inherit";
