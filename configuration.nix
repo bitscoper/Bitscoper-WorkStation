@@ -6972,7 +6972,9 @@ in
               "lithist"
             ];
 
-            # sessionVariables = { };
+            sessionVariables = {
+              HISTTIMEFORMAT = "%F %T ";
+            };
 
             shellAliases = config.programs.bash.shellAliases;
 
@@ -8130,6 +8132,10 @@ in
             enable = true;
 
             servers = {
+              crw = {
+                command = "${pkgs.fastcrw}/bin/crw-mcp";
+              };
+
               fetch = {
                 enabled = true;
 
@@ -8216,7 +8222,6 @@ in
                   {
                     id,
                     version,
-                    sha256,
                   }:
                   {
                     inherit id;
@@ -8225,7 +8230,6 @@ in
                     crxPath = builtins.fetchurl {
                       url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=${browserVersion}&x=id%3D${id}%26installsource%3Dondemand%26uc";
                       name = "${id}.crx";
-                      inherit sha256;
                     };
                   };
 
@@ -8238,13 +8242,12 @@ in
                     id,
                     version,
                     url,
-                    sha256,
                   }:
                   {
                     inherit id version;
 
                     crxPath = builtins.fetchurl {
-                      inherit url sha256;
+                      inherit url;
                       name = "${id}.crx";
                     };
                   };
@@ -8253,56 +8256,47 @@ in
                 (createExtensionFromStore {
                   id = "bkkmolkhemgaeaeggcmfbghljjjoofoh";
                   version = "5.0.0";
-                  sha256 = "sha256:01bzcbpxgrzmwp514q7fgp8g144bs7rzfmp0r07g6ysq0ykbhz3v";
                 }) # "Catppuccin Chrome Theme - Mocha"
 
                 (createExtensionFromAnywhere {
                   id = "ocaahdebbfolfmndjeplogmgcagdmblk";
                   version = "1.5.5.4";
                   url = "https://github.com/NeverDecaf/chromium-web-store/releases/download/v1.5.5.4/Chromium.Web.Store.crx";
-                  sha256 = "sha256:0ckgk793hhffn9bw5dnmj9zm9ng88qcikbbdacnay4avlas7bh33";
                 }) # "Chromium Web Store"
 
                 (createExtensionFromStore {
                   id = "ldpochfccmkkmhdbclfhpagapcfdljkj";
                   version = "3.0.2";
-                  sha256 = "sha256:056slds04sb38gcwgbrigvk05xj7mg82a9mzai7024j5lgsvwnrd";
                 }) # "Decentraleyes"
 
                 (createExtensionFromStore {
                   id = "oboonakemofpalcgghocfoadofidjkkk";
                   version = "1.10.4.1";
-                  sha256 = "sha256:0kih8qkfqpxif5pf9p1zxw28fvmncp1ylc3dpfp197lvyfdcv9md";
                 }) # "KeePassXC-Browser"
 
                 (createExtensionFromStore {
                   id = "cnojnbdhbhnkbcieeekonklommdnndci";
                   version = "8.5.4";
-                  sha256 = "sha256:09j1a79rzcqa2jgslb1c002nq603vbzp8z2zcl78xrqh82ng37nf";
                 }) # "Search by Image"
 
                 (createExtensionFromStore {
                   id = "mpiodijhokgodhhofbcjdecpffjipkle";
                   version = "1.31.2";
-                  sha256 = "sha256:126nmmm371n4mcywqqjm3raad54pwwpzkc3xha448iabfcxazphn";
                 }) # "SingleFile"
 
                 (createExtensionFromStore {
                   id = "mnjggcdmjocbbbhaepdhchncahnbgone";
                   version = "6.1.6";
-                  sha256 = "sha256:1zxlrlvggis8zhyydmmnwmg5qxbawzpwdryxl0f10ilrd8mzx1sm";
                 }) # "SponsorBlock for YouTube - Skip Sponsorships"
 
                 (createExtensionFromStore {
                   id = "ddkjiahejlhfcafbddmgiahcphecmpfh";
                   version = "2026.1012.1545";
-                  sha256 = "sha256:07xbrdpha0h1q7iyjjjsapy8xzalw0il6blwi27aln0y49ypsjd2";
                 }) # "uBlock Origin Lite"
 
                 (createExtensionFromStore {
                   id = "jabopobgcpjmedljpbcaablpmlmfcogm";
                   version = "3.2.0";
-                  sha256 = "sha256:1lhgbi5k1ds0g0ryk49dvihji40mf1gk94k4y3b5znn0i5xzxznz";
                 }) # "WhatFont"
               ];
           };

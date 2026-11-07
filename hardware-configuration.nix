@@ -216,7 +216,7 @@
   config = {
     fileSystems = {
       "/" = {
-        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        device = "/dev/mapper/luks-a5af0c70-392b-4dc5-9111-0f4b2864a698";
         fsType = "btrfs";
 
         options = [
@@ -231,7 +231,7 @@
       };
 
       "/boot" = {
-        device = "/dev/disk/by-uuid/9A25-C94D";
+        device = "/dev/disk/by-uuid/B0AC-040A";
         fsType = "vfat";
 
         options = [
@@ -241,7 +241,7 @@
       };
 
       "/nix" = {
-        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        device = "/dev/mapper/luks-a5af0c70-392b-4dc5-9111-0f4b2864a698";
         fsType = "btrfs";
 
         options = [
@@ -257,7 +257,7 @@
       };
 
       "/home" = {
-        device = "/dev/mapper/luks-bd4924a7-a931-4592-890b-d7cc35be5e39";
+        device = "/dev/mapper/luks-a5af0c70-392b-4dc5-9111-0f4b2864a698";
         fsType = "btrfs";
 
         options = [
@@ -278,7 +278,6 @@
 
         options = [
           "async"
-          "attr2"
           "defaults"
           "discard"
           # "discard=async"
@@ -293,7 +292,7 @@
 
     swapDevices = [
       {
-        device = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
+        device = "/dev/mapper/luks-bb7b9c97-627f-420e-9388-5d047601b984";
 
         discardPolicy = "both";
       }
@@ -303,15 +302,15 @@
       initrd = {
         luks = {
           devices = {
-            "luks-bd4924a7-a931-4592-890b-d7cc35be5e39" = {
-              device = "/dev/disk/by-uuid/bd4924a7-a931-4592-890b-d7cc35be5e39";
+            "luks-a5af0c70-392b-4dc5-9111-0f4b2864a698" = {
+              device = "/dev/disk/by-uuid/a5af0c70-392b-4dc5-9111-0f4b2864a698";
 
               allowDiscards = true;
               bypassWorkqueues = true;
             };
 
-            "luks-34ec5350-db4d-46fb-b370-feefe9d3de0a" = {
-              device = "/dev/disk/by-uuid/34ec5350-db4d-46fb-b370-feefe9d3de0a";
+            "luks-bb7b9c97-627f-420e-9388-5d047601b984" = {
+              device = "/dev/disk/by-uuid/luks-bb7b9c97-627f-420e-9388-5d047601b984";
 
               allowDiscards = true;
               bypassWorkqueues = true;
@@ -320,7 +319,7 @@
         };
       };
 
-      resumeDevice = "/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a";
+      resumeDevice = "/dev/mapper/luks-bb7b9c97-627f-420e-9388-5d047601b984";
     };
 
     systemd = {
@@ -381,7 +380,7 @@
 
         kernelParams = [
           "intel_iommu=on"
-          "resume=/dev/mapper/luks-34ec5350-db4d-46fb-b370-feefe9d3de0a"
+          "resume=/dev/mapper/luks-bb7b9c97-627f-420e-9388-5d047601b984"
         ];
 
         initrd = {
