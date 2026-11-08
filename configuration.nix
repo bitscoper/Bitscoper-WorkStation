@@ -269,7 +269,7 @@ in
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
         "mbedtls-3.6.1-unstable-2025-08-11"
-        "ventoy-gtk3-1.1.18"
+        "ventoy-1.1.18"
       ];
 
       problems.handlers = {
@@ -1597,9 +1597,6 @@ in
         }
       );
 
-      # extraLv2Packages = with pkgs; [
-      # ];
-
       systemWide = false;
 
       audio.enable = true;
@@ -1607,7 +1604,6 @@ in
       alsa.enable = true;
       alsa.support32Bit = true;
       pulse.enable = true;
-      jack.enable = true;
 
       socketActivation = true;
 
@@ -2709,7 +2705,6 @@ in
     systemPackages =
       with pkgs;
       [
-        # newelle # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
         aapt
@@ -2783,6 +2778,8 @@ in
         cloc
         cloneit
         cloudflared
+        cmake-format
+        cmake-lint
         codeowners
         codevis
         colorgrind
@@ -3009,6 +3006,7 @@ in
         lzham
         macchanger
         mailcap
+        markitdown
         mdns-scanner
         mergerfs
         mesa-demos
@@ -3029,6 +3027,7 @@ in
         nautilus
         nautilus-python
         nethogs
+        newelle
         newsflash
         nilfs-utils
         ninja
@@ -3216,13 +3215,10 @@ in
         zip
         zizmor
 
-        (cmakeWithGui.override {
+        (cmake.override {
           buildDocs = true;
           isMinimalBuild = false;
           useOpenSSL = true;
-          uiToolkits = [
-            "qt5"
-          ];
         })
 
         (curlFull.override {
@@ -3560,6 +3556,7 @@ in
         config.programs.nix-index.package
         config.programs.nm-applet.package # Also Provides nm-connection-editor
         config.services.phpfpm.phpPackage
+        config.services.pipewire.package
       ]
 
       ++ config.boot.extraModulePackages
@@ -3607,7 +3604,8 @@ in
           rar
           unrar
 
-          (ventoy-full-gtk.override {
+          (ventoy-full.override {
+            withCryptsetup = true;
             withExt4 = true;
             withNtfs = true;
             withXfs = true;
@@ -5433,35 +5431,26 @@ in
               enable = true;
 
               source = pkgs.writeText "contour.yml" ''
-                spawn_new_process: true
-                remember_window_position: false
-                gui_config_locked: false
-                live_config: true # live: true
-
                 platform_plugin: auto
-
-                osc_context:
-                  enabled: true
-
                 renderer:
                   backend: vulkan
 
-                images:
-                 good_image_protocol: true
-                 sixel_scrolling: true
+                spawn_new_process: true
+                remember_window_position: false
 
-                grapheme_clustering: true
-                reflow_on_resize: true
-                text_scaling_method: rerasterize
+                gui_config_locked: false
+                live: true
 
+                ui_style: native
                 window_control_style: auto
                 tab_bar_visibility: Multiple
                 tab_bar_position: Top
-                ui_style: native
-                theme: dark
-                box_arc_style: round
+                tab_switch_on_horizontal_wheel: true
+                chrome_density: comfortable
+                theme: terminal
+                command_palette_recent_count: 0
                 gutter:
-                  line_numbers: false
+                  line_numbers: off
                   timestamps: false
                   user_marks: false
                   exit_status: false
@@ -5474,10 +5463,26 @@ in
                   branch_style: thin
                   arc_style: round
                   merge_commit_style: bullet
+                box_arc_style: round
 
-                tab_switch_on_horizontal_wheel: true
+                daemon:
+                  mode: in_process
+                connect_picker_on_start: false
+                osc_context:
+                  enabled: true
+
+                images:
+                  good_image_protocol: true
+                  sixel_scrolling: true
+
+                grapheme_clustering: true
+                reflow_on_resize: true
+                snap_to_rows: false
+                text_scaling_method: rerasterize
+
                 hyperlink_hover_tooltip: true
                 on_mouse_selection: CopyToSelectionClipboard
+                secure_input: auto
 
                 accessibility_announcements: true
                 accessibility_caret_reporting: true
@@ -5518,13 +5523,7 @@ in
                   main:
                     pixel_reporting: Device
 
-                    input_method_editor: true
-
-                    permissions:
-                      capture_buffer: ask
-                      change_font: ask
-                      display_host_writable_statusline: ask
-
+                    size_indicator_on_resize: true
                     margins:
                       horizontal: ${pkgs.lib.toString (builtins.floor designFactor)}
                       vertical: ${pkgs.lib.toString (builtins.floor designFactor)}
@@ -5534,32 +5533,58 @@ in
                       position: Bottom
                     scrollbar:
                       position: Right
+                      mode: always
                       hide_in_alt_screen: false
+                      marks: [failures, commands, running, user_marks, search_matches]
                     sticky_header:
                       mode: scrolled
+
+                    mouse:
+                      hide_while_typing: false
+                    mouse_forwarding: forwarded
+                    input_method_editor: true
+                    input_method_editor_style: highlighted
                     cursor:
                       shape: bar
                       blinking: true
+                    cursor_motion_animation_duration: ${
+                      pkgs.lib.toString (builtins.floor (transitionDuration / 2.0))
+                    }
                     blink_style: smooth
+
+                    history:
+                      auto_scroll_on_update: false
+                    smooth_scrolling: true
+                    momentum_scrolling: true
+
+                    screen_transition_style: fade
+                    screen_transition_duration: ${pkgs.lib.toString transitionDuration}
+
+                    link_detection:
+                      primary_screen:
+                        file_paths: true
+                        urls: true
+                      other_screens:
+                        file_paths: true
+                        urls: true
                     hyperlink_decoration:
                       mode: hover
                       hover: underline
 
-                    size_indicator_on_resize: true
-                    screen_transition: fade
-                    mouse:
-                      hide_while_typing: false
-                    history:
-                      auto_scroll_on_update: true
-                    smooth_scrolling: true
-                    momentum_scrolling: true
                     highlight_word_and_matches_on_double_click: true
+                    search_case_sensitivity: smart
                     copy_command_preserve_multiline: true
 
                     bell:
                       sound: "default"
                       volume: 1 # 1 = Maximum
                       alert: true
+
+                    notify_on_command_finish:
+                      when: unfocused
+                      outcome: any
+                      action: notify_bell
+                      clear_on: focus
 
                     font:
                       locator: Native
@@ -5581,13 +5606,17 @@ in
                     background:
                       blur: false
                       opacity: 1.0
-
                     colors: "catppuccin_mocha"
                     draw_bold_text_with_bright_colors: true
 
                     shell: /run/current-system/sw/bin/bash
                     arguments: []
                     initial_working_directory: "~"
+
+                    permissions:
+                      capture_buffer: ask
+                      change_font: ask
+                      display_host_writable_statusline: ask
 
                 default_profile_name: main
               '';
@@ -7091,8 +7120,6 @@ in
                 symlink-dmenu = true;
               }
             );
-            # plugins = with pkgs; [
-            # ];
 
             settings = {
               modes = "run";
@@ -8132,17 +8159,25 @@ in
             enable = true;
 
             servers = {
-              crw = {
+              codebase-memory-mcp = {
+                enabled = true;
+
+                command = "${pkgs.codebase-memory-mcp}/bin/codebase-memory-mcp";
+              };
+
+              context-mode = {
+                enabled = true;
+
+                command = "${pkgs.context-mode}/bin/context-mode";
+              };
+
+              crw-mcp = {
+                enabled = true;
+
                 command = "${pkgs.fastcrw}/bin/crw-mcp";
               };
 
-              fetch = {
-                enabled = true;
-
-                command = "${pkgs.mcp-server-fetch}/bin/mcp-server-fetch";
-              };
-
-              firefox = {
+              firefox-devtools-mcp = {
                 enabled = true;
 
                 command = "${pkgs.firefox-devtools-mcp}/bin/firefox-devtools-mcp";
@@ -8154,43 +8189,71 @@ in
                 ];
               };
 
-              git = {
+              markitdown-mcp = {
                 enabled = true;
 
-                command = "${pkgs.mcp-server-git}/bin/mcp-server-git";
+                command = "${pkgs.markitdown-mcp}/bin/markitdown-mcp";
               };
 
-              kubernetes = {
+              mcp-k8s-go = {
                 enabled = true;
 
                 command = "${pkgs.mcp-k8s-go}/bin/mcp-k8s-go";
               };
 
-              nixos = {
+              mcp-nixos = {
                 enabled = true;
 
                 command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
               };
 
-              sequential-thinking = {
+              mcp-server-fetch = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-fetch}/bin/mcp-server-fetch";
+              };
+
+              mcp-server-git = {
+                enabled = true;
+
+                command = "${pkgs.mcp-server-git}/bin/mcp-server-git";
+              };
+
+              mcp-server-sequential-thinking = {
                 enabled = true;
 
                 command = "${pkgs.mcp-server-sequential-thinking}/bin/mcp-server-sequential-thinking";
               };
 
-              time = {
+              mcp-server-time = {
                 enabled = true;
 
                 command = "${pkgs.mcp-server-time}/bin/mcp-server-time";
+              };
+
+              open-websearch = {
+                enabled = true;
+
+                command = "${pkgs.open-websearch}/bin/open-websearch";
+                env = {
+                  MODE = "stdio";
+                  DEFAULT_SEARCH_ENGINE = "duckduckgo";
+                };
               };
             };
           };
 
           opencode = {
             enable = true;
-            package = pkgs.opencode;
+            package = pkgs.opencode-desktop;
+            web.enable = false;
 
             enableMcpIntegration = true;
+
+            mutableSettings = true;
+            validateFiles = {
+              config = false; # Not Applicable for pkgs.opencode-desktop
+            };
           };
 
           matplotlib = {
@@ -8496,11 +8559,7 @@ in
             italics = false;
           };
 
-          opencode = {
-            enable = config.home-manager.users.normal.programs.opencode.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
+          opencode.enable = false; # Not Applicable for GUI
 
           chromium.enable = false; # Manually Done Instead
 
