@@ -9,14 +9,14 @@
   ...
 }:
 let
-  stableNixPackages =
-    import
-      (fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-      })
-      {
-        config = config.nixpkgs.config;
-      };
+  # stableNixPackages =
+  #   import
+  #     (fetchTarball {
+  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+  #     })
+  #     {
+  #       config = config.nixpkgs.config;
+  #     };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   androidSDKCompositionFlake = builtins.getFlake "github:tadfisher/android-nixpkgs/stable";
@@ -122,7 +122,7 @@ let
           ndk-29-0-14206865
           ndk-30-0-16248370
 
-          platform-tools
+          # platform-tools # FIXME: Build Failure
 
           platforms-android-28
           platforms-android-29
@@ -271,10 +271,6 @@ in
         "mbedtls-3.6.1-unstable-2025-08-11"
         "ventoy-1.1.18"
       ];
-
-      problems.handlers = {
-        "gtk+".broken = "warn"; # For Lutris Only
-      };
 
       # android_sdk.accept_license = config.nixpkgs.config.allowUnfree;
       androidSDKCompositionFromTadFisher.accept_license = config.nixpkgs.config.allowUnfree;
@@ -591,18 +587,26 @@ in
       };
     };
 
-    kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
+    kernelPackages = pkgs.linuxPackages_xanmod_latest.extend (
+      final: previous: {
+        kernel = previous.kernel.override (arguments: {
+          kernelPatches = lib.filter (patch: patch.name != "tools-add-128-bit-integer-types-for-aarch64") (
+            arguments.kernelPatches or [ ]
+          );
+        });
+      }
+    );
 
     extraModulePackages = with config.boot.kernelPackages; [
+      # apfs # FIXME: Build Failure
+      # cpupower # FIXME: Build Failure
       # openafs # FIXME: Build Failure
-      # v4l2loopback # FIXME: Collision
-      apfs
+      # zfs_2_4 # Marked as Broken
       bcachefs
-      cpupower
       mm-tools
       tmon
       turbostat
-      zfs_2_4
+      v4l2loopback
     ];
 
     hardwareScan = true;
@@ -704,7 +708,7 @@ in
   powerManagement = {
     enable = true;
 
-    cpuFreqGovernor = "performance";
+    # cpuFreqGovernor = "performance"; # FIXME: Build Failure
     scsiLinkPolicy = "max_performance";
 
     # powerUpCommands = '''';
@@ -2295,7 +2299,7 @@ in
 
       profiles.user.databases = [
         {
-          lockAll = false;
+          lockAll = true;
 
           settings = {
             "org/gnome/desktop/interface" = {
@@ -2311,6 +2315,18 @@ in
 
             "org/gnome/desktop/wm/preferences" = {
               button-layout = "appmenu:minimize,maximize,close";
+            };
+
+            "org/gnome/nautilus/icon-view" = {
+              captions = [
+                "size"
+                "date_modified"
+                "none"
+              ];
+            };
+
+            "org/gtk/gtk4/settings/file-chooser" = {
+              show-hidden = true;
             };
 
             "org/gtk/settings/file-chooser" = {
@@ -2705,8 +2721,22 @@ in
     systemPackages =
       with pkgs;
       [
+        # apkeep # FIXME: Build Failure
+        # darling-dmg # Marked as Broken
+        # field-monitor # FIXME: Build Failure
+        # flake-checker # FIXME: Build Failure
+        # gearlever # FIXME: Build Failure
+        # genealogos-cli # FIXME: Build Failure
+        # markitdown # FIXME: Build Failure
+        # newelle # FIXME: Build Failure
+        # newsflash # FIXME: Build Failure
+        # oha # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
         # reiser4progs # Marked as Broken
+        # soundconverter # FIXME: Build Failure
+        # streamlit # FIXME: Build Failure
+        # video2x # FIXME: Build Failure
+        # zizmor # FIXME: Build Failure
         aapt
         acl
         acpica-tools
@@ -2725,7 +2755,6 @@ in
         ansilove
         apfs-fuse
         apfsprogs
-        apkeep
         apkleaks
         appimageupdate-qt
         archivemount
@@ -2850,12 +2879,10 @@ in
         ffmpegthumbnailer
         ffpb
         fh
-        field-monitor
         file
         fileinfo
         filen-desktop
         findutils
-        flake-checker
         flare-floss
         flawz
         flightgear
@@ -2871,7 +2898,7 @@ in
         gawk
         gcc
         gcr_4
-        genealogos-cli
+        gerbolyze
         gh
         gh-contribs
         gh-skyline
@@ -2893,6 +2920,7 @@ in
         glib-networking
         gnome-characters
         gnome-firmware
+        gnome-frog
         gnome-multi-writer
         gnss-sdr
         gnugrep
@@ -2912,6 +2940,7 @@ in
         gtk-vnc
         gtkhash
         gucharmap
+        guestfs-tools
         gzip
         halftone
         hashes
@@ -3006,7 +3035,6 @@ in
         lzham
         macchanger
         mailcap
-        markitdown
         mdns-scanner
         mergerfs
         mesa-demos
@@ -3018,6 +3046,7 @@ in
         minikube
         mixxx
         monkeys-audio
+        morphosis
         mousam
         moxnotify
         mp3fs
@@ -3027,8 +3056,6 @@ in
         nautilus
         nautilus-python
         nethogs
-        newelle
-        newsflash
         nilfs-utils
         ninja
         nix-diff
@@ -3049,7 +3076,7 @@ in
         nwg-bar
         nwg-drawer
         obexftp
-        oha
+        onionshare-gui
         openafs
         openai-whisper
         openapv
@@ -3114,6 +3141,7 @@ in
         satellite
         sbc
         sbom2dot
+        sbomnix
         schroedinger
         scorecard
         scrcpy
@@ -3140,7 +3168,6 @@ in
         stellarium
         strace
         strace-analyzer
-        streamlit
         subfinder
         svt-av1
         swift
@@ -3178,6 +3205,7 @@ in
         util-linux
         valgrind
         valuta
+        virt-v2v
         vorbis-tools
         vulnix
         wafw00f
@@ -3213,7 +3241,10 @@ in
         zenmap
         zfs
         zip
-        zizmor
+
+        # (cutter.withPlugins (plugins: [
+        #   plugins.rz-ghidra
+        # ])) # FIXME: Build Failure
 
         (cmake.override {
           buildDocs = true;
@@ -3576,24 +3607,6 @@ in
       ++ config.virtualisation.podman.extraRuntimes
       ++ config.xdg.portal.configPackages
       ++ config.xdg.portal.extraPortals
-
-      ++ (with stableNixPackages; [
-        darling-dmg
-        gearlever
-        gerbolyze
-        gnome-frog
-        guestfs-tools
-        morphosis
-        onionshare-gui
-        sbomnix
-        soundconverter
-        video2x
-        virt-v2v
-
-        (cutter.withPlugins (plugins: [
-          plugins.rz-ghidra
-        ]))
-      ]) # FIXME: Build Failure When Using the Unstable Channel
 
       ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
         with pkgs;
@@ -4442,20 +4455,20 @@ in
           stateVersion = config.system.stateVersion;
         };
 
-        # i18n = {
-        #   inputMethod = {
-        #     enable = config.i18n.inputMethod.enable;
-        #
-        #     type = config.i18n.inputMethod.type;
-        #     fcitx5 = {
-        #       addons = config.i18n.inputMethod.fcitx5.addons;
-        #       waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
-        #
-        #       systemd.enable = true;
-        #       ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
-        #     };
-        #   };
-        # }; # FIXME: Build Failure
+        i18n = {
+          inputMethod = {
+            enable = config.i18n.inputMethod.enable;
+
+            type = config.i18n.inputMethod.type;
+            fcitx5 = {
+              addons = config.i18n.inputMethod.fcitx5.addons;
+              waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
+
+              systemd.enable = true;
+              ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
+            };
+          };
+        };
 
         fonts.fontconfig = {
           enable = config.fonts.fontconfig.enable;
@@ -4493,7 +4506,7 @@ in
                 mode = "highres";
                 position = "auto";
                 transform = 0;
-                scale = 1;
+                scale = 1.0;
               }
             ];
 
@@ -5636,9 +5649,53 @@ in
               executable = null;
             };
 
-            "mimeapps.list" = {
-              force = true;
+            "fdroidcl/config.toml" = {
+              enable = true;
+
+              source = pkgs.writeText "fdroidcl.toml" ''
+                setups = []
+
+                [[repos]]
+                id = 'F-Droid'
+                url = 'https://f-droid.org/repo'
+                enabled = true
+
+                [[repos]]
+                id = 'F-Droid_Archive'
+                url = 'https://f-droid.org/archive'
+                enabled = true
+
+                [[repos]]
+                id = 'IzzyOnDroid'
+                url = 'https://apt.izzysoft.de/fdroid/repo'
+                enabled = true
+
+                [[repos]]
+                id = 'Guardian_Project'
+                url = 'https://guardianproject.info/fdroid/repo'
+                enabled = true
+
+                [[repos]]
+                id = 'Guardian_Project_Archive'
+                url = 'https://guardianproject.info/fdroid/archive'
+                enabled = true
+
+                [[repos]]
+                id = 'microG'
+                url = 'https://repo.microg.org/fdroid/repo'
+                enabled = true
+
+                [[repos]]
+                id = 'microG_Archive'
+                url = 'https://microg.org/fdroid/archive'
+                enabled = true
+              '';
+
+              target = "fdroidcl/config.toml";
+              executable = null;
             };
+
+            "mimeapps.list".force = true;
 
             "nwg-bar/bar.json" = {
               enable = true;
@@ -8189,11 +8246,11 @@ in
                 ];
               };
 
-              markitdown-mcp = {
-                enabled = true;
+              # markitdown-mcp = {
+              #   enabled = true;
 
-                command = "${pkgs.markitdown-mcp}/bin/markitdown-mcp";
-              };
+              #   command = "${pkgs.markitdown-mcp}/bin/markitdown-mcp";
+              # }; # FIXME: Build Failure
 
               mcp-k8s-go = {
                 enabled = true;
@@ -8344,7 +8401,7 @@ in
 
                 (createExtensionFromStore {
                   id = "mpiodijhokgodhhofbcjdecpffjipkle";
-                  version = "1.31.2";
+                  version = "1.36.0";
                 }) # "SingleFile"
 
                 (createExtensionFromStore {
@@ -8354,12 +8411,12 @@ in
 
                 (createExtensionFromStore {
                   id = "ddkjiahejlhfcafbddmgiahcphecmpfh";
-                  version = "2026.1012.1545";
+                  version = "2026.1103.1743";
                 }) # "uBlock Origin Lite"
 
                 (createExtensionFromStore {
                   id = "jabopobgcpjmedljpbcaablpmlmfcogm";
-                  version = "3.2.0";
+                  version = "3.3.0";
                 }) # "WhatFont"
               ];
           };
@@ -8386,7 +8443,7 @@ in
               pkgs.lutris.override {
                 steamSupport = config.nixpkgs.config.allowUnfree;
               }
-            ); # FIXME: Build Failure When Using the Unstable Channel
+            );
 
             extraPackages =
               with pkgs;
