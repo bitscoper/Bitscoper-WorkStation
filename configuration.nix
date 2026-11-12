@@ -326,7 +326,7 @@ in
       })
 
       (final: previous: {
-        ghost-sh = final.stdenv.mkDerivation {
+        ghost-sh = previous.stdenv.mkDerivation {
           pname = "ghost-sh";
           version = "main";
 
@@ -336,8 +336,8 @@ in
             submodules = true;
           };
 
-          nativeBuildInputs = [
-            final.zig.hook
+          nativeBuildInputs = with previous; [
+            zig.hook
           ];
 
           zigBuildFlags = [
@@ -370,9 +370,9 @@ in
             (oldAttributes.nativeBuildInputs or [
             ]
             )
-            ++ [
-              final.python3
-            ];
+            ++ (with previous; [
+              python3
+            ]);
 
           postPatch = (oldAttributes.postPatch or "") + ''
             python3 - <<'PY'
@@ -458,6 +458,32 @@ in
           '';
         });
       }) # Replaces Slower `uwsm app` with Faster `uwsm-app`
+
+      (final: previous: {
+        opendm = previous.stdenv.mkDerivation {
+          pname = "opendm";
+          version = "main";
+
+          src = fetchGit {
+            url = "https://github.com/nadermkhan/opendm.git";
+            ref = "main";
+            submodules = true;
+          };
+
+          nativeBuildInputs = with previous; [
+            cmake
+            pkg-config
+            wrapGAppsHook4
+          ];
+
+          buildInputs = with previous; [
+            curl
+            gtk4
+            libadwaita
+            nlohmann_json
+          ];
+        };
+      }) # Addition
     ];
   };
 
@@ -3077,6 +3103,7 @@ in
         lld_22
         llmfit
         llvm_22
+        lock
         logtop
         lorem
         loupe
@@ -3136,6 +3163,7 @@ in
         openai-whisper
         openapv
         opencore-amr
+        opendm # From config.nixpkgs.overlays
         openh264
         openjpeg
         openobex
@@ -3584,16 +3612,12 @@ in
         kclock
         kcolorchooser
         kdenlive
-        kget
         kjournald
-        kleopatra
         kmahjongg
-        kmousetool
         kmouth
         kontrast
         kshisen
         kwave
-        marble
       ])
 
       ++ (with pkgs.linphonePackages; [
@@ -7245,6 +7269,7 @@ in
               #clock:hover,
               #user:hover,
               #systemd-failed-units:hover,
+              #custom-swaynotificationcenter:hover,
               #gamemode:hover {
                 background-color: @surface0;
               }
