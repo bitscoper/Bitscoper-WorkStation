@@ -224,12 +224,19 @@ in
 
     ./hardware-configuration.nix
 
-    ./modules/contour.nix
-    ./modules/icecast.nix
-    ./modules/jellyfin.nix
-    ./modules/nautilus.nix
-    ./modules/waydroid.nix
-    ./modules/wireshark.nix
+    ./Modules/bat.nix
+    ./Modules/Contour.nix
+    ./Modules/Fcitx_5.nix
+    ./Modules/fdroidcl.nix
+    ./Modules/Icecast.nix
+    ./Modules/Jellyfin.nix
+    ./Modules/KeePassXC.nix
+    ./Modules/Nautilus.nix
+    ./Modules/Starship.nix
+    ./Modules/Ungoogled_Chromium.nix
+    ./Modules/vivid.nix
+    ./Modules/Waydroid.nix
+    ./Modules/Wireshark.nix
   ];
 
   nix = {
@@ -1276,24 +1283,6 @@ in
 
       LC_ALL = config.i18n.defaultLocale;
     };
-
-    inputMethod = {
-      enable = true;
-
-      type = "fcitx5";
-      fcitx5 = {
-        addons = with pkgs; [
-          fcitx5-gtk
-          fcitx5-openbangla-keyboard
-        ];
-        waylandFrontend = true;
-
-        ignoreUserConfig = false;
-      };
-
-      enableGtk3 = true;
-      enableGtk2 = false;
-    };
   };
 
   virtualisation = {
@@ -2064,23 +2053,6 @@ in
       # logout = '''';
     };
 
-    starship = {
-      enable = true;
-      package = pkgs.starship;
-
-      interactiveOnly = true;
-
-      presets = [
-        "nerd-font-symbols"
-      ];
-
-      settings = {
-        follow_symlinks = true;
-
-        add_newline = false;
-      };
-    };
-
     nix-ld = {
       enable = true;
       package = pkgs.nix-ld;
@@ -2164,19 +2136,6 @@ in
     usbtop.enable = true;
 
     nano.enable = false;
-
-    bat = {
-      enable = true;
-      package = pkgs.bat;
-      extraPackages = with pkgs.bat-extras; [
-        batdiff
-        batgrep
-        batman
-        batpipe
-        batwatch
-        prettybat
-      ];
-    };
 
     gnupg = {
       package = (
@@ -2426,9 +2385,6 @@ in
     firefox = {
       enable = true;
       package = pkgs.firefox-devedition;
-
-      nativeMessagingHosts.packages =
-        config.home-manager.users.normal.programs.chromium.nativeMessagingHosts;
 
       languagePacks = [
         "en-US"
@@ -2836,7 +2792,6 @@ in
         f2fs-tools
         fastlane
         fdk_aac
-        fdroidcl
         fdt-viewer
         fdupes
         ffmpegthumbnailer
@@ -3553,9 +3508,7 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.home-manager.users.normal.programs.lutris.extraPackages
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
-      ++ config.i18n.inputMethod.fcitx5.addons
       ++ config.networking.networkmanager.plugins
-      ++ config.programs.bat.extraPackages
       ++ config.programs.nix-ld.libraries
       ++ config.programs.obs-studio.plugins
       ++ config.services.pipewire.extraLv2Packages
@@ -3583,16 +3536,6 @@ in
         ]
       );
 
-    wordlist = {
-      enable = true;
-      lists = {
-        WORDLISTS = [
-          "${config.home-manager.users.normal.programs.keepassxc.package}/share/keepassxc/wordlists/eff_large.wordlist"
-          # (pkgs.writeText "extra-wordlist.txt" '''')
-        ];
-      };
-    };
-
     pathsToLink = [
       "/share/applications"
       "/share/i18n"
@@ -3610,9 +3553,6 @@ in
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
 
       JAVA_HOME = "${config.programs.java.package}/lib/openjdk";
-
-      CHROME_EXECUTABLE = "chromium-browser";
-      PAGER = "bat";
     }
     // pkgs.lib.optionalAttrs config.nixpkgs.config.allowUnfree {
       # ANDROID_HOME = "${androidSDKComposition.androidsdk}/libexec/android-sdk/";
@@ -4363,9 +4303,6 @@ in
         "model/stl" = "io.github.nokse22.Exhibit.desktop";
         "model/x-other" = "io.github.nokse22.Exhibit.desktop";
 
-        "x-scheme-handler/http" = "chromium-browser.desktop";
-        "x-scheme-handler/https" = "chromium-browser.desktop";
-
         "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
         "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
       };
@@ -4427,15 +4364,6 @@ in
     };
 
     gtk.icon.enable = false; # Done Manually Instead
-
-    fcitx5 = {
-      enable = config.catppuccin.enable;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      enableRounded = true;
-    };
   }; # From catppuccinThemeFlake
 
   documentation = {
@@ -4591,21 +4519,6 @@ in
           stateVersion = config.system.stateVersion;
         };
 
-        i18n = {
-          inputMethod = {
-            enable = config.i18n.inputMethod.enable;
-
-            type = config.i18n.inputMethod.type;
-            fcitx5 = {
-              addons = config.i18n.inputMethod.fcitx5.addons;
-              waylandFrontend = config.i18n.inputMethod.fcitx5.waylandFrontend;
-
-              systemd.enable = true;
-              ignoreUserConfig = config.i18n.inputMethod.fcitx5.ignoreUserConfig;
-            };
-          };
-        };
-
         fonts.fontconfig = {
           enable = config.fonts.fontconfig.enable;
 
@@ -4651,7 +4564,7 @@ in
                 "hyprland.start"
                 (pkgs.lib.generators.mkLuaInline ''
                   function()
-                    hl.exec_cmd("dbus-update-activation-environment --systemd --all") -- Fixes the Soteria Service Not Starting
+                    hl.exec_cmd("dbus-update-activation-environment --systemd --all")
 
                     hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
                     hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
@@ -5107,30 +5020,6 @@ in
 
               {
                 _args = [
-                  "SUPER + K"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.keepassxc.KeePassXC.desktop\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + K"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"keepassxc --lock\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- chromium-browser.desktop\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"chromium-browser --incognito\")")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + ALT + W"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- firefox-devedition.desktop\")")
                 ];
@@ -5555,52 +5444,6 @@ in
           };
 
           configFile = {
-            "fdroidcl/config.toml" = {
-              enable = true;
-
-              source = pkgs.writeText "fdroidcl.toml" ''
-                setups = []
-
-                [[repos]]
-                id = 'F-Droid'
-                url = 'https://f-droid.org/repo'
-                enabled = true
-
-                [[repos]]
-                id = 'F-Droid_Archive'
-                url = 'https://f-droid.org/archive'
-                enabled = true
-
-                [[repos]]
-                id = 'IzzyOnDroid'
-                url = 'https://apt.izzysoft.de/fdroid/repo'
-                enabled = true
-
-                [[repos]]
-                id = 'Guardian_Project'
-                url = 'https://guardianproject.info/fdroid/repo'
-                enabled = true
-
-                [[repos]]
-                id = 'Guardian_Project_Archive'
-                url = 'https://guardianproject.info/fdroid/archive'
-                enabled = true
-
-                [[repos]]
-                id = 'microG'
-                url = 'https://repo.microg.org/fdroid/repo'
-                enabled = true
-
-                [[repos]]
-                id = 'microG_Archive'
-                url = 'https://microg.org/fdroid/archive'
-                enabled = true
-              '';
-
-              target = "fdroidcl/config.toml";
-              executable = null;
-            };
-
             "mimeapps.list".force = true;
 
             "nwg-bar/bar.json" = {
@@ -7010,8 +6853,6 @@ in
             # profileExtra = '''';
 
             initExtra = ''
-              export LS_COLORS="$(${config.home-manager.users.normal.programs.vivid.package}/bin/vivid generate ${config.home-manager.users.normal.programs.vivid.activeTheme})"
-
               export PROMPT_COMMAND="history -a"
 
               export _GHOST_BIN="${pkgs.ghost-sh}/bin/ghost"
@@ -7021,29 +6862,6 @@ in
             '';
 
             # logoutExtra = '''';
-          };
-
-          starship = {
-            enable = config.programs.starship.enable;
-            package = config.programs.starship.package;
-
-            enableBashIntegration = true;
-            enableInteractive = config.programs.starship.interactiveOnly;
-
-            presets = config.programs.starship.presets;
-            settings = config.programs.starship.settings;
-          };
-
-          dircolors.enable = !config.home-manager.users.normal.programs.vivid.enable;
-
-          vivid = {
-            enable = true;
-            package = pkgs.vivid;
-
-            enableBashIntegration = true;
-
-            colorMode = "24-bit";
-            activeTheme = "catppuccin-${config.catppuccin.flavor}";
           };
 
           kubecolor = {
@@ -7360,27 +7178,6 @@ in
                   cursor = makeLiteral "pointer";
                 };
               };
-          };
-
-          bat = {
-            enable = config.programs.bat.enable;
-            package = config.programs.bat.package;
-            extraPackages = config.programs.bat.extraPackages;
-          };
-
-          keepassxc = {
-            enable = true;
-            package = (
-              pkgs.keepassxc.override {
-                withKeePassBrowser = true;
-                withKeePassDocs = true;
-                withKeePassFDOSecrets = true;
-                withKeePassMinimal = false;
-                withKeePassNetworking = true;
-                withKeePassSSHAgent = !config.programs.gnupg.agent.enable;
-                withKeePassX11 = config.programs.hyprland.xwayland.enable;
-              }
-            );
           };
 
           gpg = {
@@ -8266,109 +8063,9 @@ in
             };
           };
 
-          chromium = {
-            enable = true;
-            package = pkgs.ungoogled-chromium;
-
-            nativeMessagingHosts = [
-              config.home-manager.users.normal.programs.keepassxc.package
-            ];
-
-            dictionaries = with pkgs.hunspellDictsChromium; [
-              en_US
-            ];
-
-            extensions =
-              let
-                createExtensionFromStoreFor =
-                  browserVersion:
-                  {
-                    id,
-                    version,
-                  }:
-                  {
-                    inherit id;
-                    inherit version;
-
-                    crxPath = builtins.fetchurl {
-                      url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=${browserVersion}&x=id%3D${id}%26installsource%3Dondemand%26uc";
-                      name = "${id}.crx";
-                    };
-                  };
-
-                createExtensionFromStore = createExtensionFromStoreFor (
-                  pkgs.lib.versions.major config.home-manager.users.normal.programs.chromium.package.version
-                );
-
-                createExtensionFromAnywhere =
-                  {
-                    id,
-                    version,
-                    url,
-                  }:
-                  {
-                    inherit id version;
-
-                    crxPath = builtins.fetchurl {
-                      inherit url;
-                      name = "${id}.crx";
-                    };
-                  };
-              in
-              [
-                (createExtensionFromStore {
-                  id = "bkkmolkhemgaeaeggcmfbghljjjoofoh";
-                  version = "5.0.0";
-                }) # "Catppuccin Chrome Theme - Mocha"
-
-                (createExtensionFromAnywhere {
-                  id = "ocaahdebbfolfmndjeplogmgcagdmblk";
-                  version = "1.5.5.4";
-                  url = "https://github.com/NeverDecaf/chromium-web-store/releases/download/v1.5.5.4/Chromium.Web.Store.crx";
-                }) # "Chromium Web Store"
-
-                (createExtensionFromStore {
-                  id = "ldpochfccmkkmhdbclfhpagapcfdljkj";
-                  version = "3.0.2";
-                }) # "Decentraleyes"
-
-                (createExtensionFromStore {
-                  id = "oboonakemofpalcgghocfoadofidjkkk";
-                  version = "1.10.4.1";
-                }) # "KeePassXC-Browser"
-
-                (createExtensionFromStore {
-                  id = "cnojnbdhbhnkbcieeekonklommdnndci";
-                  version = "8.5.4";
-                }) # "Search by Image"
-
-                (createExtensionFromStore {
-                  id = "mpiodijhokgodhhofbcjdecpffjipkle";
-                  version = "1.36.0";
-                }) # "SingleFile"
-
-                (createExtensionFromStore {
-                  id = "mnjggcdmjocbbbhaepdhchncahnbgone";
-                  version = "6.1.6";
-                }) # "SponsorBlock for YouTube - Skip Sponsorships"
-
-                (createExtensionFromStore {
-                  id = "ddkjiahejlhfcafbddmgiahcphecmpfh";
-                  version = "2026.1103.1743";
-                }) # "uBlock Origin Lite"
-
-                (createExtensionFromStore {
-                  id = "jabopobgcpjmedljpbcaablpmlmfcogm";
-                  version = "3.3.0";
-                }) # "WhatFont"
-              ];
-          };
-
           firefox = {
             enable = config.programs.firefox.enable;
             package = config.programs.firefox.package;
-
-            nativeMessagingHosts = config.home-manager.users.normal.programs.chromium.nativeMessagingHosts;
 
             languagePacks = config.programs.firefox.languagePacks;
 
@@ -8523,35 +8220,7 @@ in
             fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
           };
 
-          fcitx5 = {
-            enable = config.catppuccin.fcitx5.enable;
-            apply = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-
-            enableRounded = true;
-          };
-
-          starship = {
-            enable = config.programs.starship.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
-          vivid = {
-            enable = config.catppuccin.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
-
           rofi.enable = false; # Manually Done Instead
-
-          bat = {
-            enable = config.programs.bat.enable;
-
-            flavor = config.catppuccin.flavor;
-          };
 
           zed = {
             enable = config.home-manager.users.normal.programs.zed-editor.enable;
@@ -8569,8 +8238,6 @@ in
           };
 
           opencode.enable = false; # Not Applicable for GUI
-
-          chromium.enable = false; # Manually Done Instead
 
           firefox.enable = false; # Manually Done Instead
 
