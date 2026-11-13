@@ -202,11 +202,34 @@ in
 {
   _class = "nixos";
 
+  _module.args = {
+    inherit
+      androidSDKCompositionFromTadFisher
+      designFactor
+      fontPreferences
+      themedBgrtPngFile
+      tlsCACertificateFile
+      tlsCertificateConcatenatedFile
+      tlsCertificateFile
+      tlsCertificateFiles
+      tlsCertificatePrivateKeyFile
+      transitionDuration
+      wallpaperFile
+      ;
+  };
+
   imports = [
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
     ./hardware-configuration.nix
+
+    ./modules/contour.nix
+    ./modules/icecast.nix
+    ./modules/jellyfin.nix
+    ./modules/nautilus.nix
+    ./modules/waydroid.nix
+    ./modules/wireshark.nix
   ];
 
   nix = {
@@ -309,14 +332,6 @@ in
               '';
             });
       })
-
-      (final: previous: {
-        contour = previous.contour.overrideAttrs (oldAttributes: {
-          postPatch = (oldAttributes.postPatch or "") + ''
-            substituteInPlace src/contour/qml/TerminalPane.qml --replace-fail 'border.color: "#3daee9"' 'border.color: "#1e1e2e"'
-          '';
-        });
-      }) # Blends the Hardcoded Border Color of Active Pane with the Background Color (Base of Catppuccin Mocha) to Hide
 
       (final: previous: {
         coreutils-full = previous.coreutils-full.override {
@@ -1193,7 +1208,6 @@ in
 
       allowedTCPPorts = [
         config.home-manager.users.normal.services.wayvnc.settings.port
-        config.services.icecast.listen.port
       ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
@@ -1347,15 +1361,6 @@ in
     };
 
     oci-containers.backend = "podman";
-
-    waydroid = {
-      enable = true;
-      package = (
-        pkgs.waydroid-nftables.override {
-          withNftables = true;
-        }
-      );
-    };
   };
 
   services = {
@@ -1960,92 +1965,6 @@ in
       '';
     };
 
-    icecast = {
-      enable = true;
-
-      hostname = config.networking.fqdn;
-      listen = {
-        address = "0.0.0.0";
-        port = 11111;
-      };
-
-      admin = {
-        user = "root";
-        password = config.secrets.password_1;
-      };
-
-      extraConfig = ''
-        <location>${config.networking.fqdn}</location>
-        <admin>root@${config.networking.fqdn}</admin>
-        <authentication>
-          <source-password>${config.secrets.password_2}</source-password>
-          <relay-password>${config.secrets.password_2}</relay-password>
-        </authentication>
-        <directory>
-          <yp-url>http://dir.xiph.org/cgi-bin/yp-cgi</yp-url>
-        </directory>
-        <paths>
-        <ssl-certificate>${tlsCertificateConcatenatedFile}</ssl-certificate>
-        </paths>
-        <logging>
-          <loglevel>2</loglevel>
-        </logging>
-        <server-id>${config.networking.fqdn}</server-id>
-      ''; # <loglevel>2</loglevel> = Warn
-    };
-
-    jellyfin = {
-      enable = true;
-      package = pkgs.jellyfin;
-
-      forceEncodingConfig = true;
-
-      transcoding = {
-        h264Crf = true;
-        h265Crf = true;
-
-        enableSubtitleExtraction = true;
-        enableToneMapping = false;
-
-        enableHardwareEncoding = true;
-
-        hardwareEncodingCodecs = {
-          av1 = true;
-          hevc = true;
-        };
-
-        hardwareDecodingCodecs = {
-          av1 = true;
-          h264 = true;
-          hevc = true;
-          hevc10bit = true;
-          hevcRExt10bit = true;
-          hevcRExt12bit = true;
-          mpeg2 = true;
-          vc1 = true;
-          vp8 = true;
-          vp9 = true;
-        };
-
-        deleteSegments = true;
-
-        encodingPreset = "auto";
-        throttleTranscoding = false;
-        threadCount = null; # Null = Automatic Detection
-        maxConcurrentStreams = null; # Null = Limited by Hardware
-      };
-
-      hardwareAcceleration = {
-        enable = false;
-        type = "vaapi";
-      };
-
-      user = "jellyfin";
-      group = "jellyfin";
-
-      openFirewall = true;
-    };
-
     ollama = {
       enable = true;
       package = pkgs.ollama-cpu;
@@ -2118,11 +2037,6 @@ in
       package = pkgs.gamemode;
 
       enableRenice = true;
-    };
-
-    nautilus-open-any-terminal = {
-      enable = true;
-      terminal = "contour";
     };
 
     bash = {
@@ -2356,14 +2270,6 @@ in
               button-layout = "appmenu:minimize,maximize,close";
             };
 
-            "org/gnome/nautilus/icon-view" = {
-              captions = [
-                "size"
-                "date_modified"
-                "none"
-              ];
-            };
-
             "org/gnome/Resources" = {
               apps-show-combined-memory = true;
               apps-show-cpu = true;
@@ -2405,10 +2311,6 @@ in
               show-virtual-network-interfaces = true;
               sidebar-meter-type = "Graph";
               temperature-unit = "Celsius";
-            };
-
-            "org/gtk/gtk4/settings/file-chooser" = {
-              show-hidden = true;
             };
 
             "org/gtk/settings/file-chooser" = {
@@ -2700,26 +2602,6 @@ in
 
       startAgent = !config.programs.gnupg.agent.enable;
     };
-
-    wireshark = {
-      enable = true;
-      package = (
-        pkgs.wireshark.override {
-          libpcap = (
-            pkgs.libpcap.override {
-              withBluez = true;
-              withRdma = true;
-              withRemote = true;
-            }
-          );
-          withExtras = true;
-          withQt = true;
-        }
-      );
-
-      dumpcap.enable = true;
-      usbmon.enable = true;
-    };
   };
 
   fonts = {
@@ -2898,7 +2780,6 @@ in
         compsize
         concessio
         constrict
-        contour
         coreutils-full
         coulomb
         cpio
@@ -3135,8 +3016,6 @@ in
         mtools
         mtr-gui # mtr --gtk
         mysqltuner
-        nautilus
-        nautilus-python
         nethogs
         nilfs-utils
         ninja
@@ -3295,7 +3174,6 @@ in
         wayback-machine-archiver
         wayback_machine_downloader
         waycheck
-        waydroid-helper
         wayland-utils
         wayscriber
         webfont-bundler
@@ -3790,17 +3668,6 @@ in
 
     autostart.enable = true;
 
-    terminal-exec = {
-      enable = true;
-      package = pkgs.xdg-terminal-exec;
-
-      settings = {
-        default = [
-          "org.contourterminal.Contour.desktop"
-        ];
-      };
-    };
-
     portal = {
       enable = true;
       extraPortals = [
@@ -3818,9 +3685,6 @@ in
 
       # https://www.iana.org/assignments/media-types/media-types.xhtml
       defaultApplications = {
-        "inode/directory" = "org.gnome.Nautilus.desktop";
-        "inode/mount-point" = "org.gnome.Nautilus.desktop";
-
         "application/bzip2" = "peazip.desktop";
         "application/gzip" = "peazip.desktop";
         "application/vnd.android.package-archive" = "peazip.desktop";
@@ -4653,7 +4517,6 @@ in
           "gpsd"
           "i2c"
           "input"
-          "jellyfin"
           "kvm"
           "libvirtd"
           "lp"
@@ -4671,7 +4534,6 @@ in
           "uucp"
           "video"
           "wheel"
-          "wireshark"
         ];
 
         linger = true;
@@ -4722,11 +4584,7 @@ in
 
           # sessionSearchVariables = { };
 
-          activation = {
-            permitJellyfin = ''
-              ${pkgs.acl}/bin/setfacl --modify user:jellyfin:--x $HOME
-            '';
-          };
+          # activation = { };
 
           enableDebugInfo = config.environment.enableDebugInfo;
 
@@ -5237,34 +5095,16 @@ in
               {
                 _args = [
                   "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term contour -nofs -fm nautilus\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term ${config.customOptions.executableNameOfTerminalEmulator} -nofs -fm ${config.customOptions.executableNameOfFileManager}\")")
                 ];
               }
               {
                 _args = [
                   "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- contour bash -ic \\\"$cmd; bash -i\\\"\")")
+                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
-              {
-                _args = [
-                  "SUPER + T"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.contourterminal.Contour.desktop\")")
-                ];
-              }
-              {
-                _args = [
-                  "XF86Explorer"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.gnome.Nautilus.desktop\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + F"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- org.gnome.Nautilus.desktop\")")
-                ];
-              }
               {
                 _args = [
                   "SUPER + K"
@@ -5715,215 +5555,6 @@ in
           };
 
           configFile = {
-            "contour/contour.yml" = {
-              enable = true;
-
-              source = pkgs.writeText "contour.yml" ''
-                platform_plugin: auto
-                renderer:
-                  backend: vulkan
-
-                spawn_new_process: true
-                remember_window_position: false
-
-                gui_config_locked: false
-                live: true
-
-                ui_style: native
-                window_control_style: auto
-                tab_bar_visibility: Multiple
-                tab_bar_position: Top
-                tab_switch_on_horizontal_wheel: true
-                chrome_density: comfortable
-                theme: terminal
-                command_palette_recent_count: 0
-                gutter:
-                  line_numbers: off
-                  timestamps: false
-                  user_marks: false
-                  exit_status: false
-                  bold_on_hover: false
-                folding:
-                  enabled: false
-                  show_markers: false
-                  auto_collapse_on_new_command: false
-                git_drawings:
-                  branch_style: thin
-                  arc_style: round
-                  merge_commit_style: bullet
-                box_arc_style: round
-
-                daemon:
-                  mode: in_process
-                connect_picker_on_start: false
-                osc_context:
-                  enabled: true
-
-                images:
-                  good_image_protocol: true
-                  sixel_scrolling: true
-
-                grapheme_clustering: true
-                reflow_on_resize: true
-                snap_to_rows: false
-                text_scaling_method: rerasterize
-
-                hyperlink_hover_tooltip: true
-                on_mouse_selection: CopyToSelectionClipboard
-                secure_input: auto
-
-                accessibility_announcements: true
-                accessibility_caret_reporting: true
-
-                ui_font_family: ${fontPreferences.sansSerif}
-
-                color_schemes:
-                  catppuccin_mocha:
-                    default:
-                      background: "#1e1e2e" # Base
-                      foreground: "#cdd6f4" # Text
-
-                    cursor:
-                      default: "#f5e0dc" # Rosewater
-                      text: "#1e1e2e" # Base
-
-                    normal:
-                      black: "#45475a" # Surface 1
-                      red: "#f38ba8" # Red
-                      green: "#a6e3a1" # Green
-                      yellow: "#f9e2af" # Yellow
-                      blue: "#89b4fa" # Blue
-                      magenta: "#f5c2e7" # Pink
-                      cyan: "#94e2d5" # Teal
-                      white: "#bac2de" # Subtext 1
-
-                    bright:
-                      black: "#585b70" # Surface 2
-                      red: "#f38ba8" # Red
-                      green: "#a6e3a1" # Green
-                      yellow: "#f9e2af" # Yellow
-                      blue: "#89b4fa" # Blue
-                      magenta: "#f5c2e7" # Pink
-                      cyan: "#94e2d5" # Teal
-                      white: "#a6adc8" # Subtext 0
-
-                profiles:
-                  main:
-                    pixel_reporting: Device
-
-                    size_indicator_on_resize: true
-                    margins:
-                      horizontal: ${pkgs.lib.toString (builtins.floor designFactor)}
-                      vertical: ${pkgs.lib.toString (builtins.floor designFactor)}
-                    show_title_bar: true
-                    status_line:
-                      display: none
-                      position: Bottom
-                    scrollbar:
-                      position: Right
-                      mode: always
-                      hide_in_alt_screen: false
-                      marks: [failures, commands, running, user_marks, search_matches]
-                    sticky_header:
-                      mode: scrolled
-
-                    mouse:
-                      hide_while_typing: false
-                    mouse_forwarding: forwarded
-                    input_method_editor: true
-                    input_method_editor_style: highlighted
-                    cursor:
-                      shape: bar
-                      blinking: true
-                    cursor_motion_animation_duration: ${
-                      pkgs.lib.toString (builtins.floor (transitionDuration / 2.0))
-                    }
-                    blink_style: smooth
-
-                    history:
-                      auto_scroll_on_update: false
-                    smooth_scrolling: true
-                    momentum_scrolling: true
-
-                    screen_transition_style: fade
-                    screen_transition_duration: ${pkgs.lib.toString transitionDuration}
-
-                    link_detection:
-                      primary_screen:
-                        file_paths: true
-                        urls: true
-                      other_screens:
-                        file_paths: true
-                        urls: true
-                    hyperlink_decoration:
-                      mode: hover
-                      hover: underline
-
-                    highlight_word_and_matches_on_double_click: true
-                    search_case_sensitivity: smart
-                    copy_command_preserve_multiline: true
-
-                    bell:
-                      sound: "default"
-                      volume: 1 # 1 = Maximum
-                      alert: true
-
-                    notify_on_command_finish:
-                      when: unfocused
-                      outcome: any
-                      action: notify_bell
-                      clear_on: focus
-
-                    font:
-                      locator: Native
-                      strict_spacing: true
-
-                      builtin_box_drawing: false
-                      text_shaping:
-                        engine: Native
-                      render_mode: Gray
-
-                      regular:
-                        family: ${fontPreferences.monospace}
-                        slant: Normal
-                        weight: Regular
-                        features: []
-
-                      emoji: ${fontPreferences.emoji}
-
-                    background:
-                      blur: false
-                      opacity: 1.0
-                    colors: "catppuccin_mocha"
-                    draw_bold_text_with_bright_colors: true
-
-                    shell: /run/current-system/sw/bin/bash
-                    arguments: []
-                    initial_working_directory: "~"
-
-                    permissions:
-                      capture_buffer: ask
-                      change_font: ask
-                      display_host_writable_statusline: ask
-
-                default_profile_name: main
-              '';
-
-              target = "contour/contour.yml";
-              executable = null;
-            };
-
-            "contour/settings.yml" = {
-              enable = true;
-
-              source = pkgs.writeText "contour-settings.yml" ''
-                {}
-              '';
-
-              target = "contour/settings.yml";
-              executable = null;
-            };
-
             "fdroidcl/config.toml" = {
               enable = true;
 
@@ -6458,7 +6089,7 @@ in
               program_options = {
                 menu = "nested";
 
-                terminal = "uwsm-app -- contour working-directory";
+                terminal = "uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} ${config.customOptions.workingDirectoryFlagOfTerminalEmulator}";
                 file_manager = "uwsm-app -- xdg-open";
 
                 password_cache = 5; # 5 Minutes
@@ -7508,7 +7139,7 @@ in
               cycle = true;
 
               disable-history = true;
-              terminal = "contour";
+              terminal = config.customOptions.executableNameOfTerminalEmulator;
             };
 
             theme =

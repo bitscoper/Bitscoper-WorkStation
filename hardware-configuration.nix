@@ -5,10 +5,7 @@
 # for device in /sys/class/hidraw/hidraw*; do echo "== $device =="; readlink -f "$device/device"; cat "$device/device/uevent" 2>/dev/null || true; done
 
 {
-  config,
   lib,
-  modulesPath,
-  options,
   pkgs,
   ...
 }:
