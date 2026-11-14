@@ -222,16 +222,16 @@ in
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
-    ./hardware-configuration.nix
-
     ./Modules/bat.nix
     ./Modules/BlueZ.nix
     ./Modules/Cine.nix
     ./Modules/Contour.nix
+    ./Modules/CPU-X.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
     ./Modules/GNU_GRand_Unified_Bootloader.nix
+    ./Modules/Hardinfo2.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
@@ -243,6 +243,7 @@ in
     ./Modules/nwg-bar.nix
     ./Modules/nwg-drawer.nix
     ./Modules/Open_Broadcaster_Software_Studio.nix
+    ./Modules/OpenDM.nix
     ./Modules/PHP.nix
     ./Modules/PipeWire.nix
     ./Modules/Plymouth.nix
@@ -250,10 +251,13 @@ in
     ./Modules/PostgreSQL.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
+    ./Modules/sysctl.nix
     ./Modules/Ungoogled_Chromium.nix
     ./Modules/vivid.nix
     ./Modules/Waydroid.nix
     ./Modules/Wireshark.nix
+
+    ./hardware-configuration.nix
   ];
 
   nix = {
@@ -363,38 +367,6 @@ in
           '';
         };
       }) # Addition
-
-      (final: previous: {
-        hardinfo2 = previous.hardinfo2.override {
-          printingSupport = true;
-        };
-      })
-
-      (final: previous: {
-        opendm = previous.stdenv.mkDerivation {
-          pname = "opendm";
-          version = "main";
-
-          src = fetchGit {
-            url = "https://github.com/nadermkhan/opendm.git";
-            ref = "main";
-            submodules = true;
-          };
-
-          nativeBuildInputs = with previous; [
-            cmake
-            pkg-config
-            wrapGAppsHook4
-          ];
-
-          buildInputs = with previous; [
-            curl
-            gtk4
-            libadwaita
-            nlohmann_json
-          ];
-        };
-      }) # Addition
     ];
   };
 
@@ -431,57 +403,6 @@ in
 
     kernel = {
       enable = true;
-
-      sysctl = {
-        "dev.tty.ldisc_autoload" = 0;
-
-        "fs.protected_fifos" = 2;
-        "fs.protected_hardlinks" = 1;
-        "fs.protected_regular" = 2;
-        "fs.protected_symlinks" = 1;
-        "fs.suid_dumpable" = 0;
-
-        "kernel.core_uses_pid" = 1;
-        "kernel.ctrl-alt-del" = 0;
-        "kernel.dmesg_restrict" = 1;
-        "kernel.kptr_restrict" = 2;
-        "kernel.perf_event_paranoid" = 3;
-        "kernel.randomize_va_space" = 2;
-        "kernel.sysrq" = 0;
-        "kernel.unprivileged_bpf_disabled" = 1;
-        "kernel.yama.ptrace_scope" = 2;
-
-        "net.core.default_qdisc" = "fq";
-        "net.ipv4.conf.all.accept_redirects" = 0;
-        "net.ipv4.conf.all.accept_source_route" = 0;
-        "net.ipv4.conf.all.bootp_relay" = 0;
-        "net.ipv4.conf.all.forwarding" = 0;
-        "net.ipv4.conf.all.log_martians" = 1;
-        "net.ipv4.conf.all.mc_forwarding" = 0;
-        "net.ipv4.conf.all.proxy_arp" = 0;
-        "net.ipv4.conf.all.rp_filter" = 1;
-        "net.ipv4.conf.all.send_redirects" = 0;
-        "net.ipv4.conf.default.accept_redirects" = 0;
-        "net.ipv4.conf.default.accept_source_route" = 0;
-        "net.ipv4.conf.default.log_martians" = 1;
-        "net.ipv4.conf.default.rp_filter" = 1;
-        "net.ipv4.conf.default.send_redirects" = 0;
-        "net.ipv4.icmp_echo_ignore_broadcasts" = 1;
-        "net.ipv4.icmp_ignore_bogus_error_responses" = 1;
-        "net.ipv4.tcp_congestion_control" = "bbr";
-        "net.ipv4.tcp_ecn" = 1;
-        "net.ipv4.tcp_mtu_probing" = 1;
-        "net.ipv4.tcp_syncookies" = 1;
-        "net.ipv4.tcp_timestamps" = 1;
-        "net.ipv4.tcp_tw_reuse" = 2;
-        "net.ipv4.tcp_window_scaling" = 1;
-        "net.ipv6.conf.all.accept_redirects" = 0;
-        "net.ipv6.conf.all.accept_source_route" = 0;
-        "net.ipv6.conf.default.accept_redirects" = 0;
-        "net.ipv6.conf.default.accept_source_route" = 0;
-
-        "vm.swappiness" = 10;
-      };
     };
 
     kernelPackages = pkgs.linuxPackages_xanmod_latest.extend (
@@ -709,38 +630,6 @@ in
 
       execWheelOnly = true;
       wheelNeedsPassword = true;
-
-      extraRules = [
-        {
-          users = [
-            config.users.users.normal.name
-          ];
-          commands = [
-            {
-              command = "${pkgs.cpu-x}/bin/cpu-x";
-              options = [
-                "NOPASSWD"
-                "SETENV"
-              ];
-            }
-          ];
-        }
-
-        {
-          users = [
-            config.users.users.normal.name
-          ];
-          commands = [
-            {
-              command = "${pkgs.hardinfo2}/bin/hardinfo2";
-              options = [
-                "NOPASSWD"
-                "SETENV"
-              ];
-            }
-          ];
-        }
-      ];
 
       extraConfig = ''
         Defaults pwfeedback
@@ -2249,7 +2138,6 @@ in
         openai-whisper
         openapv
         opencore-amr
-        opendm # From config.nixpkgs.overlays
         openh264
         openjpeg
         openobex
@@ -2429,10 +2317,6 @@ in
           zstdSupport = true;
         })
 
-        (writeShellScriptBin "cpu-x" ''
-          exec sudo -E ${cpu-x}/bin/cpu-x "$@"
-        '') # With config.security.sudo.extraRules
-
         (
           (ffmpeg-full.override {
             withAlsa = config.services.pipewire.alsa.enable;
@@ -2548,10 +2432,6 @@ in
           useQt = false;
           useGtk = true;
         })
-
-        (writeShellScriptBin "hardinfo2" ''
-          exec sudo -E ${hardinfo2}/bin/hardinfo2 "$@"
-        '') # With config.security.sudo.extraRules
 
         (nwg-displays.override {
           hyprlandSupport = true;
@@ -4077,83 +3957,6 @@ in
         };
 
         xdg = {
-          desktopEntries = {
-            cpu-x =
-              let
-                desktopFile = "${pkgs.cpu-x}/share/applications/io.github.thetumultuousunicornofdarkness.cpu-x.desktop";
-
-                get =
-                  key:
-                  pkgs.runCommand "${key}_from_CPU-X_Desktop_File" { } ''
-                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
-                    import configparser
-
-                    parser = configparser.ConfigParser(strict=False)
-
-                    parser.read("${desktopFile}")
-                    value = parser.get("Desktop Entry", "${key}", fallback="")
-                    print(value)
-                    EOF
-                  '';
-              in
-              {
-                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
-                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
-
-                name = builtins.readFile (get "Name");
-                icon = builtins.readFile (get "Icon"); # Available in config.home-manager.users.normal.gtk.iconTheme
-                comment = builtins.readFile (get "Comment");
-
-                exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
-                terminal = builtins.fromJSON (
-                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
-                );
-
-                settings = {
-                  Keywords = builtins.readFile (get "Keywords");
-                };
-              }; # Addition
-
-            hardinfo2 =
-              let
-                desktopFile = "${pkgs.hardinfo2}/share/applications/hardinfo2.desktop";
-
-                get =
-                  key:
-                  pkgs.runCommand "${key}_from_Hardinfo2_Desktop_File" { } ''
-                    ${pkgs.python3}/bin/python3 - << 'EOF' > $out
-                    import configparser
-
-                    parser = configparser.ConfigParser(strict=False)
-
-                    parser.read("${desktopFile}")
-                    value = parser.get("Desktop Entry", "${key}", fallback="")
-                    print(value)
-                    EOF
-                  '';
-              in
-              {
-                type = pkgs.lib.strings.trim (builtins.readFile (get "Type"));
-                categories = pkgs.lib.splitString ";" (builtins.readFile (get "Categories"));
-
-                name = builtins.readFile (get "Name");
-                icon = "${pkgs.hardinfo2}/share/icons/hicolor/scalable/apps/hardinfo2.svg";
-                comment = builtins.readFile (get "Comment");
-
-                exec = builtins.readFile (get "Exec"); # Calls the same binary as the output of writeShellScriptBin in config.environment.systemPackages
-                terminal = builtins.fromJSON (
-                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "Terminal")))
-                );
-                startupNotify = builtins.fromJSON (
-                  pkgs.lib.strings.toLower (pkgs.lib.strings.trim (builtins.readFile (get "StartupNotify")))
-                );
-
-                settings = {
-                  Keywords = builtins.readFile (get "Keywords");
-                };
-              }; # Addition
-          };
-
           portal = {
             enable = config.xdg.portal.enable;
             extraPortals = config.xdg.portal.extraPortals;
