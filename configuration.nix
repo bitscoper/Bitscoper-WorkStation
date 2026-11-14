@@ -225,6 +225,8 @@ in
     ./hardware-configuration.nix
 
     ./Modules/bat.nix
+    ./Modules/BlueZ.nix
+    ./Modules/Cine.nix
     ./Modules/Contour.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
@@ -232,11 +234,15 @@ in
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
+    ./Modules/LibreOffice.nix
+    ./Modules/Loupe.nix
     ./Modules/MariaDB.nix
     ./Modules/Nautilus.nix
+    ./Modules/Nocturne.nix
     ./Modules/nwg-bar.nix
     ./Modules/nwg-drawer.nix
-    ./Modules/OBS_Studio.nix
+    ./Modules/Open_Broadcasting_Software_Studio.nix
+    ./Modules/PipeWire.nix
     ./Modules/PostgreSQL.nix
     ./Modules/Starship.nix
     ./Modules/Ungoogled_Chromium.nix
@@ -728,89 +734,6 @@ in
       };
     };
 
-    bluetooth = {
-      enable = true;
-      package = (
-        pkgs.bluez.override {
-          enableExperimental = true;
-        }
-      );
-
-      hsphfpd.enable = !config.services.pipewire.wireplumber.enable;
-
-      powerOnBoot = true;
-
-      input = {
-        General = {
-          IdleTimeout = 0; # 0 = Disabled
-          LEAutoSecurity = true;
-          ClassicBondedOnly = true;
-          UserspaceHID = true;
-        };
-      };
-
-      network = {
-        General = {
-          DisableSecurity = false;
-        };
-      };
-
-      settings = {
-        General = {
-          MaxControllers = 0; # 0 = Unlimited
-          ControllerMode = "dual";
-
-          Name = config.networking.hostName;
-
-          DiscoverableTimeout = 0; # 0 = Disabled
-          PairableTimeout = 0; # 0 = Disabled
-          AlwaysPairable = true;
-          FastConnectable = true;
-
-          ReverseServiceDiscovery = true;
-          NameResolving = true;
-          RemoteNameRequestRetryDelay = 60; # 60 Seconds
-          RefreshDiscovery = true;
-          TemporaryTimeout = 0; # 0 = Disabled
-
-          SecureConnections = "on";
-          Privacy = "off";
-
-          Experimental = true; # Shows Battery Percentage
-          KernelExperimental = true;
-        };
-
-        Policy = {
-          AutoEnable = true;
-
-          ResumeDelay = 2; # 2 Seconds
-          ReconnectAttempts = 7;
-          ReconnectIntervals = "1, 2, 4, 8, 16, 32, 64";
-        };
-
-        GATT = {
-          Cache = "always";
-        };
-
-        CSIS = {
-          Encryption = true;
-        };
-
-        AVRCP = {
-          VolumeCategory = true;
-          VolumeWithoutTarget = false;
-        };
-
-        AVDTP = {
-          SessionMode = "ertm";
-        };
-
-        AdvMon = {
-          RSSISamplingPeriod = "0x00";
-        };
-      };
-    };
-
     rtl-sdr = {
       enable = true;
       package = pkgs.rtl-sdr;
@@ -826,7 +749,7 @@ in
         withLogind = true;
         withOpenSSL = true;
         withPam = true;
-        withPolkit = true;
+        withPolkit = config.security.polkit.enable;
       }
     );
 
@@ -1049,7 +972,7 @@ in
       spice-client-glib-usb-acl-helper = {
         source = "${
           (pkgs.spice-gtk.override {
-            withPolkit = true;
+            withPolkit = config.security.polkit.enable;
           })
         }/bin/spice-client-glib-usb-acl-helper";
       };
@@ -1519,87 +1442,6 @@ in
       );
     };
 
-    pipewire = {
-      enable = true;
-      package = (
-        pkgs.pipewire.override {
-          bluezSupport = true;
-          enableSystemd = true;
-          raopSupport = true;
-          rocSupport = true;
-          vulkanSupport = true;
-          zeroconfSupport = true;
-        }
-      );
-
-      systemWide = false;
-
-      audio.enable = true;
-
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-
-      socketActivation = true;
-
-      wireplumber = {
-        enable = true;
-        package = (
-          pkgs.wireplumber.override {
-            enableDocs = true;
-          }
-        );
-
-        extraLv2Packages = config.services.pipewire.extraLv2Packages;
-
-        extraConfig.bluetoothEnhancements = {
-          "monitor.bluez.properties" = {
-            "bluez5.enable-hw-volume" = true;
-
-            "bluez5.enable-sbc-xq" = true;
-            "bluez5.enable-msbc" = true;
-
-            "bluez5.roles" = [
-              "a2dp_sink"
-              "a2dp_source"
-              "bap_sink"
-              "bap_source"
-              "hfp_ag"
-              "hfp_hf"
-              "hsp_ag"
-              "hsp_hs"
-            ];
-
-            "bluez5.codecs" = [
-              "aac"
-              "aptx"
-              "aptx_hd"
-              "aptx_ll"
-              "aptx_ll_duplex"
-              "faststream"
-              "faststream_duplex"
-              "lc3"
-              "lc3plus_h3"
-              "ldac"
-              "opus_05"
-              "opus_05_51"
-              "opus_05_71"
-              "opus_05_duplex"
-              "opus_05_pro"
-              "sbc"
-              "sbc_xq"
-            ];
-          };
-
-          "wireplumber.settings" = {
-            "bluetooth.autoswitch-to-headset-profile" = false;
-          };
-        };
-      };
-
-      raopOpenFirewall = true;
-    };
-
     gpsd = {
       enable = true;
 
@@ -2033,12 +1875,6 @@ in
           lockAll = true;
 
           settings = {
-            "com/saivert/pwvucontrol" = {
-              beep-on-volume-changes = true;
-              enable-overamplification = true;
-              use-peakmeter-led = false;
-            };
-
             "com/github/huluti/Curtail" = {
               new-file = true;
               png-lossless-level = pkgs.lib.gvariant.mkInt32 6;
@@ -2174,15 +2010,15 @@ in
           mprisSupport = true;
           niriSupport = false;
           nlSupport = true;
-          pipewireSupport = true;
-          pulseSupport = true;
+          pipewireSupport = config.services.pipewire.enable;
+          pulseSupport = config.services.pipewire.pulse.enable;
           rfkillSupport = true;
           sndioSupport = true;
           systemdSupport = true;
           traySupport = true;
           udevSupport = true;
           upowerSupport = true;
-          wireplumberSupport = true;
+          wireplumberSupport = config.services.pipewire.wireplumber.enable;
           withMediaPlayer = true;
 
           runTests = false;
@@ -2350,8 +2186,6 @@ in
         aegisub
         aide
         aircrack-ng
-        alsa-plugins
-        alsa-utils
         android-backup-extractor
         android-tools
         angryipscanner
@@ -2381,8 +2215,6 @@ in
         bindfs
         blanket
         bleachbit
-        bluez-alsa
-        bluez-tools
         brightnessctl
         btfs
         btrfs-assistant
@@ -2400,7 +2232,6 @@ in
         certbot-full
         certdump
         chunkfs
-        cine
         clang-analyzer
         clang-tools
         clang_22
@@ -2547,7 +2378,6 @@ in
         hashes
         hdparm
         heaptrack
-        helvum
         hfsprogs
         hfsutils
         hieroglyphic
@@ -2610,7 +2440,6 @@ in
         libnotify
         libogg
         libopus
-        libreoffice # To Use the GTK Theme: Tools > "Options..." > LibreOffice > Appearance > "LibreOffice Themes" > Uncheck "Enable application theming"
         libsecret
         libsixel
         libultrahdr
@@ -2625,7 +2454,6 @@ in
         lock
         logtop
         lorem
-        loupe
         lsb-release
         lsof
         lsscsi
@@ -2664,7 +2492,6 @@ in
         nixoscope
         nixpkgs-reviewFull
         noaa-apt
-        nocturne
         normcap
         ntfs2btrfs
         ntfs3g
@@ -2684,7 +2511,6 @@ in
         openssl
         orbvis
         otree
-        overskride
         packet
         paleta
         pana
@@ -2712,7 +2538,6 @@ in
         proton-vpn
         protonup-qt
         psmisc
-        pwvucontrol
         qalculate-gtk
         qdirstat
         qemu-user
@@ -2867,7 +2692,7 @@ in
 
         (
           (ffmpeg-full.override {
-            withAlsa = true;
+            withAlsa = config.services.pipewire.alsa.enable;
             withAom = true;
             withAribb24 = true;
             withAribcaption = true;
@@ -2922,7 +2747,7 @@ in
             withOpenmpt = true;
             withOpus = true;
             withPlacebo = true;
-            withPulse = true;
+            withPulse = config.services.pipewire.pulse.enable;
             withQrencode = true;
             withQuirc = true;
             withRav1e = true;
@@ -2976,7 +2801,7 @@ in
         )
 
         (guvcview.override {
-          pulseaudioSupport = true;
+          pulseaudioSupport = config.services.pipewire.pulse.enable;
           useQt = false;
           useGtk = true;
         })
@@ -2998,7 +2823,7 @@ in
         })
 
         (python315FreeThreading.override {
-          bluezSupport = true;
+          bluezSupport = config.hardware.bluetooth.enable;
           enableNoSemanticInterposition = true;
           enableOptimizations = true;
           mimetypesSupport = true;
@@ -3042,7 +2867,7 @@ in
         })
 
         (spice-gtk.override {
-          withPolkit = true;
+          withPolkit = config.security.polkit.enable;
         })
 
         (testdisk-qt.override {
@@ -3055,8 +2880,8 @@ in
           libnotifySupport = true;
           libvaSupport = true;
           mediaSupport = true;
-          pipewireSupport = true;
-          pulseaudioSupport = true;
+          pipewireSupport = config.services.pipewire.enable;
+          pulseaudioSupport = config.services.pipewire.pulse.enable;
           waylandSupport = true;
         })
 
@@ -3073,7 +2898,7 @@ in
 
         (gst-plugins-bad.override {
           ajaSupport = true;
-          bluezSupport = true;
+          bluezSupport = config.hardware.bluetooth.enable;
           enableDocumentation = config.documentation.enable;
           enableGplPlugins = true;
           enableZbar = true;
@@ -3086,7 +2911,7 @@ in
         })
 
         (gst-plugins-base.override {
-          enableAlsa = true;
+          enableAlsa = config.services.pipewire.alsa.enable;
           enableCdparanoia = true;
           enableDocumentation = config.documentation.enable;
           enableWayland = true;
@@ -3175,7 +3000,6 @@ in
         config.programs.nix-index.package
         config.programs.nm-applet.package # Also Provides nm-connection-editor
         config.services.phpfpm.phpPackage
-        config.services.pipewire.package
       ]
 
       ++ config.boot.extraModulePackages
@@ -3186,7 +3010,6 @@ in
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
-      ++ config.services.pipewire.extraLv2Packages
       ++ config.services.udev.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
       ++ config.virtualisation.podman.extraRuntimes
@@ -3483,460 +3306,6 @@ in
         "text/xml" = "dev.zed.Zed.desktop";
         "text/xml-external-parsed-entity" = "dev.zed.Zed.desktop";
 
-        "image/aces" = "org.gnome.Loupe.desktop";
-        "image/apng" = "org.gnome.Loupe.desktop";
-        "image/avci" = "org.gnome.Loupe.desktop";
-        "image/avcs" = "org.gnome.Loupe.desktop";
-        "image/avif" = "org.gnome.Loupe.desktop";
-        "image/bmp" = "org.gnome.Loupe.desktop";
-        "image/cgm" = "org.gnome.Loupe.desktop";
-        "image/dicom-rle" = "org.gnome.Loupe.desktop";
-        "image/dpx" = "org.gnome.Loupe.desktop";
-        "image/emf" = "org.gnome.Loupe.desktop";
-        "image/fits" = "org.gnome.Loupe.desktop";
-        "image/g3fax" = "org.gnome.Loupe.desktop";
-        "image/gif" = "org.gnome.Loupe.desktop";
-        "image/heic" = "org.gnome.Loupe.desktop";
-        "image/heic-sequence" = "org.gnome.Loupe.desktop";
-        "image/heif" = "org.gnome.Loupe.desktop";
-        "image/heif-sequence" = "org.gnome.Loupe.desktop";
-        "image/hej2k" = "org.gnome.Loupe.desktop";
-        "image/hsj2" = "org.gnome.Loupe.desktop";
-        "image/ief" = "org.gnome.Loupe.desktop";
-        "image/j2c" = "org.gnome.Loupe.desktop";
-        "image/jaii" = "org.gnome.Loupe.desktop";
-        "image/jais" = "org.gnome.Loupe.desktop";
-        "image/jls" = "org.gnome.Loupe.desktop";
-        "image/jp2" = "org.gnome.Loupe.desktop";
-        "image/jpeg" = "org.gnome.Loupe.desktop";
-        "image/jph" = "org.gnome.Loupe.desktop";
-        "image/jphc" = "org.gnome.Loupe.desktop";
-        "image/jpm" = "org.gnome.Loupe.desktop";
-        "image/jpx" = "org.gnome.Loupe.desktop";
-        "image/jxl" = "org.gnome.Loupe.desktop";
-        "image/jxr" = "org.gnome.Loupe.desktop";
-        "image/jxrA" = "org.gnome.Loupe.desktop";
-        "image/jxrS" = "org.gnome.Loupe.desktop";
-        "image/jxs" = "org.gnome.Loupe.desktop";
-        "image/jxsc" = "org.gnome.Loupe.desktop";
-        "image/jxsi" = "org.gnome.Loupe.desktop";
-        "image/jxss" = "org.gnome.Loupe.desktop";
-        "image/ktx" = "org.gnome.Loupe.desktop";
-        "image/ktx2" = "org.gnome.Loupe.desktop";
-        "image/naplps" = "org.gnome.Loupe.desktop";
-        "image/png" = "org.gnome.Loupe.desktop";
-        "image/prs.btif" = "org.gnome.Loupe.desktop";
-        "image/prs.pti" = "org.gnome.Loupe.desktop";
-        "image/pwg-raster" = "org.gnome.Loupe.desktop";
-        "image/qoi" = "org.gnome.Loupe.desktop";
-        "image/svg+xml" = "org.gnome.Loupe.desktop";
-        "image/svg+xml-compressed" = "org.gnome.Loupe.desktop";
-        "image/t38" = "org.gnome.Loupe.desktop";
-        "image/tiff" = "org.gnome.Loupe.desktop";
-        "image/tiff-fx" = "org.gnome.Loupe.desktop";
-        "image/vnd.adobe.photoshop" = "org.gnome.Loupe.desktop";
-        "image/vnd.airzip.accelerator.azv" = "org.gnome.Loupe.desktop";
-        "image/vnd.blockfact.facti" = "org.gnome.Loupe.desktop";
-        "image/vnd.clip" = "org.gnome.Loupe.desktop";
-        "image/vnd.cns.inf2" = "org.gnome.Loupe.desktop";
-        "image/vnd.dece.graphic" = "org.gnome.Loupe.desktop";
-        "image/vnd.djvu" = "org.gnome.Loupe.desktop";
-        "image/vnd.dvb.subtitle" = "org.gnome.Loupe.desktop";
-        "image/vnd.dwg" = "org.gnome.Loupe.desktop";
-        "image/vnd.dxf" = "org.gnome.Loupe.desktop";
-        "image/vnd.fastbidsheet" = "org.gnome.Loupe.desktop";
-        "image/vnd.fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.fst" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-mmr" = "org.gnome.Loupe.desktop";
-        "image/vnd.fujixerox.edmics-rlc" = "org.gnome.Loupe.desktop";
-        "image/vnd.globalgraphics.pgb" = "org.gnome.Loupe.desktop";
-        "image/vnd.microsoft.icon" = "org.gnome.Loupe.desktop";
-        "image/vnd.mix" = "org.gnome.Loupe.desktop";
-        "image/vnd.mozilla.apng" = "org.gnome.Loupe.desktop";
-        "image/vnd.ms-modi" = "org.gnome.Loupe.desktop";
-        "image/vnd.net-fpx" = "org.gnome.Loupe.desktop";
-        "image/vnd.pco.b16" = "org.gnome.Loupe.desktop";
-        "image/vnd.radiance" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealed.png" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.gif" = "org.gnome.Loupe.desktop";
-        "image/vnd.sealedmedia.softseal.jpg" = "org.gnome.Loupe.desktop";
-        "image/vnd.svf" = "org.gnome.Loupe.desktop";
-        "image/vnd.tencent.tap" = "org.gnome.Loupe.desktop";
-        "image/vnd.valve.source.texture" = "org.gnome.Loupe.desktop";
-        "image/vnd.wap.wbmp" = "org.gnome.Loupe.desktop";
-        "image/vnd.xiff" = "org.gnome.Loupe.desktop";
-        "image/vnd.zbrush.pcx" = "org.gnome.Loupe.desktop";
-        "image/webp" = "org.gnome.Loupe.desktop";
-        "image/wmf" = "org.gnome.Loupe.desktop";
-        "image/x-3ds" = "org.gnome.Loupe.desktop";
-        "image/x-dds" = "org.gnome.Loupe.desktop";
-        "image/x-emf" = "org.gnome.Loupe.desktop";
-        "image/x-exr" = "org.gnome.Loupe.desktop";
-        "image/x-jp2-codestream" = "org.gnome.Loupe.desktop";
-        "image/x-portable-anymap" = "org.gnome.Loupe.desktop";
-        "image/x-portable-bitmap" = "org.gnome.Loupe.desktop";
-        "image/x-portable-graymap" = "org.gnome.Loupe.desktop";
-        "image/x-portable-pixmap" = "org.gnome.Loupe.desktop";
-        "image/x-qoi" = "org.gnome.Loupe.desktop";
-        "image/x-tga" = "org.gnome.Loupe.desktop";
-        "image/x-win-bitmap" = "org.gnome.Loupe.desktop";
-        "image/x-wmf" = "org.gnome.Loupe.desktop";
-        "image/x-xbitmap" = "org.gnome.Loupe.desktop";
-        "image/x-xpixmap" = "org.gnome.Loupe.desktop";
-
-        "audio/1d-interleaved-parityfec" = "com.jeffser.Nocturne.desktop";
-        "audio/32kadpcm" = "com.jeffser.Nocturne.desktop";
-        "audio/3gpp" = "com.jeffser.Nocturne.desktop";
-        "audio/3gpp2" = "com.jeffser.Nocturne.desktop";
-        "audio/aac" = "com.jeffser.Nocturne.desktop";
-        "audio/ac3" = "com.jeffser.Nocturne.desktop";
-        "audio/aiff" = "com.jeffser.Nocturne.desktop";
-        "audio/AMR" = "com.jeffser.Nocturne.desktop";
-        "audio/AMR-WB" = "com.jeffser.Nocturne.desktop";
-        "audio/amr-wb+" = "com.jeffser.Nocturne.desktop";
-        "audio/aptx" = "com.jeffser.Nocturne.desktop";
-        "audio/asc" = "com.jeffser.Nocturne.desktop";
-        "audio/ATRAC-ADVANCED-LOSSLESS" = "com.jeffser.Nocturne.desktop";
-        "audio/ATRAC-X" = "com.jeffser.Nocturne.desktop";
-        "audio/ATRAC3" = "com.jeffser.Nocturne.desktop";
-        "audio/basic" = "com.jeffser.Nocturne.desktop";
-        "audio/BV16" = "com.jeffser.Nocturne.desktop";
-        "audio/BV32" = "com.jeffser.Nocturne.desktop";
-        "audio/clearmode" = "com.jeffser.Nocturne.desktop";
-        "audio/CN" = "com.jeffser.Nocturne.desktop";
-        "audio/DAT12" = "com.jeffser.Nocturne.desktop";
-        "audio/dls" = "com.jeffser.Nocturne.desktop";
-        "audio/dsr-es201108" = "com.jeffser.Nocturne.desktop";
-        "audio/dsr-es202050" = "com.jeffser.Nocturne.desktop";
-        "audio/dsr-es202211" = "com.jeffser.Nocturne.desktop";
-        "audio/dsr-es202212" = "com.jeffser.Nocturne.desktop";
-        "audio/DV" = "com.jeffser.Nocturne.desktop";
-        "audio/DVI4" = "com.jeffser.Nocturne.desktop";
-        "audio/eac3" = "com.jeffser.Nocturne.desktop";
-        "audio/encaprtp" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRC" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRC-QCP" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRC0" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRC1" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCB" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCB0" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCB1" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCNW" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCNW0" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCNW1" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCWB" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCWB0" = "com.jeffser.Nocturne.desktop";
-        "audio/EVRCWB1" = "com.jeffser.Nocturne.desktop";
-        "audio/EVS" = "com.jeffser.Nocturne.desktop";
-        "audio/flac" = "com.jeffser.Nocturne.desktop";
-        "audio/flexfec" = "com.jeffser.Nocturne.desktop";
-        "audio/fwdred" = "com.jeffser.Nocturne.desktop";
-        "audio/G711-0" = "com.jeffser.Nocturne.desktop";
-        "audio/G719" = "com.jeffser.Nocturne.desktop";
-        "audio/G722" = "com.jeffser.Nocturne.desktop";
-        "audio/G7221" = "com.jeffser.Nocturne.desktop";
-        "audio/G723" = "com.jeffser.Nocturne.desktop";
-        "audio/G726-16" = "com.jeffser.Nocturne.desktop";
-        "audio/G726-24" = "com.jeffser.Nocturne.desktop";
-        "audio/G726-32" = "com.jeffser.Nocturne.desktop";
-        "audio/G726-40" = "com.jeffser.Nocturne.desktop";
-        "audio/G728" = "com.jeffser.Nocturne.desktop";
-        "audio/G729" = "com.jeffser.Nocturne.desktop";
-        "audio/G7291" = "com.jeffser.Nocturne.desktop";
-        "audio/G729D" = "com.jeffser.Nocturne.desktop";
-        "audio/G729E" = "com.jeffser.Nocturne.desktop";
-        "audio/GSM" = "com.jeffser.Nocturne.desktop";
-        "audio/GSM-EFR" = "com.jeffser.Nocturne.desktop";
-        "audio/GSM-HR-08" = "com.jeffser.Nocturne.desktop";
-        "audio/iLBC" = "com.jeffser.Nocturne.desktop";
-        "audio/ip-mr_v2.5" = "com.jeffser.Nocturne.desktop";
-        "audio/L16" = "com.jeffser.Nocturne.desktop";
-        "audio/L20" = "com.jeffser.Nocturne.desktop";
-        "audio/L24" = "com.jeffser.Nocturne.desktop";
-        "audio/L8" = "com.jeffser.Nocturne.desktop";
-        "audio/LPC" = "com.jeffser.Nocturne.desktop";
-        "audio/m3u" = "com.jeffser.Nocturne.desktop";
-        "audio/m4a" = "com.jeffser.Nocturne.desktop";
-        "audio/matroska" = "com.jeffser.Nocturne.desktop";
-        "audio/MELP" = "com.jeffser.Nocturne.desktop";
-        "audio/MELP1200" = "com.jeffser.Nocturne.desktop";
-        "audio/MELP2400" = "com.jeffser.Nocturne.desktop";
-        "audio/MELP600" = "com.jeffser.Nocturne.desktop";
-        "audio/mhas" = "com.jeffser.Nocturne.desktop";
-        "audio/midi-clip" = "com.jeffser.Nocturne.desktop";
-        "audio/mobile-xmf" = "com.jeffser.Nocturne.desktop";
-        "audio/mp1" = "com.jeffser.Nocturne.desktop";
-        "audio/mp2" = "com.jeffser.Nocturne.desktop";
-        "audio/mp3" = "com.jeffser.Nocturne.desktop";
-        "audio/mp4" = "com.jeffser.Nocturne.desktop";
-        "audio/MP4A-LATM" = "com.jeffser.Nocturne.desktop";
-        "audio/MPA" = "com.jeffser.Nocturne.desktop";
-        "audio/mpa-robust" = "com.jeffser.Nocturne.desktop";
-        "audio/mpeg" = "com.jeffser.Nocturne.desktop";
-        "audio/mpeg2" = "com.jeffser.Nocturne.desktop";
-        "audio/mpeg3" = "com.jeffser.Nocturne.desktop";
-        "audio/mpeg4-generic" = "com.jeffser.Nocturne.desktop";
-        "audio/mpegurl" = "com.jeffser.Nocturne.desktop";
-        "audio/mpg" = "com.jeffser.Nocturne.desktop";
-        "audio/musepack" = "com.jeffser.Nocturne.desktop";
-        "audio/ogg" = "com.jeffser.Nocturne.desktop";
-        "audio/opus" = "com.jeffser.Nocturne.desktop";
-        "audio/parityfec" = "com.jeffser.Nocturne.desktop";
-        "audio/PCMA" = "com.jeffser.Nocturne.desktop";
-        "audio/PCMA-WB" = "com.jeffser.Nocturne.desktop";
-        "audio/PCMU" = "com.jeffser.Nocturne.desktop";
-        "audio/PCMU-WB" = "com.jeffser.Nocturne.desktop";
-        "audio/prs.sid" = "com.jeffser.Nocturne.desktop";
-        "audio/QCELP" = "com.jeffser.Nocturne.desktop";
-        "audio/raptorfec" = "com.jeffser.Nocturne.desktop";
-        "audio/RED" = "com.jeffser.Nocturne.desktop";
-        "audio/rn-mpeg" = "com.jeffser.Nocturne.desktop";
-        "audio/rtp-enc-aescm128" = "com.jeffser.Nocturne.desktop";
-        "audio/rtp-midi" = "com.jeffser.Nocturne.desktop";
-        "audio/rtploopback" = "com.jeffser.Nocturne.desktop";
-        "audio/rtx" = "com.jeffser.Nocturne.desktop";
-        "audio/scip" = "com.jeffser.Nocturne.desktop";
-        "audio/scpls" = "com.jeffser.Nocturne.desktop";
-        "audio/SMV" = "com.jeffser.Nocturne.desktop";
-        "audio/SMV-QCP" = "com.jeffser.Nocturne.desktop";
-        "audio/SMV0" = "com.jeffser.Nocturne.desktop";
-        "audio/sofa" = "com.jeffser.Nocturne.desktop";
-        "audio/soundfont" = "com.jeffser.Nocturne.desktop";
-        "audio/sp-midi" = "com.jeffser.Nocturne.desktop";
-        "audio/speex" = "com.jeffser.Nocturne.desktop";
-        "audio/t140c" = "com.jeffser.Nocturne.desktop";
-        "audio/t38" = "com.jeffser.Nocturne.desktop";
-        "audio/telephone-event" = "com.jeffser.Nocturne.desktop";
-        "audio/TETRA_ACELP" = "com.jeffser.Nocturne.desktop";
-        "audio/TETRA_ACELP_BB" = "com.jeffser.Nocturne.desktop";
-        "audio/tone" = "com.jeffser.Nocturne.desktop";
-        "audio/TSVCIS" = "com.jeffser.Nocturne.desktop";
-        "audio/UEMCLIP" = "com.jeffser.Nocturne.desktop";
-        "audio/ulpfec" = "com.jeffser.Nocturne.desktop";
-        "audio/usac" = "com.jeffser.Nocturne.desktop";
-        "audio/VDVI" = "com.jeffser.Nocturne.desktop";
-        "audio/VMR-WB" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.3gpp.iufp" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.4SB" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.audiokoz" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.blockfact.facta" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.CELP" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.cisco.nse" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.cmles.radio-events" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.cns.anp1" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.cns.inf1" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dece.audio" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.digital-winds" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dlna.adts" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.heaac.1" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.heaac.2" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.mlp" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.mps" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.pl2" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.pl2x" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.pl2z" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dolby.pulse.1" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dra" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dts" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dts.hd" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dts.uhd" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.dvb.file" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.everad.plj" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.hns.audio" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.lucent.voice" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.ms-playready.media.pya" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.nokia.mobile-xmf" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.nortel.vbk" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.nuera.ecelp4800" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.nuera.ecelp7470" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.nuera.ecelp9600" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.octel.sbc" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.presonus.multitrack" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.qcelp" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.rhetorex.32kadpcm" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.rip" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.rn-realaudio" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.sealedmedia.softseal.mpeg" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.vmx.cvsd" = "com.jeffser.Nocturne.desktop";
-        "audio/vnd.wave" = "com.jeffser.Nocturne.desktop";
-        "audio/vorbis" = "com.jeffser.Nocturne.desktop";
-        "audio/vorbis-config" = "com.jeffser.Nocturne.desktop";
-        "audio/wav" = "com.jeffser.Nocturne.desktop";
-        "audio/webm" = "com.jeffser.Nocturne.desktop";
-        "audio/x-aac" = "com.jeffser.Nocturne.desktop";
-        "audio/x-adpcm" = "com.jeffser.Nocturne.desktop";
-        "audio/x-aiff" = "com.jeffser.Nocturne.desktop";
-        "audio/x-ape" = "com.jeffser.Nocturne.desktop";
-        "audio/x-flac" = "com.jeffser.Nocturne.desktop";
-        "audio/x-m4a" = "com.jeffser.Nocturne.desktop";
-        "audio/x-m4b" = "com.jeffser.Nocturne.desktop";
-        "audio/x-matroska" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mp1" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mp2" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mp3" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mpeg" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mpegurl" = "com.jeffser.Nocturne.desktop";
-        "audio/x-mpg" = "com.jeffser.Nocturne.desktop";
-        "audio/x-ms-asf" = "com.jeffser.Nocturne.desktop";
-        "audio/x-ms-wma" = "com.jeffser.Nocturne.desktop";
-        "audio/x-musepack" = "com.jeffser.Nocturne.desktop";
-        "audio/x-opus+ogg" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pls" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pn-aiff" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pn-au" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pn-realaudio" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pn-wav" = "com.jeffser.Nocturne.desktop";
-        "audio/x-pn-windows-pcm" = "com.jeffser.Nocturne.desktop";
-        "audio/x-realaudio" = "com.jeffser.Nocturne.desktop";
-        "audio/x-scpls" = "com.jeffser.Nocturne.desktop";
-        "audio/x-shorten" = "com.jeffser.Nocturne.desktop";
-        "audio/x-speex" = "com.jeffser.Nocturne.desktop";
-        "audio/x-tta" = "com.jeffser.Nocturne.desktop";
-        "audio/x-vorbis" = "com.jeffser.Nocturne.desktop";
-        "audio/x-vorbis+ogg" = "com.jeffser.Nocturne.desktop";
-        "audio/x-wav" = "com.jeffser.Nocturne.desktop";
-        "audio/x-wavpack" = "com.jeffser.Nocturne.desktop";
-
-        "video/1d-interleaved-parityfec" = "io.github.diegopvlk.Cine.desktop";
-        "video/3gp" = "io.github.diegopvlk.Cine.desktop";
-        "video/3gpp" = "io.github.diegopvlk.Cine.desktop";
-        "video/3gpp-tt" = "io.github.diegopvlk.Cine.desktop";
-        "video/3gpp2" = "io.github.diegopvlk.Cine.desktop";
-        "video/AV1" = "io.github.diegopvlk.Cine.desktop";
-        "video/avi" = "io.github.diegopvlk.Cine.desktop";
-        "video/BMPEG" = "io.github.diegopvlk.Cine.desktop";
-        "video/BT656" = "io.github.diegopvlk.Cine.desktop";
-        "video/CelB" = "io.github.diegopvlk.Cine.desktop";
-        "video/divx" = "io.github.diegopvlk.Cine.desktop";
-        "video/DV" = "io.github.diegopvlk.Cine.desktop";
-        "video/encaprtp" = "io.github.diegopvlk.Cine.desktop";
-        "video/evc" = "io.github.diegopvlk.Cine.desktop";
-        "video/FFV1" = "io.github.diegopvlk.Cine.desktop";
-        "video/flexfec" = "io.github.diegopvlk.Cine.desktop";
-        "video/fli" = "io.github.diegopvlk.Cine.desktop";
-        "video/flv" = "io.github.diegopvlk.Cine.desktop";
-        "video/H261" = "io.github.diegopvlk.Cine.desktop";
-        "video/H263" = "io.github.diegopvlk.Cine.desktop";
-        "video/H263-1998" = "io.github.diegopvlk.Cine.desktop";
-        "video/H263-2000" = "io.github.diegopvlk.Cine.desktop";
-        "video/H264" = "io.github.diegopvlk.Cine.desktop";
-        "video/H264-RCDO" = "io.github.diegopvlk.Cine.desktop";
-        "video/H264-SVC" = "io.github.diegopvlk.Cine.desktop";
-        "video/H265" = "io.github.diegopvlk.Cine.desktop";
-        "video/H266" = "io.github.diegopvlk.Cine.desktop";
-        "video/iso.segment" = "io.github.diegopvlk.Cine.desktop";
-        "video/JPEG" = "io.github.diegopvlk.Cine.desktop";
-        "video/jpeg2000" = "io.github.diegopvlk.Cine.desktop";
-        "video/jpeg2000-scl" = "io.github.diegopvlk.Cine.desktop";
-        "video/jxsv" = "io.github.diegopvlk.Cine.desktop";
-        "video/lottie+json" = "io.github.diegopvlk.Cine.desktop";
-        "video/matroska" = "io.github.diegopvlk.Cine.desktop";
-        "video/matroska-3d" = "io.github.diegopvlk.Cine.desktop";
-        "video/mj2" = "io.github.diegopvlk.Cine.desktop";
-        "video/mkv" = "io.github.diegopvlk.Cine.desktop";
-        "video/MP1S" = "io.github.diegopvlk.Cine.desktop";
-        "video/MP2P" = "io.github.diegopvlk.Cine.desktop";
-        "video/MP2T" = "io.github.diegopvlk.Cine.desktop";
-        "video/mp4" = "io.github.diegopvlk.Cine.desktop";
-        "video/MP4V-ES" = "io.github.diegopvlk.Cine.desktop";
-        "video/mpeg" = "io.github.diegopvlk.Cine.desktop";
-        "video/mpeg4-generic" = "io.github.diegopvlk.Cine.desktop";
-        "video/MPV" = "io.github.diegopvlk.Cine.desktop";
-        "video/msvideo" = "io.github.diegopvlk.Cine.desktop";
-        "video/nv" = "io.github.diegopvlk.Cine.desktop";
-        "video/ogg" = "io.github.diegopvlk.Cine.desktop";
-        "video/parityfec" = "io.github.diegopvlk.Cine.desktop";
-        "video/pointer" = "io.github.diegopvlk.Cine.desktop";
-        "video/quicktime" = "io.github.diegopvlk.Cine.desktop";
-        "video/raptorfec" = "io.github.diegopvlk.Cine.desktop";
-        "video/raw" = "io.github.diegopvlk.Cine.desktop";
-        "video/rtp-enc-aescm128" = "io.github.diegopvlk.Cine.desktop";
-        "video/rtploopback" = "io.github.diegopvlk.Cine.desktop";
-        "video/rtx" = "io.github.diegopvlk.Cine.desktop";
-        "video/scip" = "io.github.diegopvlk.Cine.desktop";
-        "video/smpte291" = "io.github.diegopvlk.Cine.desktop";
-        "video/SMPTE292M" = "io.github.diegopvlk.Cine.desktop";
-        "video/ulpfec" = "io.github.diegopvlk.Cine.desktop";
-        "video/vc1" = "io.github.diegopvlk.Cine.desktop";
-        "video/vc2" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.avi" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.blockfact.factv" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.CCTV" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.hd" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.mobile" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.mp4" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.pd" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.sd" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dece.video" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.directv.mpeg" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.directv.mpeg-tts" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.divx" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dlna.mpeg-tts" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.dvb.file" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.fvt" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.hns.video" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.1dparityfec-1010" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.1dparityfec-2005" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.2dparityfec-1010" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.2dparityfec-2005" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.ttsavc" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.iptvforum.ttsmpeg2" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.motorola.video" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.motorola.videop" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.mpegurl" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.ms-playready.media.pyv" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.nokia.interleaved-multimedia" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.nokia.mp4vr" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.nokia.videovoip" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.objectvideo" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.planar" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.radgamettools.bink" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.radgamettools.smacker" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.rn-realvideo" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.sealed.mpeg1" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.sealed.mpeg4" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.sealed.swf" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.sealedmedia.softseal.mov" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.uvvu.mp4" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.vivo" = "io.github.diegopvlk.Cine.desktop";
-        "video/vnd.youtube.yt" = "io.github.diegopvlk.Cine.desktop";
-        "video/VP8" = "io.github.diegopvlk.Cine.desktop";
-        "video/VP9" = "io.github.diegopvlk.Cine.desktop";
-        "video/webm" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-avi" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-flc" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-flic" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-flv" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-m4v" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-matroska" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-mpeg2" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-mpeg3" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ms-afs" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ms-asf" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ms-wmv" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ms-wmx" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ms-wvxvideo" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-msvideo" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ogm" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-ogm+ogg" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-theora" = "io.github.diegopvlk.Cine.desktop";
-        "video/x-theora+ogg" = "io.github.diegopvlk.Cine.desktop";
-
-        "application/msword" = "writer.desktop";
-        "application/vnd.oasis.opendocument.text" = "writer.desktop";
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = "writer.desktop";
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.template" = "writer.desktop";
-
-        "application/vnd.ms-excel" = "calc.desktop";
-        "application/vnd.oasis.opendocument.spreadsheet" = "calc.desktop";
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = "calc.desktop";
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.template" = "calc.desktop";
-
-        "application/vnd.ms-powerpoint" = "impress.desktop";
-        "application/vnd.oasis.opendocument.presentation" = "impress.desktop";
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop";
-        "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop";
-
         "application/illustrator" = "org.gnome.Evince.desktop";
         "application/oxps" = "org.gnome.Evince.desktop";
         "application/pdf" = "org.gnome.Evince.desktop";
@@ -4125,7 +3494,6 @@ in
           "lp"
           "networkmanager"
           "nm-openvpn"
-          "pipewire"
           "plugdev"
           "podman"
           "qemu-libvirtd"
