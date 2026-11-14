@@ -243,7 +243,9 @@ in
     ./Modules/nwg-drawer.nix
     ./Modules/Open_Broadcasting_Software_Studio.nix
     ./Modules/PipeWire.nix
+    ./Modules/Podman.nix
     ./Modules/PostgreSQL.nix
+    ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
     ./Modules/Ungoogled_Chromium.nix
     ./Modules/vivid.nix
@@ -765,9 +767,6 @@ in
     tmpfiles.rules = [
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
-      "r /run/current-system/sw/share/wayland-sessions/hyprland.desktop"
-      "L+ /etc/xdg/wayland-sessions/hyprland-uwsm.desktop - - - - ${config.programs.hyprland.package}/share/wayland-sessions/hyprland-uwsm.desktop"
-
       "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
 
       "d /var/lib/swtpm-localca 0750 tss root -"
@@ -913,7 +912,6 @@ in
           [
             "hyprlock"
             "login"
-            "sddm"
             "polkit-1"
             "sshd"
             "su"
@@ -1149,41 +1147,6 @@ in
     };
 
     spiceUSBRedirection.enable = true;
-
-    podman = {
-      enable = true;
-      package = pkgs.podman;
-      extraRuntimes = with pkgs; [
-        runc
-      ];
-
-      dockerCompat = true;
-      dockerSocket.enable = true;
-
-      networkSocket = {
-        enable = true;
-
-        server = "ghostunnel";
-
-        listenAddress = "0.0.0.0";
-        port = 2376;
-
-        tls = {
-          cert = tlsCertificateFile;
-          key = tlsCertificatePrivateKeyFile;
-
-          cacert = tlsCACertificateFile;
-        };
-
-        openFirewall = true;
-      };
-
-      defaultNetwork.settings = {
-        dns_enabled = true;
-      };
-    };
-
-    oci-containers.backend = "podman";
   };
 
   services = {
@@ -1384,35 +1347,6 @@ in
     zram-generator = {
       enable = true;
       package = pkgs.zram-generator;
-    };
-
-    displayManager = {
-      enable = true;
-
-      sddm = {
-        enable = true;
-        package = pkgs.qt6Packages.sddm;
-
-        wayland = {
-          enable = true;
-          compositor = "kwin";
-        };
-
-        enableHidpi = true;
-
-        autoNumlock = false;
-        autoLogin.relogin = false;
-
-        settings = {
-          Wayland.SessionDir = "/etc/xdg/wayland-sessions/"; # With config.systemd.tmpfiles.rules
-        };
-      };
-
-      defaultSession = "hyprland-uwsm";
-
-      autoLogin.enable = false;
-
-      logToJournal = true;
     };
 
     accounts-daemon.enable = true;
@@ -2273,12 +2207,10 @@ in
         dduper
         delineate
         desktop-file-utils
-        diffoci
         dig
         dippi
         dislocker
         disorderfs
-        dive
         dmg2img
         dmidecode
         dnsrecon
@@ -2527,8 +2459,6 @@ in
         platformio
         play
         playerctl
-        podman-compose
-        pods
         poop # POOP = Performance Optimizer Observation Platform
         powershell
         procps
@@ -3012,7 +2942,6 @@ in
       ++ config.programs.nix-ld.libraries
       ++ config.services.udev.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
-      ++ config.virtualisation.podman.extraRuntimes
       ++ config.xdg.portal.configPackages
       ++ config.xdg.portal.extraPortals
 
@@ -3382,24 +3311,6 @@ in
 
     plymouth.enable = false; # Done Manually Instead
 
-    sddm = {
-      enable = config.services.displayManager.sddm.enable;
-      assertQt6Sddm = true;
-
-      flavor = config.catppuccin.flavor;
-      accent = config.catppuccin.accent;
-
-      background = wallpaperFile;
-
-      font = fontPreferences.sansSerif;
-      fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
-
-      loginBackground = true;
-      userIcon = true;
-
-      clockEnabled = true;
-    };
-
     cursors = {
       enable = config.catppuccin.enable;
 
@@ -3478,7 +3389,6 @@ in
 
         extraGroups = [
           "adm"
-          "audio"
           "avahi"
           "cdrom"
           "dialout"
@@ -3495,7 +3405,6 @@ in
           "networkmanager"
           "nm-openvpn"
           "plugdev"
-          "podman"
           "qemu-libvirtd"
           "render"
           "systemd-journal"
@@ -4732,11 +4641,6 @@ in
             pinentry.package = config.programs.gnupg.agent.pinentryPackage;
             noAllowExternalCache = false;
             grabKeyboardAndMouse = true;
-          };
-
-          easyeffects = {
-            enable = true;
-            package = pkgs.easyeffects;
           };
 
           network-manager-applet = {

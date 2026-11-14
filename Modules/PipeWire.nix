@@ -11,7 +11,7 @@
       enable = true;
       package = (
         pkgs.pipewire.override {
-          bluezSupport = true;
+          bluezSupport = config.hardware.bluetooth.enable;
           enableSystemd = true;
           raopSupport = true;
           rocSupport = true;
@@ -20,11 +20,11 @@
         }
       );
 
-      #       extraLadspaPackages = with pkgs; [
-      #       ];
-      #
-      #       extraLv2Packages = with pkgs; [
-      #       ];
+      # extraLadspaPackages = with pkgs; [
+      # ];
+
+      # extraLv2Packages = with pkgs; [
+      # ];
 
       systemWide = false;
 
@@ -50,6 +50,15 @@
       raopOpenFirewall = true;
     };
 
+    home-manager.sharedModules = [
+      {
+        services.easyeffects = {
+          enable = true;
+          package = pkgs.easyeffects;
+        };
+      }
+    ];
+
     environment.systemPackages = with pkgs; [
       alsa-plugins
       alsa-utils
@@ -72,6 +81,7 @@
     ];
 
     users.users.normal.extraGroups = [
+      "audio"
       "pipewire"
     ];
   };
