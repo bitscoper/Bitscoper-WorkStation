@@ -231,6 +231,7 @@ in
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
+    ./Modules/GNU_GRand_Unified_Bootloader.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
@@ -241,8 +242,10 @@ in
     ./Modules/Nocturne.nix
     ./Modules/nwg-bar.nix
     ./Modules/nwg-drawer.nix
-    ./Modules/Open_Broadcasting_Software_Studio.nix
+    ./Modules/Open_Broadcaster_Software_Studio.nix
+    ./Modules/PHP.nix
     ./Modules/PipeWire.nix
+    ./Modules/Plymouth.nix
     ./Modules/Podman.nix
     ./Modules/PostgreSQL.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
@@ -321,39 +324,6 @@ in
     };
 
     overlays = [
-      (final: previous: {
-        catppuccin-grub =
-          (previous.catppuccin-grub.override {
-            flavor = config.catppuccin.flavor;
-          }).overrideAttrs
-            (oldAttributes: {
-              postInstall = (oldAttributes.postInstall or "") + ''
-                cp ${themedBgrtPngFile} $out/background.png
-
-                rm -f $out/logo.png
-                sed -i '/# Logo image/,+5d' $out/theme.txt
-              '';
-            });
-      })
-
-      (final: previous: {
-        catppuccin-plymouth =
-          (previous.catppuccin-plymouth.override {
-            variant = config.catppuccin.flavor;
-          }).overrideAttrs
-            (oldAttributes: {
-              postInstall = (oldAttributes.postInstall or "") + ''
-                THEME_DIRECTORY=$out/share/plymouth/themes/catppuccin-${config.catppuccin.flavor}
-                mkdir -p $THEME_DIRECTORY
-
-                cp ${themedBgrtPngFile} $THEME_DIRECTORY/background.png
-
-                sed -i 's/VerticalAlignment=.*/VerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
-                sed -i 's/DialogVerticalAlignment=.*/DialogVerticalAlignment=.90/g' $THEME_DIRECTORY/catppuccin-${config.catppuccin.flavor}.plymouth
-              '';
-            });
-      })
-
       (final: previous: {
         coreutils-full = previous.coreutils-full.override {
           aclSupport = true;
@@ -459,46 +429,6 @@ in
   boot = {
     isContainer = false;
 
-    loader = {
-      efi.canTouchEfiVariables = true;
-
-      grub = {
-        enable = true;
-
-        copyKernels = true;
-
-        efiSupport = true;
-        zfsSupport = true;
-        enableCryptodisk = true;
-        useOSProber = true;
-
-        fsIdentifier = "uuid";
-        device = "nodev";
-
-        gfxmodeEfi = "${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)},auto";
-        gfxpayloadEfi = "keep";
-        splashMode = "normal";
-
-        theme = "${pkgs.catppuccin-grub}/"; # From config.nixpkgs.overlays
-        splashImage = pkgs.lib.mkForce "${themedBgrtPngFile}";
-
-        configurationLimit = 100;
-        extraEntriesBeforeNixOS = false;
-
-        memtest86 = {
-          enable = true;
-
-          params = [
-            "btrace"
-          ];
-        };
-
-        forceInstall = false;
-      };
-
-      timeout = 1; # 1 Second
-    };
-
     kernel = {
       enable = true;
 
@@ -573,7 +503,6 @@ in
       mm-tools
       tmon
       turbostat
-      v4l2loopback
     ];
 
     hardwareScan = true;
@@ -649,27 +578,6 @@ in
     };
 
     consoleLogLevel = 4; # 4 = KERN_WARNING
-
-    plymouth = {
-      enable = true;
-
-      themePackages = with pkgs; [
-        catppuccin-plymouth # From config.nixpkgs.overlays
-      ];
-      theme = "catppuccin-${config.catppuccin.flavor}";
-
-      font = "${config.home-manager.users.normal.gtk.font.package}/share/fonts/truetype/NerdFonts/Noto/NotoSansNerdFont-Regular.ttf";
-
-      logo = builtins.fetchurl {
-        url = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png";
-      }; # Due to zero margin between the logo and throbber, and because the shutdown screen does not render the logo like the boot screen.
-
-      showDelay = 0;
-
-      extraConfig = ''
-        UseFirmwareBackground=false
-      ''; # Done Manually Instead
-    };
   };
 
   powerManagement = {
@@ -1385,101 +1293,6 @@ in
       port = 2947;
 
       debugLevel = 0; # 0 = Disabled
-    };
-
-    phpfpm = {
-      phpPackage =
-        (pkgs.php85.override {
-          argon2Support = true;
-          cgiSupport = true;
-          cgotoSupport = true;
-          cliSupport = true;
-          fpmSupport = true;
-          ipv6Support = true;
-          pearSupport = true;
-          pharSupport = true;
-          phpdbgSupport = true;
-          staticSupport = true;
-          systemdSupport = true;
-          valgrindSupport = true;
-          zendMaxExecutionTimersSupport = false;
-          zendSignalsSupport = true;
-          ztsSupport = true;
-        }).buildEnv
-          {
-            extensions =
-              {
-                enabled,
-                all,
-              }:
-              enabled
-              ++ (with all; [
-                bz2
-                calendar
-                ctype
-                curl
-                dba
-                dom
-                exif
-                ffi
-                fileinfo
-                filter
-                ftp
-                gd
-                gnupg
-                iconv
-                imagick
-                imap
-                mailparse
-                mysqli
-                mysqlnd
-                openssl
-                pcntl
-                pdo
-                pdo_mysql
-                pdo_pgsql
-                pgsql
-                posix
-                session
-                sockets
-                sodium
-                systemd
-                xdebug
-                xml
-                xmlreader
-                xmlwriter
-                xsl
-                zip
-                zlib
-              ]);
-
-            extraConfig = config.services.phpfpm.phpOptions;
-          };
-
-      settings = {
-        log_level = "warning";
-      };
-
-      phpOptions = ''
-        default_charset = "UTF-8"
-        error_reporting = E_ALL
-        display_errors = Off
-        log_errors = On
-        cgi.force_redirect = 1
-        expose_php = Off
-        file_uploads = On
-        session.cookie_lifetime = 0
-        session.use_cookies = 1
-        session.use_only_cookies = 1
-        session.use_strict_mode = 1
-        session.cookie_httponly = 1
-        session.cookie_secure = 1
-        session.cookie_samesite = "Strict"
-        session.gc_maxlifetime = 43200
-        session.use_trans_sid = O
-        session.cache_limiter = nocache
-        xdebug.mode=debug
-      '';
     };
 
     avahi = {
@@ -2929,7 +2742,6 @@ in
         config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
         config.programs.nm-applet.package # Also Provides nm-connection-editor
-        config.services.phpfpm.phpPackage
       ]
 
       ++ config.boot.extraModulePackages
@@ -3301,15 +3113,11 @@ in
     flavor = "mocha";
     accent = "lavender";
 
-    grub.enable = false; # Done Manually Instead
-
     tty = {
       enable = config.catppuccin.enable;
 
       flavor = config.catppuccin.flavor;
     };
-
-    plymouth.enable = false; # Done Manually Instead
 
     cursors = {
       enable = config.catppuccin.enable;
