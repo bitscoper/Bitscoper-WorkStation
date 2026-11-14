@@ -61,7 +61,6 @@
     environment.systemPackages = with pkgs; [
       pg_top
       pgbadger
-      pgpdump
       pgread
     ];
   };

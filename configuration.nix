@@ -231,6 +231,7 @@ in
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
     ./Modules/GNU_GRand_Unified_Bootloader.nix
+    ./Modules/GnuPG.nix
     ./Modules/Hardinfo2.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
@@ -248,9 +249,11 @@ in
     ./Modules/PipeWire.nix
     ./Modules/Plymouth.nix
     ./Modules/Podman.nix
+    ./Modules/polkit.nix
     ./Modules/PostgreSQL.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
+    ./Modules/sudo.nix
     ./Modules/sysctl.nix
     ./Modules/Ungoogled_Chromium.nix
     ./Modules/vivid.nix
@@ -620,41 +623,6 @@ in
 
     rtkit.enable = true;
 
-    sudo = {
-      enable = true;
-      package = (
-        pkgs.sudo.override {
-          withInsults = true; # May Include Profanity
-        }
-      );
-
-      execWheelOnly = true;
-      wheelNeedsPassword = true;
-
-      extraConfig = ''
-        Defaults pwfeedback
-      '';
-    };
-
-    polkit = {
-      enable = true;
-      package = (
-        pkgs.polkit.override {
-          useSystemd = true;
-        }
-      );
-      enablePkexecWrapper = true;
-
-      adminIdentities = [
-        "unix-group:wheel"
-      ];
-    };
-
-    soteria = {
-      enable = true;
-      package = pkgs.soteria;
-    };
-
     pam = {
       mount = {
         enable = true;
@@ -709,10 +677,8 @@ in
           [
             "hyprlock"
             "login"
-            "polkit-1"
             "sshd"
             "su"
-            "sudo"
             "vlock"
           ]
       ); # ls /etc/pam.d/
@@ -1447,38 +1413,6 @@ in
 
     nano.enable = false;
 
-    gnupg = {
-      package = (
-        pkgs.gnupg1compat.override {
-          gnupg = (
-            pkgs.gnupg24.override {
-              enableMinimal = false;
-              guiSupport = true;
-              withPcsc = true;
-              withTpm2Tss = true;
-            }
-          );
-        }
-      );
-
-      dirmngr.enable = true;
-
-      agent = {
-        enable = true;
-
-        enableBrowserSocket = true;
-        enableExtraSocket = true;
-
-        enableSSHSupport = true;
-
-        pinentryPackage = (
-          pkgs.pinentry-qt.override {
-            withLibsecret = true;
-          }
-        );
-      };
-    };
-
     git = {
       enable = true;
       package = (
@@ -1710,8 +1644,6 @@ in
 
     ssh = {
       package = config.services.openssh.package;
-
-      startAgent = !config.programs.gnupg.agent.enable;
     };
   };
 
@@ -2085,7 +2017,6 @@ in
         lld_22
         llmfit
         llvm_22
-        lock
         logtop
         lorem
         lsb-release
@@ -2619,7 +2550,6 @@ in
       ++ [
         config.hardware.firmware
         config.home-manager.users.normal.services.udiskie.package
-        config.programs.gnupg.agent.pinentryPackage
         config.programs.nix-index.package
         config.programs.nm-applet.package # Also Provides nm-connection-editor
       ]
@@ -4240,20 +4170,6 @@ in
             ];
           };
 
-          gpg-agent = {
-            enable = config.programs.gnupg.agent.enable;
-
-            enableExtraSocket = config.programs.gnupg.agent.enableExtraSocket;
-            enableScDaemon = true;
-
-            enableSshSupport = config.programs.gnupg.agent.enableSSHSupport;
-            enableBashIntegration = true;
-
-            pinentry.package = config.programs.gnupg.agent.pinentryPackage;
-            noAllowExternalCache = false;
-            grabKeyboardAndMouse = true;
-          };
-
           network-manager-applet = {
             enable = config.programs.nm-applet.enable;
             package = config.programs.nm-applet.package;
@@ -5518,31 +5434,6 @@ in
                   cursor = makeLiteral "pointer";
                 };
               };
-          };
-
-          gpg = {
-            enable = true;
-            package = config.programs.gnupg.package;
-
-            mutableKeys = true;
-            mutableTrust = true;
-
-            settings = {
-              no-comments = false;
-            };
-
-            scdaemonSettings = {
-              disable-ccid = true;
-            };
-
-            dirmngrSettings = {
-              allow-version-check = true;
-              keyserver = "hkps://keys.openpgp.org/";
-            };
-
-            gpgsmSettings = {
-              with-key-data = true;
-            };
           };
 
           zed-editor = {
