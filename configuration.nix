@@ -228,10 +228,16 @@ in
     ./Modules/Contour.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
+    ./Modules/Firefox.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
+    ./Modules/MariaDB.nix
     ./Modules/Nautilus.nix
+    ./Modules/nwg-bar.nix
+    ./Modules/nwg-drawer.nix
+    ./Modules/OBS_Studio.nix
+    ./Modules/PostgreSQL.nix
     ./Modules/Starship.nix
     ./Modules/Ungoogled_Chromium.nix
     ./Modules/vivid.nix
@@ -385,101 +391,6 @@ in
           printingSupport = true;
         };
       })
-
-      (final: previous: {
-        nwg-bar = previous.nwg-bar.overrideAttrs (oldAttributes: {
-          nativeBuildInputs =
-            (oldAttributes.nativeBuildInputs or [
-            ]
-            )
-            ++ (with previous; [
-              python3
-            ]);
-
-          postPatch = (oldAttributes.postPatch or "") + ''
-            python3 - <<'PY'
-            from pathlib import Path
-
-            path = Path("main.go")
-            lines = path.read_text().splitlines(keepends=True)
-
-            start = next(
-              (
-                i
-                for i, line in enumerate(lines)
-                if "createPixbuf(" in line and "b.Icon" in line
-              ),
-              None,
-            )
-
-            if start is None:
-              raise SystemExit("Could not locate the icon-loading statement in main.go of nwg-bar!")
-
-            end = next(
-              (
-                i
-                for i in range(start + 1, len(lines))
-                if "SetImage(img)" in lines[i]
-              ),
-              None,
-            )
-
-            if end is None:
-              raise SystemExit("Could not locate SetImage(img) after the icon-loading statement of nwg-bar!")
-
-            indent = lines[start][
-              :len(lines[start]) - len(lines[start].lstrip())
-            ]
-
-            replacement = [
-              indent + "var img *gtk.Image\n",
-              indent + 'if strings.HasPrefix(b.Icon, "/") {\n',
-              indent + "\tpixbuf, err := createPixbuf(b.Icon, *imgSize)\n",
-              indent + "\tif err == nil {\n",
-              indent + "\t\timg, _ = gtk.ImageNewFromPixbuf(pixbuf)\n",
-              indent + "\t} else {\n",
-              indent + '\t\timg, _ = gtk.ImageNewFromIconName("image-missing", gtk.ICON_SIZE_INVALID)\n',
-              indent + "\t}\n",
-              indent + "} else {\n",
-              indent + "\timg, _ = gtk.ImageNewFromIconName(b.Icon, gtk.ICON_SIZE_DIALOG)\n",
-              indent + "}\n",
-              indent + "button.SetImage(img)\n",
-            ]
-
-            lines[start:end + 1] = replacement
-            path.write_text("".join(lines))
-            PY
-          '';
-
-          postInstall = (oldAttributes.postInstall or "") + ''
-            for icon in system-lock-screen.svg system-log-out.svg system-shutdown.svg system-reboot.svg
-            do
-              file="$out/share/nwg-bar/images/$icon"
-
-              if grep -q "fill:#ffffff" "$file"; then
-                substituteInPlace "$file" --replace-fail "fill:#ffffff" "fill:currentColor"
-              fi
-
-              if grep -q "fill:#fff" "$file"; then
-                substituteInPlace "$file" --replace-fail "fill:#fff" "fill:currentColor"
-              fi
-            done
-          '';
-        });
-      }) # Enables currentColor
-
-      (final: previous: {
-        nwg-drawer = previous.nwg-drawer.overrideAttrs (oldAttributes: {
-          postPatch = (oldAttributes.postPatch or "") + ''
-            substituteInPlace tools.go \
-              --replace-fail 'exec.LookPath("uwsm")' 'exec.LookPath("uwsm-app")' \
-              --replace-fail 'exec.Command("uwsm", append([]string{"app", "--"}, cParts...)...)' 'exec.Command("uwsm-app", append([]string{"--"}, cParts...)...)' \
-              --replace-fail 'Unable to find uwsm, running command directly' 'Unable to find uwsm-app, running command directly'
-
-            substituteInPlace main.go --replace-fail "or uwsm app -- (with 'uwsm' for Universal Wayland Session Manager) to launch programs" "or uwsm-app -- (with 'uwsm' for Universal Wayland Session Manager) to launch programs"
-          '';
-        });
-      }) # Replaces Slower `uwsm app` with Faster `uwsm-app`
 
       (final: previous: {
         opendm = previous.stdenv.mkDerivation {
@@ -1875,85 +1786,6 @@ in
       openFirewall = true;
     };
 
-    postgresql = {
-      enable = true;
-      package = (
-        pkgs.postgresql_18.override {
-          bonjourSupport = false; # FIXME: Build Failure
-          curlSupport = true;
-          gssSupport = true;
-          jitSupport = true;
-          nlsSupport = false; # FIXME: Build Failure
-          numaSupport = true;
-          pamSupport = true;
-          pythonSupport = true;
-          selinuxSupport = true;
-          systemdSupport = true;
-          uringSupport = true;
-        }
-      );
-
-      enableTCPIP = true;
-      enableJIT = true;
-
-      settings = pkgs.lib.mkForce {
-        jit = true;
-
-        listen_addresses = "*";
-        port = 5432;
-
-        logging_collector = true;
-        log_destination = "syslog";
-      };
-
-      authentication = pkgs.lib.mkOverride 10 ''
-        local all all md5
-        host all all 0.0.0.0/0 md5
-        host all all ::/0 md5
-        local replication all md5
-        host replication all 0.0.0.0/0 md5
-        host replication all ::/0 md5
-      '';
-
-      checkConfig = true;
-
-      initialScript = pkgs.writeText "postgresqlInitialScript.sql" ''
-        ALTER USER postgres WITH PASSWORD '${config.secrets.password_1}';
-      '';
-    };
-
-    mysql = {
-      enable = true;
-      package = (
-        pkgs.mariadb_118.override {
-          withEmbedded = true;
-          withNuma = true;
-          withStorageMroonga = true;
-          withStorageRocks = true;
-        }
-      );
-
-      settings = {
-        mysqld = {
-          bind-address = "*";
-          port = 3306;
-
-          sql_mode = "";
-        };
-      };
-
-      initialScript = pkgs.writeText "mariadbInitialScript.sql" ''
-        FLUSH PRIVILEGES;
-        CREATE USER IF NOT EXISTS 'root'@'localhost';
-        CREATE USER IF NOT EXISTS 'root'@'%';
-        ALTER USER 'root'@'localhost' IDENTIFIED BY '${config.secrets.password_1}';
-        ALTER USER 'root'@'%' IDENTIFIED BY '${config.secrets.password_1}';
-        GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
-        GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
-        FLUSH PRIVILEGES;
-      '';
-    };
-
     ollama = {
       enable = true;
       package = pkgs.ollama-cpu;
@@ -2382,121 +2214,6 @@ in
       );
     };
 
-    firefox = {
-      enable = true;
-      package = pkgs.firefox-devedition;
-
-      languagePacks = [
-        "en-US"
-      ];
-
-      policies = {
-        SkipTermsOfUse = true;
-
-        DisableTelemetry = true;
-        DisableFirefoxStudies = true;
-        DisableFirefoxAccounts = true;
-        DisablePocket = true;
-
-        AppAutoUpdate = false;
-        BackgroundAppUpdate = false;
-        NoDefaultBookmarks = true;
-
-        HardwareAcceleration = true;
-        PostQuantumKeyAgreementEnabled = true;
-        DisablePrivateBrowsing = false;
-        CaptivePortal = true;
-
-        DisableDeveloperTools = false;
-        AllowFileSelectionDialogs = true;
-        DisableBuiltinPDFViewer = false;
-        VisualSearchEnabled = true;
-        SearchSuggestEnabled = true;
-        TranslateEnabled = true;
-        PrintingEnabled = true;
-
-        HttpsOnlyMode = "enabled";
-        OfferToSaveLogins = false;
-        AutofillAddressEnabled = false;
-        AutofillCreditCardEnabled = false;
-        PromptForDownloadLocation = false;
-        StartDownloadsInTempDirectory = false;
-
-        ExtensionSettings =
-          let
-            linkFormat = linkPart: "https://addons.mozilla.org/firefox/downloads/latest/${linkPart}/latest.xpi";
-          in
-          {
-            "{8446b178-c865-4f5c-8ccc-1d7887811ae3}" = {
-              install_url = linkFormat "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-git";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            }; # Hardcoded Identifier for Catppuccin Mocha Lavender
-
-            "jid1-BoFifL9Vbdl2zQ@jetpack" = {
-              install_url = linkFormat "decentraleyes";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "FirefoxColor@mozilla.com" = {
-              install_url = linkFormat "firefox-color";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "keepassxc-browser@keepassxc.org" = {
-              install_url = linkFormat "keepassxc-browser";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "@testpilot-containers" = {
-              install_url = linkFormat "multi-account-containers";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{2e5ff8c8-32fe-46d0-9fc8-6b8986621f3c}" = {
-              install_url = linkFormat "search_by_image";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{531906d3-e22f-4a6c-a102-8057b88a1a63}" = {
-              install_url = linkFormat "single-file";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "sponsorBlocker@ajay.app" = {
-              install_url = linkFormat "sponsorblock";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "uBlock0@raymondhill.net" = {
-              install_url = linkFormat "ublock-origin";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-
-            "{dcb8caa2-63fa-41aa-a508-a45c5990ebdd}" = {
-              install_url = linkFormat "zjm-whatfont";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-          }
-          // {
-            "queryamoid@kaply.com" = {
-              install_url = "https://github.com/mkaply/queryamoid/releases/download/v0.2/query_amo_addon_id-0.2-fx.xpi";
-              installation_mode = "normal_installed";
-              updates_disabled = false;
-            };
-          };
-      };
-    };
-
     evince = {
       enable = true;
       package = (
@@ -2505,40 +2222,6 @@ in
           withLibsecret = true;
         }
       );
-    };
-
-    obs-studio = {
-      enable = true;
-      package = (
-        pkgs.obs-studio.override {
-          alsaSupport = true;
-          browserSupport = false;
-          pipewireSupport = true;
-          pulseaudioSupport = true;
-          scriptingSupport = true;
-          withFdk = true;
-        }
-      );
-
-      enableVirtualCamera = false; # Done Manually Instead
-
-      plugins = with pkgs.obs-studio-plugins; [
-        obs-3d-effect
-        obs-backgroundremoval
-        obs-composite-blur
-        obs-gradient-source
-        obs-gstreamer
-        obs-multi-rtmp
-        obs-mute-filter
-        obs-pipewire-audio-capture
-        obs-scale-to-sound
-        obs-source-clone
-        obs-source-record
-        obs-text-pthread
-        obs-transition-table
-        obs-vaapi
-        obs-vkcapture
-      ];
     };
 
     wayvnc = {
@@ -2970,7 +2653,6 @@ in
         mp3fs
         mtools
         mtr-gui # mtr --gtk
-        mysqltuner
         nethogs
         nilfs-utils
         ninja
@@ -2989,8 +2671,6 @@ in
         ntfsprogs-plus
         nurl
         nvme-cli
-        nwg-bar
-        nwg-drawer
         obexftp
         onionshare-gui
         openafs
@@ -3015,10 +2695,6 @@ in
         pdfarranger
         peazip
         pev
-        pg_top
-        pgbadger
-        pgpdump
-        pgread
         picard
         picard-tools
         pkg-config
@@ -3510,7 +3186,6 @@ in
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
-      ++ config.programs.obs-studio.plugins
       ++ config.services.pipewire.extraLv2Packages
       ++ config.services.udev.packages
       ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
@@ -4962,13 +4637,6 @@ in
 
               {
                 _args = [
-                  "SUPER + L"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-bar -p center -t 'bar.json' -s 'style.css'\")")
-                ];
-              }
-
-              {
-                _args = [
                   "SUPER + A"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
                 ];
@@ -5007,29 +4675,11 @@ in
 
               {
                 _args = [
-                  "SUPER + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term ${config.customOptions.executableNameOfTerminalEmulator} -nofs -fm ${config.customOptions.executableNameOfFileManager}\")")
-                ];
-              }
-              {
-                _args = [
                   "SUPER + ALT + RETURN"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
-              {
-                _args = [
-                  "SUPER + ALT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- firefox-devedition.desktop\")")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + SHIFT + W"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"firefox-devedition --private-window\")")
-                ];
-              }
               {
                 _args = [
                   "SUPER + E"
@@ -5445,199 +5095,6 @@ in
 
           configFile = {
             "mimeapps.list".force = true;
-
-            "nwg-bar/bar.json" = {
-              enable = true;
-
-              source = pkgs.writeText "nwg-bar.json" ''
-                [
-                  {
-                    "label": "_Lock",
-                    "exec": "loginctl lock-session",
-                    "icon": "system-lock-screen-symbolic"
-                  },
-                  {
-                    "label": "_Exit",
-                    "exec": "uwsm stop",
-                    "icon": "system-log-out-symbolic"
-                  },
-                  {
-                    "label": "_Shutdown",
-                    "exec": "systemctl -i poweroff",
-                    "icon": "system-shutdown-symbolic"
-                  },
-                  {
-                    "label": "_Reboot",
-                    "exec": "systemctl reboot",
-                    "icon": "system-reboot-symbolic"
-                  }
-                ]
-              ''; # FIXME: hyprshutdown Does Not Work
-
-              target = "nwg-bar/bar.json";
-              executable = null;
-            };
-
-            "nwg-bar/style.css" = {
-              enable = true;
-
-              source = pkgs.writeText "nwg-bar.css" ''
-                /* Catppuccin Mocha */
-                @define-color rosewater #f5e0dc;
-                @define-color flamingo #f2cdcd;
-                @define-color pink #f5c2e7;
-                @define-color mauve #cba6f7;
-                @define-color red #f38ba8;
-                @define-color maroon #eba0ac;
-                @define-color peach #fab387;
-                @define-color yellow #f9e2af;
-                @define-color green #a6e3a1;
-                @define-color teal #94e2d5;
-                @define-color sky #89dceb;
-                @define-color sapphire #74c7ec;
-                @define-color blue #89b4fa;
-                @define-color lavender #b4befe;
-                @define-color text #cdd6f4;
-                @define-color subtext1 #bac2de;
-                @define-color subtext0 #a6adc8;
-                @define-color overlay2 #9399b2;
-                @define-color overlay1 #7f849c;
-                @define-color overlay0 #6c7086;
-                @define-color surface2 #585b70;
-                @define-color surface1 #45475a;
-                @define-color surface0 #313244;
-                @define-color base #1e1e2e;
-                @define-color mantle #181825;
-                @define-color crust #11111b;
-
-                * {
-                  font-family: ${fontPreferences.sansSerif};
-                  font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                }
-
-                window {
-                  border: 1px solid @surface2;
-                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                  /* background-color: @base; */
-                  background-color: rgba(30, 30, 46, 0.99);
-                }
-
-                button {
-                  margin: ${pkgs.lib.toString (builtins.floor designFactor)}px ${pkgs.lib.toString (builtins.floor designFactor)}px ${pkgs.lib.toString (builtins.floor designFactor)}px 0px;
-                  box-shadow: none;
-                  border: none;
-                  border-radius: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                  background-color: @mantle;
-                  padding-top: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                  padding-bottom: ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}px;
-                  color: @text;
-                  transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
-                }
-
-                button:first-child {
-                  margin-left: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                }
-
-                button:hover,
-                button:focus {
-                  background-color: @surface0;
-                  color: @lavender;
-                }
-
-                button image {
-                  box-shadow: none;
-                  border: none;
-                  background-color: transparent;
-                  color: @text;
-                  transition: color ${pkgs.lib.toString transitionDuration}ms;
-                }
-
-                button:hover image,
-                button:focus image {
-                  color: @lavender;
-                }
-              '';
-
-              target = "nwg-bar/style.css";
-              executable = null;
-            };
-
-            "nwg-drawer/style.css" = {
-              enable = true;
-
-              source = pkgs.writeText "nwg-drawer.css" ''
-                /* Catppuccin Mocha */
-                @define-color rosewater #f5e0dc;
-                @define-color flamingo #f2cdcd;
-                @define-color pink #f5c2e7;
-                @define-color mauve #cba6f7;
-                @define-color red #f38ba8;
-                @define-color maroon #eba0ac;
-                @define-color peach #fab387;
-                @define-color yellow #f9e2af;
-                @define-color green #a6e3a1;
-                @define-color teal #94e2d5;
-                @define-color sky #89dceb;
-                @define-color sapphire #74c7ec;
-                @define-color blue #89b4fa;
-                @define-color lavender #b4befe;
-                @define-color text #cdd6f4;
-                @define-color subtext1 #bac2de;
-                @define-color subtext0 #a6adc8;
-                @define-color overlay2 #9399b2;
-                @define-color overlay1 #7f849c;
-                @define-color overlay0 #6c7086;
-                @define-color surface2 #585b70;
-                @define-color surface1 #45475a;
-                @define-color surface0 #313244;
-                @define-color base #1e1e2e;
-                @define-color mantle #181825;
-                @define-color crust #11111b;
-
-                * {
-                  font-family: ${fontPreferences.sansSerif};
-                  font-size: ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px;
-                }
-
-                window {
-                  background-color: @base;
-                  color: @text;
-                }
-
-                entry {
-                  margin-bottom: ${pkgs.lib.toString (builtins.floor (designFactor * 3.0))}px;
-                  border: 1px solid @surface2;
-                  background-color: @mantle;
-                }
-
-                #pinned-box {
-                  border-bottom: 1px solid @surface1;
-                  padding-bottom: ${pkgs.lib.toString (builtins.floor designFactor)}px;
-                }
-
-                button {
-                  box-shadow: none;
-                  border: none;
-                  background: none;
-                  transition: background-color ${pkgs.lib.toString transitionDuration}ms, color ${pkgs.lib.toString transitionDuration}ms;
-                }
-
-                button:hover,
-                button:focus {
-                  background: @surface0;
-                  color: @lavender;
-                }
-
-                image {
-                  box-shadow: none;
-                  border: none;
-                  background: none;
-                }
-              '';
-
-              target = "nwg-drawer/style.css";
-              executable = null;
-            };
           };
 
           dataFile = {
@@ -7974,18 +7431,6 @@ in
                 command = "${pkgs.fastcrw}/bin/crw-mcp";
               };
 
-              firefox-devtools-mcp = {
-                enabled = true;
-
-                command = "${pkgs.firefox-devtools-mcp}/bin/firefox-devtools-mcp";
-                args = [
-                  "--firefox-path"
-                  "${pkgs.firefox-devedition}/bin/firefox-devedition"
-                  "--tool-preset"
-                  "developer"
-                ];
-              };
-
               # markitdown-mcp = {
               #   enabled = true;
 
@@ -8063,15 +7508,6 @@ in
             };
           };
 
-          firefox = {
-            enable = config.programs.firefox.enable;
-            package = config.programs.firefox.package;
-
-            languagePacks = config.programs.firefox.languagePacks;
-
-            policies = config.programs.firefox.policies;
-          };
-
           mangohud = {
             enable = true;
             package = pkgs.mangohud;
@@ -8114,12 +7550,6 @@ in
             settings = {
               no-embed-thumbnail = true;
             };
-          };
-
-          obs-studio = {
-            enable = config.programs.obs-studio.enable;
-            package = config.programs.obs-studio.package;
-            plugins = config.programs.obs-studio.plugins;
           };
 
           ssh = {
@@ -8239,19 +7669,11 @@ in
 
           opencode.enable = false; # Not Applicable for GUI
 
-          firefox.enable = false; # Manually Done Instead
-
           mangohud = {
             enable = config.home-manager.users.normal.programs.mangohud.enable;
 
             flavor = config.catppuccin.flavor;
           };
-
-          obs = {
-            enable = config.programs.obs-studio.enable;
-
-            flavor = config.catppuccin.flavor;
-          }; # Settings > Appearance > Theme, Style
         }; # From catppuccinThemeFlake
 
         manual = {
