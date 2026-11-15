@@ -7,37 +7,35 @@
 }:
 {
   config = {
-    programs = {
-      gnupg = {
-        package = (
-          pkgs.gnupg1compat.override {
-            gnupg = (
-              pkgs.gnupg24.override {
-                enableMinimal = false;
-                guiSupport = true;
-                withPcsc = true;
-                withTpm2Tss = true;
-              }
-            );
-          }
-        );
-
-        dirmngr.enable = true;
-
-        agent = {
-          enable = true;
-
-          enableBrowserSocket = true;
-          enableExtraSocket = true;
-
-          enableSSHSupport = true;
-
-          pinentryPackage = (
-            pkgs.pinentry-qt.override {
-              withLibsecret = true;
+    programs.gnupg = {
+      package = (
+        pkgs.gnupg1compat.override {
+          gnupg = (
+            pkgs.gnupg24.override {
+              enableMinimal = false;
+              guiSupport = true;
+              withPcsc = true;
+              withTpm2Tss = true;
             }
           );
-        };
+        }
+      );
+
+      dirmngr.enable = true;
+
+      agent = {
+        enable = true;
+
+        enableBrowserSocket = true;
+        enableExtraSocket = true;
+
+        enableSSHSupport = true;
+
+        pinentryPackage = (
+          pkgs.pinentry-qt.override {
+            withLibsecret = true;
+          }
+        );
       };
     };
 
