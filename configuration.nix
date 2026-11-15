@@ -230,6 +230,7 @@ in
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
+    ./Modules/GNU_Bash.nix
     ./Modules/GNU_GRand_Unified_Bootloader.nix
     ./Modules/GnuPG.nix
     ./Modules/Hardinfo2.nix
@@ -240,6 +241,7 @@ in
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
     ./Modules/LibreOffice.nix
+    ./Modules/libvirt.nix
     ./Modules/Loupe.nix
     ./Modules/MariaDB.nix
     ./Modules/Nautilus.nix
@@ -342,39 +344,6 @@ in
           withOpenssl = true;
         };
       })
-
-      (final: previous: {
-        ghost-sh = previous.stdenv.mkDerivation {
-          pname = "ghost-sh";
-          version = "main";
-
-          src = fetchGit {
-            url = "https://github.com/h-jangra/Ghost.sh.git";
-            ref = "main";
-            submodules = true;
-          };
-
-          nativeBuildInputs = with previous; [
-            zig.hook
-          ];
-
-          zigBuildFlags = [
-            "-Doptimize=ReleaseFast"
-          ];
-
-          installPhase = ''
-            runHook preInstall
-
-            install -Dm755 zig-out/bin/ghost $out/bin/ghost
-            install -Dm644 ghost.sh $out/share/ghost/ghost.sh
-
-            substituteInPlace $out/share/ghost/ghost.sh --replace-fail '_GHOST_BIN="$(dirname "''${BASH_SOURCE[0]}")/ghost"' "_GHOST_BIN=\"$out/bin/ghost\""
-            substituteInPlace $out/share/ghost/ghost.sh --replace-fail 'if ! command -v "$_GHOST_BIN" >/dev/null 2>&1 || [[ ! -t 0 || ! -t 1 || ! -r /dev/tty ]]; then' 'if false; then'
-
-            runHook postInstall
-          '';
-        };
-      }) # Addition
     ];
   };
 
@@ -448,16 +417,12 @@ in
       "simplefb"
     ];
 
-    extraModprobeConfig = ''
-      options kvm ignore_msrs=1 report_ignored_msrs=0
-    ''
-    + config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-configuration.nix
+    extraModprobeConfig = config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-configuration.nix
 
     kernelParams = [
       "boot.shell_on_fail"
       "initcall_blacklist=simpledrm_platform_driver_init"
       "iommu=pt"
-      "kvm.ignore_msrs=1"
       "mitigations=auto"
       "rd.systemd.show_status=true"
       "rd.udev.log_level=err"
@@ -605,8 +570,6 @@ in
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
 
       "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
-
-      "d /var/lib/swtpm-localca 0750 tss root -"
     ]
     ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
   };
@@ -733,15 +696,6 @@ in
     };
 
     enableWrappers = true;
-    wrappers = {
-      spice-client-glib-usb-acl-helper = {
-        source = "${
-          (pkgs.spice-gtk.override {
-            withPolkit = config.security.polkit.enable;
-          })
-        }/bin/spice-client-glib-usb-acl-helper";
-      };
-    };
 
     audit = {
       enable = true;
@@ -884,38 +838,6 @@ in
     };
   };
 
-  virtualisation = {
-    libvirtd = {
-      enable = true;
-      package = (
-        pkgs.libvirt.override {
-          enableCeph = false; # FIXME: Build Failure
-          enableGlusterfs = true;
-          enableIscsi = true;
-          enableXen = false;
-          enableZfs = true;
-        }
-      );
-
-      qemu = {
-        package = pkgs.qemu;
-
-        vhostUserPackages = with pkgs; [
-          virtiofsd
-        ];
-
-        swtpm = {
-          enable = true;
-          package = pkgs.swtpm;
-        };
-
-        runAsRoot = true;
-      };
-    };
-
-    spiceUSBRedirection.enable = true;
-  };
-
   services = {
     journald = {
       settings = {
@@ -954,7 +876,6 @@ in
 
       packages = with pkgs; [
         fprintd
-        libvirt-dbus
       ];
     };
 
@@ -1308,31 +1229,6 @@ in
       enableRenice = true;
     };
 
-    bash = {
-      vteIntegration = true;
-
-      completion = {
-        enable = true;
-        package = pkgs.bash-completion;
-      };
-
-      enableLsColors = true;
-
-      undistractMe = {
-        enable = true;
-        playSound = true;
-      };
-
-      # shellAliases = { };
-
-      # loginShellInit = '''';
-      # shellInit = '''';
-      # interactiveShellInit = '''';
-      # promptInit = '''';
-
-      # logout = '''';
-    };
-
     nix-ld = {
       enable = true;
       package = pkgs.nix-ld;
@@ -1518,52 +1414,6 @@ in
               show-hidden = true;
               sort-directories-first = true;
             };
-
-            "org/virt-manager/virt-manager" = {
-              xmleditor-enabled = true;
-            };
-
-            "org/virt-manager/virt-manager/connections" = {
-              autoconnect = [
-                "qemu:///system"
-              ];
-              uris = [
-                "qemu:///system"
-              ];
-            };
-
-            "org/virt-manager/virt-manager/new-vm" = {
-              cpu-default = "host-passthrough";
-            };
-
-            "org/virt-manager/virt-manager/console" = {
-              auto-redirect = false;
-              autoconnect = true;
-            };
-
-            "org/virt-manager/virt-manager/stats" = {
-              enable-cpu-poll = true;
-              enable-disk-poll = true;
-              enable-memory-poll = true;
-              enable-net-poll = true;
-            };
-
-            "org/virt-manager/virt-manager/vmlist-fields" = {
-              cpu-usage = true;
-              disk-usage = true;
-              host-cpu-usage = true;
-              memory-usage = true;
-              network-traffic = true;
-            };
-
-            "org/virt-manager/virt-manager/confirm" = {
-              delete-storage = true;
-              forcepoweroff = true;
-              pause = true;
-              poweroff = true;
-              removedev = true;
-              unapplied-dev = true;
-            };
           };
         }
       ];
@@ -1613,15 +1463,6 @@ in
       package = pkgs.networkmanagerapplet;
 
       indicator = true;
-    };
-
-    virt-manager = {
-      enable = true;
-      package = (
-        pkgs.virt-manager.override {
-          spiceSupport = true;
-        }
-      );
     };
 
     evince = {
@@ -1718,10 +1559,6 @@ in
   };
 
   environment = {
-    shells = [
-      config.home-manager.users.normal.programs.bash.package
-    ];
-
     enableAllTerminfo = true;
 
     homeBinInPath = true;
@@ -1734,7 +1571,6 @@ in
       [
         # apkeep # FIXME: Build Failure
         # darling-dmg # Marked as Broken
-        # field-monitor # FIXME: Build Failure
         # flake-checker # FIXME: Build Failure
         # gearlever # FIXME: Build Failure
         # genealogos-cli # FIXME: Build Failure
@@ -1900,13 +1736,13 @@ in
         gawk
         gcc
         gcr_4
+        gdk-pixbuf
         gerbolyze
         gh
         gh-contribs
         gh-skyline
         gh2md
         ghatm
-        ghost-sh # From config.nixpkgs.overlays
         ghrepo-stats
         gimp-with-plugins
         git-big-picture
@@ -1939,10 +1775,8 @@ in
         gpu-viewer
         graphviz
         gtk-frdp
-        gtk-vnc
         gtkhash
         gucharmap
-        guestfs-tools
         gzip
         halftone
         hashes
@@ -2000,12 +1834,14 @@ in
         letterpress
         lha
         libaom
+        libavif
         libde265
         libfreeaptx
         libheif.bin
         libheif.out
         libilbc
         libimobiledevice
+        libjxl
         liblc3
         libnotify
         libogg
@@ -2106,8 +1942,6 @@ in
         psmisc
         qalculate-gtk
         qdirstat
-        qemu-user
-        qemu-utils
         qr-backup
         qsstv
         qtrvsim
@@ -2189,7 +2023,6 @@ in
         util-linux
         valgrind
         valuta
-        virt-v2v
         vorbis-tools
         vulnix
         wafw00f
@@ -2199,6 +2032,7 @@ in
         wayland-utils
         wayscriber
         webfont-bundler
+        webp-pixbuf-loader
         websocat
         wev
         whatfiles
@@ -2424,10 +2258,6 @@ in
           usrp_source = true;
         })
 
-        (spice-gtk.override {
-          withPolkit = config.security.polkit.enable;
-        })
-
         (testdisk-qt.override {
           enableExtFs = true;
           enableNtfs = true;
@@ -2566,7 +2396,6 @@ in
       ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
       ++ config.services.udev.packages
-      ++ config.virtualisation.libvirtd.qemu.vhostUserPackages
       ++ config.xdg.portal.configPackages
       ++ config.xdg.portal.extraPortals
 
@@ -2978,8 +2807,6 @@ in
     mutableUsers = true;
     manageLingering = true;
 
-    defaultUserShell = config.home-manager.users.normal.programs.bash.package;
-
     motd = "Welcome to ${config.networking.fqdn}";
 
     users = {
@@ -3020,13 +2847,10 @@ in
           "gpsd"
           "i2c"
           "input"
-          "kvm"
-          "libvirtd"
           "lp"
           "networkmanager"
           "nm-openvpn"
           "plugdev"
-          "qemu-libvirtd"
           "render"
           "systemd-journal"
           "tape"
@@ -4883,48 +4707,6 @@ in
                 padding: 0px ${pkgs.lib.toString (builtins.floor designFactor)}px 0px ${pkgs.lib.toString (builtins.floor designFactor)}px;
               }
             '';
-          };
-
-          bash = {
-            enable = true;
-            package = pkgs.bashInteractive;
-
-            enableVteIntegration = config.programs.bash.vteIntegration;
-            enableCompletion = config.programs.bash.completion.enable;
-
-            shellOptions = [
-              "-extdebug"
-              "autocd"
-              "checkhash"
-              "checkjobs"
-              "checkwinsize"
-              "cmdhist"
-              "dotglob"
-              "extglob"
-              "globstar"
-              "gnu_errfmt"
-              "histappend"
-              "lithist"
-            ];
-
-            sessionVariables = {
-              HISTTIMEFORMAT = "%F %T ";
-            };
-
-            shellAliases = config.programs.bash.shellAliases;
-
-            # profileExtra = '''';
-
-            initExtra = ''
-              export PROMPT_COMMAND="history -a"
-
-              export _GHOST_BIN="${pkgs.ghost-sh}/bin/ghost"
-              if [[ -f "${pkgs.ghost-sh}/share/ghost/ghost.sh" ]]; then
-                source "${pkgs.ghost-sh}/share/ghost/ghost.sh"
-              fi
-            '';
-
-            # logoutExtra = '''';
           };
 
           kubecolor = {
