@@ -58,6 +58,8 @@
       config.services.postgresql.settings.port
     ];
 
+    systemd.targets.postgresql.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
     environment.systemPackages = with pkgs; [
       pg_top
       pgbadger

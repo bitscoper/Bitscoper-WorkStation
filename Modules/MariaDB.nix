@@ -43,6 +43,8 @@
       config.services.mysql.settings.mysqld.port
     ];
 
+    systemd.services.mysql.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
     environment.systemPackages = with pkgs; [
       mysqltuner
     ];

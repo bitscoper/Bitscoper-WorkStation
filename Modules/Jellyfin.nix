@@ -58,6 +58,8 @@
       openFirewall = true;
     };
 
+    systemd.services.jellyfin.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
     home-manager.sharedModules = [
       {
         home.activation.permitJellyfin = ''

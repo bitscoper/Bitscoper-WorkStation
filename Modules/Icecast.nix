@@ -2,6 +2,7 @@
 
 {
   config,
+  pkgs,
   tlsCertificateConcatenatedFile,
   ...
 }:
@@ -44,5 +45,7 @@
     networking.firewall.allowedTCPPorts = [
       config.services.icecast.listen.port
     ];
+
+    systemd.services.icecast.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
   };
 }

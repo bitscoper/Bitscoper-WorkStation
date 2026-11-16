@@ -47,6 +47,10 @@
       oci-containers.backend = "podman";
     };
 
+    networking.firewall.allowedTCPPorts = [
+      config.virtualisation.podman.networkSocket.port
+    ];
+
     environment.systemPackages =
       with pkgs;
       [
@@ -56,10 +60,6 @@
         pods
       ]
       ++ config.virtualisation.podman.extraRuntimes;
-
-    networking.firewall.allowedTCPPorts = [
-      config.virtualisation.podman.networkSocket.port
-    ];
 
     users.users.normal.extraGroups = [
       "podman"

@@ -9,17 +9,18 @@
   ...
 }:
 let
-  # stableNixPackages =
-  #   import
-  #     (fetchTarball {
-  #       url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
-  #     })
-  #     {
-  #       config = config.nixpkgs.config;
-  #     };
+  stableNixPackages =
+    import
+      (fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-26.05.tar.gz";
+      })
+      {
+        config = config.nixpkgs.config;
+      };
 
   homeManagerFlake = builtins.getFlake "github:nix-community/home-manager/master";
   androidSDKCompositionFlake = builtins.getFlake "github:tadfisher/android-nixpkgs/stable";
+  sysdManagerFlake = builtins.getFlake "github:plrigaux/sysd-manager/main";
   catppuccinThemeFlake = builtins.getFlake "github:catppuccin/nix/main";
 
   # package="$(nix eval --raw nixpkgs#path)/pkgs/development/mobile/androidenv/querypackages.sh"; for type in packages images addons extras licenses; do sh "$package" "$type"; done
@@ -211,7 +212,6 @@ in
       tlsCACertificateFile
       tlsCertificateConcatenatedFile
       tlsCertificateFile
-      tlsCertificateFiles
       tlsCertificatePrivateKeyFile
       transitionDuration
       wallpaperFile
@@ -240,6 +240,7 @@ in
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
+    ./Modules/Kubernetes.nix
     ./Modules/LibreOffice.nix
     ./Modules/libvirt.nix
     ./Modules/Loupe.nix
@@ -766,9 +767,8 @@ in
 
       allowPing = true;
 
-      allowedTCPPorts = [
-        config.home-manager.users.normal.services.wayvnc.settings.port
-      ];
+      # allowedTCPPorts = [
+      # ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
 
       trustedInterfaces = [
@@ -794,7 +794,7 @@ in
   time = {
     hardwareClockInLocalTime = false;
 
-    timeZone = null; # Null = Imparative
+    timeZone = "Asia/Dhaka";
   };
 
   i18n = {
@@ -894,16 +894,6 @@ in
             "~."
           ];
         };
-      };
-    };
-
-    tzupdate = {
-      enable = true;
-      package = pkgs.tzupdate;
-
-      timer = {
-        enable = true;
-        interval = "hourly";
       };
     };
 
@@ -1164,10 +1154,6 @@ in
       host = "0.0.0.0";
       port = 11434;
       openFirewall = true;
-    };
-
-    kubernetes = {
-      package = pkgs.kubernetes;
     };
 
     tailscale = {
@@ -1719,7 +1705,6 @@ in
         fh
         file
         fileinfo
-        filen-desktop
         findutils
         flare-floss
         flawz
@@ -1761,6 +1746,7 @@ in
         gnome-frog
         gnome-multi-writer
         gnss-sdr
+        gnucash
         gnugrep
         gnumake
         gnused
@@ -1818,17 +1804,12 @@ in
         kernel-hardening-checker
         kernelshark
         kexec-tools
-        kind
         kmod
         kotlin
         krapslog
         krename
         krita
         krita-plugin-gmic
-        kubectl
-        kubernetes-controller-tools
-        kubescape
-        kubeshark
         labplot
         lenspect
         letterpress
@@ -1878,7 +1859,6 @@ in
         mfcuk
         mfoc
         millisecond
-        minikube
         mixxx
         monkeys-audio
         morphosis
@@ -1964,7 +1944,6 @@ in
         scorecard
         scrcpy
         sdrangel
-        seabird
         seer # seergdb
         selectdefaultapplication
         semver-tool
@@ -1981,6 +1960,7 @@ in
         srain
         sshfs-fuse
         sslscan
+        stableNixPackages.filen-desktop
         stdenv.cc.libc.out # Includes Locales
         steam-run-free
         stellarium
@@ -1994,6 +1974,7 @@ in
         switcheroo
         syft
         symlinks
+        sysdManagerFlake.packages.${config.nixpkgs.hostPlatform.system}.sysd-manager
         tauno-monitor
         telegraph
         teleprompter
@@ -3985,7 +3966,7 @@ in
             package = config.programs.wayvnc.package;
 
             settings = {
-              address = "127.0.0.1";
+              address = "0.0.0.0"; # Not to be Allowed through Firewall
               port = 5901;
             };
 
@@ -4707,18 +4688,6 @@ in
                 padding: 0px ${pkgs.lib.toString (builtins.floor designFactor)}px 0px ${pkgs.lib.toString (builtins.floor designFactor)}px;
               }
             '';
-          };
-
-          kubecolor = {
-            enable = true;
-            package = pkgs.kubecolor;
-
-            enableAlias = true;
-
-            settings = {
-              kubectl = pkgs.lib.getExe pkgs.kubectl;
-              preset = "dark";
-            };
           };
 
           nix-index = {
@@ -5799,12 +5768,6 @@ in
 
               #   command = "${pkgs.markitdown-mcp}/bin/markitdown-mcp";
               # }; # FIXME: Build Failure
-
-              mcp-k8s-go = {
-                enabled = true;
-
-                command = "${pkgs.mcp-k8s-go}/bin/mcp-k8s-go";
-              };
 
               mcp-nixos = {
                 enabled = true;
