@@ -11,6 +11,7 @@
       enable = true;
       package = (
         pkgs.postgresql_18.override {
+          # bonjourSupport = config.services.avahi.enable;
           bonjourSupport = false; # FIXME: Build Failure
           curlSupport = true;
           gssSupport = true;

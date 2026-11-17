@@ -16,7 +16,7 @@
           raopSupport = true;
           rocSupport = true;
           vulkanSupport = true;
-          zeroconfSupport = true;
+          zeroconfSupport = config.services.avahi.enable;
         }
       );
 

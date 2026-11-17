@@ -47,6 +47,10 @@
       oci-containers.backend = "podman";
     };
 
+    services.cockpit.plugins = with pkgs; [
+      cockpit-podman
+    ];
+
     networking.firewall.allowedTCPPorts = [
       config.virtualisation.podman.networkSocket.port
     ];

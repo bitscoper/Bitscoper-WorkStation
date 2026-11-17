@@ -8,6 +8,47 @@
   tlsCertificatePrivateKeyFile,
   ...
 }:
+let
+  administratorTlsCertificateFiles =
+    pkgs.runCommand "Kubernetes_Administrator_TLS_Certificate_Files"
+      {
+        nativeBuildInputs = with pkgs; [
+          openssl
+        ];
+      }
+      ''
+        mkdir -p "$out"
+
+        openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out "$out/Private.key"
+
+        openssl req -new -key "$out/Private.key" -out Administrator.csr -subj "/O=system:masters/CN=cluster-admin"
+
+        cat > Administrator_Extensions.cnf <<EOF
+        [administrator_tls_certificate]
+        basicConstraints = critical, CA:FALSE
+        keyUsage = critical, digitalSignature
+        extendedKeyUsage = clientAuth
+        subjectKeyIdentifier = hash
+        authorityKeyIdentifier = keyid,issuer
+        EOF
+
+        printf '1000\n' > CA.srl
+
+        openssl x509 -req -in Administrator.csr -CA "${tlsCACertificateFile}" -CAkey "${tlsCertificatePrivateKeyFile}" -CAserial CA.srl -out "$out/Certificate.crt" -days 36499 -sha512 -extfile Administrator_Extensions.cnf -extensions administrator_tls_certificate
+      '';
+
+  administratorKubeconfig = config.services.kubernetes.lib.mkKubeConfig "cluster-admin" {
+    server = config.services.kubernetes.apiserverAddress;
+
+    caFile = tlsCACertificateFile;
+    certFile = "${administratorTlsCertificateFiles}/Certificate.crt";
+    keyFile = "${administratorTlsCertificateFiles}/Private.key";
+  };
+
+  bootstrapAddonFiles = pkgs.lib.mapAttrsToList (
+    name: resource: pkgs.writeText "kubernetes-bootstrap-${name}.json" (builtins.toJSON resource)
+  ) config.services.kubernetes.addonManager.bootstrapAddons;
+in
 {
   config = {
     services = {
@@ -24,7 +65,9 @@
         listenClientUrls = [
           "https://0.0.0.0:2379"
         ];
-        advertiseClientUrls = config.services.etcd.listenClientUrls;
+        advertiseClientUrls = [
+          "https://${config.networking.fqdn}:2379"
+        ];
 
         peerClientCertAuth = true;
         peerTrustedCaFile = tlsCACertificateFile;
@@ -33,7 +76,13 @@
         listenPeerUrls = [
           "https://0.0.0.0:2380"
         ];
-        initialAdvertisePeerUrls = config.services.etcd.listenPeerUrls;
+        initialAdvertisePeerUrls = [
+          "https://${config.networking.fqdn}:2380"
+        ];
+
+        initialCluster = [
+          "${config.networking.fqdn}=https://${config.networking.fqdn}:2380"
+        ];
 
         extraConf = {
           "CORS" = "*";
@@ -55,10 +104,6 @@
           caFile = tlsCACertificateFile;
           certFile = tlsCertificateFile;
           keyFile = tlsCertificatePrivateKeyFile;
-        };
-
-        extraNetworkConfig = {
-          EnableIPv6 = true;
         };
       };
 
@@ -88,6 +133,29 @@
 
         addonManager = {
           enable = true;
+
+          bootstrapAddons = {
+            clusterAdministrator = {
+              apiVersion = "rbac.authorization.k8s.io/v1";
+              kind = "ClusterRoleBinding";
+
+              metadata.name = "clusterAdministrator";
+
+              roleRef = {
+                apiGroup = "rbac.authorization.k8s.io";
+                kind = "ClusterRole";
+                name = "cluster-admin";
+              };
+
+              subjects = [
+                {
+                  kind = "User";
+                  name = config.networking.fqdn;
+                  apiGroup = "rbac.authorization.k8s.io";
+                }
+              ];
+            };
+          };
         };
 
         addons.dns = {
@@ -125,7 +193,6 @@
           tlsCertFile = tlsCertificateFile;
           tlsKeyFile = tlsCertificatePrivateKeyFile;
           bindAddress = "0.0.0.0";
-          advertiseAddress = "0.0.0.0";
           securePort = 6443;
 
           storageBackend = "etcd3";
@@ -139,6 +206,8 @@
             keyFile = tlsCertificatePrivateKeyFile;
           };
 
+          apiAudiences = "api,https://kubernetes.default.svc.${config.networking.fqdn}";
+
           clientCaFile = tlsCACertificateFile;
 
           proxyClientCertFile = tlsCertificateFile;
@@ -148,6 +217,7 @@
           kubeletClientCertFile = tlsCertificateFile;
           kubeletClientKeyFile = tlsCertificatePrivateKeyFile;
 
+          serviceAccountIssuer = "https://kubernetes.default.svc.${config.networking.fqdn}";
           serviceAccountKeyFile = tlsCertificatePrivateKeyFile;
           serviceAccountSigningKeyFile = tlsCertificatePrivateKeyFile;
 
@@ -225,15 +295,46 @@
 
           registerNode = true;
           unschedulable = false;
+
+          extraOpts = "--fail-swap-on=false";
         };
       };
+    };
+
+    systemd.services.kube-addon-manager = {
+      environment.KUBECONFIG = config.services.kubernetes.lib.mkKubeConfig "addon-manager" {
+        server = config.services.kubernetes.apiserverAddress;
+
+        caFile = tlsCACertificateFile;
+        certFile = tlsCertificateFile;
+        keyFile = tlsCertificatePrivateKeyFile;
+      };
+
+      preStart = ''
+        export KUBECONFIG=${administratorKubeconfig}
+
+        ${pkgs.lib.concatMapStringsSep "\n" (file: ''
+          ${config.services.kubernetes.package}/bin/kubectl apply -f ${file}
+        '') bootstrapAddonFiles}
+      '';
+
+      serviceConfig.PermissionsStartOnly = true;
     };
 
     environment.systemPackages =
       with pkgs;
       [
+        # kubectl-validate # FIXME: Build Failure
         kubectl
-        kubernetes-controller-tools
+        kubectl-doctor
+        kubectl-evict-pod
+        kubectl-graph
+        kubectl-images
+        kubectl-ktop
+        kubectl-neat
+        kubectl-node-shell
+        kubectl-tree
+        kubectl-view-secret
         kubescape
         kubeshark
         seabird
@@ -263,6 +364,21 @@
 
               command = "${pkgs.mcp-k8s-go}/bin/mcp-k8s-go";
             };
+          };
+        };
+
+        home = {
+          file.".kube/config" = {
+            enable = true;
+
+            source = administratorKubeconfig;
+
+            target = ".kube/config";
+            executable = false;
+          };
+
+          sessionVariables = {
+            KUBECONFIG = "$HOME/.kube/config";
           };
         };
       }

@@ -187,18 +187,40 @@ let
         CN = config.networking.fqdn;
       }
       ''
-        mkdir -p $out
+        mkdir -p "$out"
 
-        ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out $out/private.key
-        ${pkgs.openssl}/bin/openssl req -new -x509 -key $out/private.key -out $out/certificate.crt -days 36500 -subj "/CN=$CN"
+        cat > OpenSSL.cnf <<EOF
+        [req]
+        prompt = no
+        distinguished_name = dn
+        x509_extensions = v3_ca
 
-        cat $out/private.key $out/certificate.crt > $out/concatenated.pem
-        cp $out/certificate.crt $out/ca.crt
+        [dn]
+        CN = $CN
+
+        [v3_ca]
+        basicConstraints = critical, CA:TRUE
+        keyUsage = critical, digitalSignature, keyCertSign, cRLSign
+        subjectKeyIdentifier = hash
+        authorityKeyIdentifier = keyid:always
+        subjectAltName = @alt_names
+
+        [alt_names]
+        DNS.1 = $CN
+        EOF
+
+        ${pkgs.openssl}/bin/openssl ecparam -name secp521r1 -genkey -noout -out "$out/Private.key"
+
+        ${pkgs.openssl}/bin/openssl req -new -x509 -key "$out/Private.key" -out "$out/Certificate.crt" -days 36500 -config OpenSSL.cnf
+
+        cat "$out/Private.key" "$out/Certificate.crt" > "$out/Concatenated.pem"
+
+        cp "$out/Certificate.crt" "$out/CA_Certificate.crt"
       '';
-  tlsCertificatePrivateKeyFile = "${tlsCertificateFiles}/private.key";
-  tlsCertificateFile = "${tlsCertificateFiles}/certificate.crt";
-  tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/concatenated.pem";
-  tlsCACertificateFile = "${tlsCertificateFiles}/ca.crt";
+  tlsCACertificateFile = "${tlsCertificateFiles}/CA_Certificate.crt";
+  tlsCertificateFile = "${tlsCertificateFiles}/Certificate.crt";
+  tlsCertificatePrivateKeyFile = "${tlsCertificateFiles}/Private.key";
+  tlsCertificateConcatenatedFile = "${tlsCertificateFiles}/Concatenated.pem";
 in
 {
   _class = "nixos";
@@ -222,9 +244,11 @@ in
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
+    ./Modules/Avahi.nix
     ./Modules/bat.nix
     ./Modules/BlueZ.nix
     ./Modules/Cine.nix
+    ./Modules/Cockpit.nix
     ./Modules/Contour.nix
     ./Modules/CPU-X.nix
     ./Modules/Fcitx_5.nix
@@ -249,7 +273,9 @@ in
     ./Modules/Nocturne.nix
     ./Modules/nwg-bar.nix
     ./Modules/nwg-drawer.nix
+    ./Modules/Ollama.nix
     ./Modules/Open_Broadcaster_Software_Studio.nix
+    ./Modules/OpenCode.nix
     ./Modules/OpenDM.nix
     ./Modules/PHP.nix
     ./Modules/PipeWire.nix
@@ -257,6 +283,7 @@ in
     ./Modules/Podman.nix
     ./Modules/polkit.nix
     ./Modules/PostgreSQL.nix
+    ./Modules/Qt.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
     ./Modules/Sudo.nix
@@ -720,7 +747,7 @@ in
     enableIPv6 = true;
 
     domain = "local";
-    hostName = "Bitscoper-WorkStation";
+    hostName = "bitscoper-workstation";
     fqdn = "${config.networking.hostName}.${config.networking.domain}";
 
     wireless = {
@@ -1065,43 +1092,6 @@ in
       debugLevel = 0; # 0 = Disabled
     };
 
-    avahi = {
-      enable = true;
-      package = (
-        pkgs.avahi.override {
-          gtk3Support = true;
-        }
-      );
-
-      nssmdns4 = true;
-      nssmdns6 = true;
-
-      wideArea = false;
-
-      settings = {
-        server = {
-          use-ipv4 = true;
-          use-ipv6 = true;
-
-          domain-name = config.networking.domain;
-          host-name = config.networking.hostName;
-        };
-
-        publish = {
-          disable-publishing = false;
-
-          publish-domain = true;
-          publish-addresses = true;
-          publish-workstation = true;
-          publish-hinfo = true;
-
-          disable-user-service-publishing = false;
-        };
-      };
-
-      openFirewall = true;
-    };
-
     openssh = {
       enable = true;
       package = (
@@ -1142,17 +1132,6 @@ in
           X11Forwarding = config.programs.hyprland.xwayland.enable;
         };
 
-      openFirewall = true;
-    };
-
-    ollama = {
-      enable = true;
-      package = pkgs.ollama-cpu;
-
-      syncModels = false;
-
-      host = "0.0.0.0";
-      port = 11434;
       openFirewall = true;
     };
 
@@ -1561,7 +1540,6 @@ in
         # gearlever # FIXME: Build Failure
         # genealogos-cli # FIXME: Build Failure
         # markitdown # FIXME: Build Failure
-        # newelle # FIXME: Build Failure
         # newsflash # FIXME: Build Failure
         # oha # FIXME: Build Failure
         # python314Packages.pymobiledevice3 # Marked as Broken
@@ -1778,7 +1756,6 @@ in
         hydra-check
         hyprgraphics
         hyprland-protocols
-        hyprland-qt-support
         hyprmag
         hyprshot
         hyprshutdown
@@ -1851,7 +1828,6 @@ in
         lzham
         macchanger
         mailcap
-        mdns-scanner
         mergerfs
         mesa-demos
         metadata-cleaner
@@ -2179,8 +2155,8 @@ in
 
         (guvcview.override {
           pulseaudioSupport = config.services.pipewire.pulse.enable;
-          useQt = false;
           useGtk = true;
+          useQt = false;
         })
 
         (nwg-displays.override {
@@ -2291,7 +2267,7 @@ in
           enableJack = true;
           enableWayland = true;
           gtkSupport = true;
-          qt6Support = true;
+          qt6Support = config.qt.enable;
         })
 
         (gst-plugins-ugly.override {
@@ -2433,7 +2409,6 @@ in
 
       EGL_PLATFORM = "wayland";
       GDK_BACKEND = "wayland";
-      QT_QPA_PLATFORM = "wayland";
       SDL_VIDEODRIVER = "wayland";
       WINE_DRIVER = "wayland";
       NIXOS_OZONE_WL = 1;
@@ -2719,13 +2694,6 @@ in
 
   gtk.iconCache.enable = true;
 
-  qt = {
-    enable = true;
-
-    platformTheme = "qt5ct"; # Both qt6ct and qt5ct
-    style = "kvantum";
-  };
-
   catppuccin = {
     enable = true;
 
@@ -2818,7 +2786,6 @@ in
 
         extraGroups = [
           "adm"
-          "avahi"
           "cdrom"
           "dialout"
           "disk"
@@ -3859,81 +3826,6 @@ in
               name = config.home-manager.users.normal.gtk.cursorTheme.name;
               package = config.home-manager.users.normal.gtk.cursorTheme.package;
               size = config.home-manager.users.normal.gtk.cursorTheme.size;
-            };
-          };
-        };
-
-        qt = {
-          enable = true;
-
-          platformTheme.name = "qtct";
-          style.name = config.qt.style;
-
-          qt6ctSettings = {
-            Fonts = {
-              fixed = "\"${fontPreferences.monospace},${
-                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
-              },-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
-              general = "\"${fontPreferences.sansSerif},${
-                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
-              },-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular,0,0\"";
-            };
-
-            Appearance = {
-              custom_palette = true;
-              color_scheme_path = "${config.catppuccin.sources.qt5ct}/catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}.conf";
-              style = "kvantum-dark";
-
-              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
-
-              standard_dialogs = "xdgdesktopportal";
-            };
-
-            Interface = {
-              activate_item_on_single_click = 0; # 0 = Disabled
-              buttonbox_layout = 2; # 2 = KDE
-              dialog_buttons_have_icons = 0; # 0 = Disabled
-              keyboard_scheme = 3; # 3 = KDE
-              menus_have_icons = true;
-              show_shortcuts_in_context_menus = true;
-              toolbutton_style = 4; # 4 = Follow Application Style
-              underline_shortcut = 2; # 2 = Enabled
-            };
-          };
-
-          qt5ctSettings = {
-            Appearance = {
-              custom_palette = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.custom_palette;
-              color_scheme_path = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.color_scheme_path;
-              style = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.style;
-
-              icon_theme = config.home-manager.users.normal.gtk.iconTheme.name;
-
-              standard_dialogs = config.home-manager.users.normal.qt.qt6ctSettings.Appearance.standard_dialogs;
-            };
-
-            Interface = {
-              activate_item_on_single_click =
-                config.home-manager.users.normal.qt.qt6ctSettings.Interface.activate_item_on_single_click;
-              buttonbox_layout = config.home-manager.users.normal.qt.qt6ctSettings.Interface.buttonbox_layout;
-              dialog_buttons_have_icons =
-                config.home-manager.users.normal.qt.qt6ctSettings.Interface.dialog_buttons_have_icons;
-              keyboard_scheme = config.home-manager.users.normal.qt.qt6ctSettings.Interface.keyboard_scheme;
-              menus_have_icons = config.home-manager.users.normal.qt.qt6ctSettings.Interface.menus_have_icons;
-              show_shortcuts_in_context_menus =
-                config.home-manager.users.normal.qt.qt6ctSettings.Interface.show_shortcuts_in_context_menus;
-              toolbutton_style = config.home-manager.users.normal.qt.qt6ctSettings.Interface.toolbutton_style;
-              underline_shortcut = config.home-manager.users.normal.qt.qt6ctSettings.Interface.underline_shortcut;
-            };
-          };
-
-          kvantum = {
-            enable = true;
-
-            settings = {
-              General = {
-                theme = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}";
-              };
             };
           };
         };
@@ -5811,19 +5703,6 @@ in
             };
           };
 
-          opencode = {
-            enable = true;
-            package = pkgs.opencode-desktop;
-            web.enable = false;
-
-            enableMcpIntegration = true;
-
-            mutableSettings = true;
-            validateFiles = {
-              config = false; # Not Applicable for pkgs.opencode-desktop
-            };
-          };
-
           matplotlib = {
             enable = true;
 
@@ -5925,23 +5804,6 @@ in
 
           gtk.icon.enable = config.catppuccin.gtk.icon.enable;
 
-          qt5ct = {
-            enable = config.catppuccin.enable;
-            assertPlatformTheme = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
-          kvantum = {
-            enable = config.catppuccin.enable;
-            assertStyle = true;
-            apply = true;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
           hyprtoolkit = {
             enable = config.catppuccin.enable;
 
@@ -5983,8 +5845,6 @@ in
 
             italics = false;
           };
-
-          opencode.enable = false; # Not Applicable for GUI
 
           mangohud = {
             enable = config.home-manager.users.normal.programs.mangohud.enable;

@@ -57,9 +57,15 @@
       spiceUSBRedirection.enable = true;
     };
 
-    services.dbus.packages = with pkgs; [
-      libvirt-dbus
-    ];
+    services = {
+      dbus.packages = with pkgs; [
+        libvirt-dbus
+      ];
+
+      cockpit.plugins = with pkgs; [
+        cockpit-machines
+      ];
+    };
 
     systemd.tmpfiles.rules = [
       "d /var/lib/swtpm-localca 0750 tss root -"

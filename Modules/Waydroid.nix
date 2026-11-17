@@ -26,9 +26,10 @@
 
       services = {
         waydroid-container.wantedBy = pkgs.lib.mkForce [ ];
-        waydroid-monitor.wantedBy = pkgs.lib.mkForce [ ];
         waydroid-mount.wantedBy = pkgs.lib.mkForce [ ];
       }; # No Automatic Start
+
+      user.services.waydroid-monitor.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
     };
   };
 }
