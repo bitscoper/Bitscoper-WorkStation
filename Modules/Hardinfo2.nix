@@ -49,6 +49,8 @@
               get =
                 key:
                 pkgs.runCommand "${key}_from_Hardinfo2_Desktop_File" { } ''
+                  set -euo pipefail
+
                   ${pkgs.python3}/bin/python3 - << 'EOF' > $out
                   import configparser
 

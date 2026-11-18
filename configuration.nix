@@ -162,6 +162,8 @@ let
         ];
       }
       ''
+        set -euo pipefail
+
         magick BMP:${bgrtBmpFile} \
           -fuzz 16% \
           -transparent black \
@@ -187,6 +189,8 @@ let
         CN = config.networking.fqdn;
       }
       ''
+        set -euo pipefail
+
         mkdir -p "$out"
 
         cat > OpenSSL.cnf <<EOF
@@ -247,10 +251,13 @@ in
     ./Modules/Avahi.nix
     ./Modules/bat.nix
     ./Modules/BlueZ.nix
+    ./Modules/chrony.nix
     ./Modules/Cine.nix
+    ./Modules/cliphist.nix
     ./Modules/Cockpit.nix
     ./Modules/Contour.nix
     ./Modules/CPU-X.nix
+    ./Modules/Fastfetch.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
@@ -261,6 +268,7 @@ in
     ./Modules/hypridle.nix
     ./Modules/hyprlock.nix
     ./Modules/hyprpaper.nix
+    ./Modules/Hyprshot.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
@@ -268,6 +276,7 @@ in
     ./Modules/LibreOffice.nix
     ./Modules/libvirt.nix
     ./Modules/Loupe.nix
+    ./Modules/Lutris.nix
     ./Modules/MariaDB.nix
     ./Modules/Nautilus.nix
     ./Modules/Nocturne.nix
@@ -284,6 +293,7 @@ in
     ./Modules/polkit.nix
     ./Modules/PostgreSQL.nix
     ./Modules/Qt.nix
+    ./Modules/Rofi.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
     ./Modules/Sudo.nix
@@ -293,6 +303,7 @@ in
     ./Modules/Ungoogled_Chromium.nix
     ./Modules/vivid.nix
     ./Modules/Waydroid.nix
+    ./Modules/Wayscriber.nix
     ./Modules/Wireshark.nix
 
     ./hardware-configuration.nix
@@ -596,8 +607,6 @@ in
 
     tmpfiles.rules = [
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
-
-      "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
     ]
     ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
   };
@@ -809,19 +818,6 @@ in
       "2620:fe::fe#dns.quad9.net"
       "2620:fe::9#dns.quad9.net"
     ];
-
-    timeServers = [
-      "0.nixos.pool.ntp.org"
-      "1.nixos.pool.ntp.org"
-      "2.nixos.pool.ntp.org"
-      "3.nixos.pool.ntp.org"
-    ];
-  };
-
-  time = {
-    hardwareClockInLocalTime = false;
-
-    timeZone = "Asia/Dhaka";
   };
 
   i18n = {
@@ -924,24 +920,6 @@ in
       };
     };
 
-    chrony = {
-      enable = true;
-      package = pkgs.chrony;
-
-      enableMemoryLocking = true;
-
-      servers = config.networking.timeServers;
-      enableNTS = false;
-      serverOption = "iburst";
-
-      enableRTCTrimming = true;
-      makestep = {
-        enable = true;
-      };
-    };
-
-    timesyncd.enable = !config.services.chrony.enable;
-
     fwupd = {
       enable = true;
       package = (
@@ -1015,7 +993,6 @@ in
     udev = {
       enable = true;
       packages = with pkgs; [
-        game-devices-udev-rules
         libmtp.out
         rtl-sdr
       ];
@@ -1187,13 +1164,6 @@ in
 
     xwayland.enable = config.programs.hyprland.xwayland.enable;
 
-    gamemode = {
-      enable = true;
-      package = pkgs.gamemode;
-
-      enableRenice = true;
-    };
-
     nix-ld = {
       enable = true;
       package = pkgs.nix-ld;
@@ -1201,7 +1171,6 @@ in
       libraries =
         options.programs.nix-ld.libraries.default
         ++ (with pkgs; [
-          gamemode.lib
           glib.out
           libsecret
           llvmPackages.stdenv.cc.cc.lib
@@ -1609,7 +1578,6 @@ in
         clang_22
         clapgrep
         clinfo
-        cliphist
         cloc
         cloneit
         cloudflared
@@ -1694,7 +1662,6 @@ in
         fuse-overlayfs
         fuse3
         fwupd-efi
-        gamepad-mirror
         gawd
         gawk
         gcc
@@ -1757,7 +1724,6 @@ in
         hyprgraphics
         hyprland-protocols
         hyprmag
-        hyprshot
         hyprshutdown
         hyprtoolkit
         hyprutils
@@ -1774,7 +1740,6 @@ in
         jfsutils
         jmol
         jq
-        jstest-gtk
         jxrlib
         karlender
         kdiff3
@@ -1810,7 +1775,6 @@ in
         libva-utils
         libvpx
         linux-exploit-suggester
-        linuxConsoleTools
         livecaptions
         lld_22
         llmfit
@@ -1894,7 +1858,6 @@ in
         progress
         protocol
         proton-vpn
-        protonup-qt
         psmisc
         qalculate-gtk
         qdirstat
@@ -1987,7 +1950,6 @@ in
         wayback_machine_downloader
         waycheck
         wayland-utils
-        wayscriber
         webfont-bundler
         webp-pixbuf-loader
         websocat
@@ -1997,7 +1959,6 @@ in
         whois
         wildcard
         windowtolayer
-        wl-clipboard
         wvkbd # wvkbd-mobintl
         xar
         xdg-user-dirs
@@ -2348,7 +2309,6 @@ in
       ++ config.fonts.packages
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
-      ++ config.home-manager.users.normal.programs.lutris.extraPackages
       ++ config.home-manager.users.normal.programs.zed-editor.extraPackages
       ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
@@ -2410,15 +2370,12 @@ in
       EGL_PLATFORM = "wayland";
       GDK_BACKEND = "wayland";
       SDL_VIDEODRIVER = "wayland";
-      WINE_DRIVER = "wayland";
       NIXOS_OZONE_WL = 1;
       ANKI_WAYLAND = 1;
       _JAVA_AWT_WM_NONREPARENTING = "1";
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
-
-      VKD3D_CONFIG = "vkd3d_shader_cache";
     }
     // config.specificHardwareConfiguration.environment.sessionVariables;
 
@@ -2791,7 +2748,6 @@ in
           "disk"
           "floppy"
           "fwupd-refresh"
-          "gamemode"
           "gpsd"
           "i2c"
           "input"
@@ -2910,9 +2866,6 @@ in
                 (pkgs.lib.generators.mkLuaInline ''
                   function()
                     hl.exec_cmd("dbus-update-activation-environment --systemd --all")
-
-                    hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
-                    hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
                   end
                 '')
               ];
@@ -3302,51 +3255,6 @@ in
                 _args = [
                   "SUPER + ALT + Q"
                   (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + A"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wayscriber --no-tray --active\")")
-                ];
-              }
-              {
-                _args = [
-                  "Print"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=region --clipboard-only\")")
-                ];
-              }
-              {
-                _args = [
-                  "SHIFT + Print"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=window --clipboard-only\")")
-                ];
-              }
-              {
-                _args = [
-                  "ALT + Print"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=region\")")
-                ];
-              }
-              {
-                _args = [
-                  "SHIFT + ALT + Print"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- hyprshot --mode=window\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + SPACE"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cliphist list | rofi -dmenu -sync -window-title 'Clipboard' -p 'Clipboard' | cliphist decode | wl-copy\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + ALT + RETURN"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} bash -ic \\\"$cmd; bash -i\\\"\")")
                 ];
               }
 
@@ -4605,287 +4513,6 @@ in
             silent = config.programs.direnv.silent;
           };
 
-          fastfetch = {
-            enable = true;
-            package = (
-              pkgs.fastfetch.override {
-                audioSupport = true;
-                brightnessSupport = true;
-                dbusSupport = true;
-                enlightenmentSupport = false;
-                flashfetchSupport = false;
-                gnomeSupport = false;
-                imageSupport = true;
-                openclSupport = true;
-                openglSupport = true;
-                rpmSupport = false;
-                sqliteSupport = true;
-                terminalSupport = true;
-                vulkanSupport = true;
-                waylandSupport = true;
-                x11Support = config.programs.hyprland.xwayland.enable;
-                xfceSupport = false;
-                zfsSupport = true;
-              }
-            );
-          };
-
-          rofi = {
-            enable = true;
-            package = (
-              pkgs.rofi.override {
-                rofi-unwrapped = (
-                  pkgs.rofi-unwrapped.override {
-                    waylandSupport = true;
-                    x11Support = config.programs.hyprland.xwayland.enable;
-                  }
-                );
-
-                symlink-dmenu = true;
-              }
-            );
-
-            settings = {
-              modes = "run";
-
-              font = "${fontPreferences.sansSerif} ${pkgs.lib.toString (builtins.floor (designFactor * 1.5))}";
-              show-icons = false; # For dmenu
-              icon-theme = config.home-manager.users.normal.gtk.iconTheme.name;
-
-              global-kb = true;
-              steal-focus = true;
-              click-to-exit = true;
-              hover-select = true;
-
-              case-sensitive = false;
-              fixed-num-lines = true;
-              sort = true;
-              cycle = true;
-
-              disable-history = true;
-              terminal = config.customOptions.executableNameOfTerminalEmulator;
-            };
-
-            theme =
-              let
-                makeLiteral = value: {
-                  _type = "literal";
-                  inherit value;
-                };
-              in
-              {
-                "*" = {
-                  # Catppuccin Mocha
-                  rosewater = makeLiteral "#f5e0dc";
-                  flamingo = makeLiteral "#f2cdcd";
-                  pink = makeLiteral "#f5c2e7";
-                  mauve = makeLiteral "#cba6f7";
-                  red = makeLiteral "#f38ba8";
-                  maroon = makeLiteral "#eba0ac";
-                  peach = makeLiteral "#fab387";
-                  yellow = makeLiteral "#f9e2af";
-                  green = makeLiteral "#a6e3a1";
-                  teal = makeLiteral "#94e2d5";
-                  sky = makeLiteral "#89dceb";
-                  sapphire = makeLiteral "#74c7ec";
-                  blue = makeLiteral "#89b4fa";
-                  lavender = makeLiteral "#b4befe";
-                  text = makeLiteral "#cdd6f4";
-                  subtext1 = makeLiteral "#bac2de";
-                  subtext0 = makeLiteral "#a6adc8";
-                  overlay2 = makeLiteral "#9399b2";
-                  overlay1 = makeLiteral "#7f849c";
-                  overlay0 = makeLiteral "#6c7086";
-                  surface2 = makeLiteral "#585b70";
-                  surface1 = makeLiteral "#45475a";
-                  surface0 = makeLiteral "#313244";
-                  base = makeLiteral "#1e1e2e";
-                  mantle = makeLiteral "#181825";
-                  crust = makeLiteral "#11111b";
-
-                  background-color = makeLiteral "@base";
-                  text-color = makeLiteral "@text";
-                };
-
-                window = {
-                  border = makeLiteral "1px";
-                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
-                  border-color = makeLiteral "@surface2";
-                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
-                };
-
-                mainbox = {
-                  border = makeLiteral "0px";
-                  padding = makeLiteral "0px";
-                };
-
-                inputbar = {
-                  margin = makeLiteral "0px 0px ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px 0px";
-                  border = makeLiteral "1px";
-                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
-                  border-color = makeLiteral "@surface2";
-                  background-color = makeLiteral "@mantle";
-                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                  spacing = makeLiteral "0px";
-                  children = map makeLiteral [
-                    "prompt"
-                    "textbox-prompt-colon"
-                    "entry"
-                    "num-filtered-rows"
-                    "textbox-num-sep"
-                    "num-rows"
-                    "case-indicator"
-                  ];
-                };
-
-                prompt = {
-                  background-color = makeLiteral "@mantle";
-                  spacing = makeLiteral "0px";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                textbox-prompt-colon = {
-                  expand = false;
-                  margin = makeLiteral "0px 0.3000em 0.0000em 0.0000em";
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@lavender";
-                  str = ":";
-                };
-
-                entry = {
-                  background-color = makeLiteral "@mantle";
-                  spacing = makeLiteral "0px";
-                  placeholder-color = makeLiteral "@overlay0";
-                  placeholder = "Search";
-                  cursor = makeLiteral "text";
-                };
-
-                num-filtered-rows = {
-                  expand = false;
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                textbox-num-sep = {
-                  expand = false;
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@lavender";
-                  str = "/";
-                };
-
-                num-rows = {
-                  expand = false;
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                case-indicator = {
-                  background-color = makeLiteral "@mantle";
-                  spacing = makeLiteral "0px";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                message = {
-                  margin = makeLiteral "0px 0px ${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px 0px";
-                  border = makeLiteral "0px";
-                  padding = makeLiteral "0px";
-                };
-
-                textbox = {
-                  horizontal-align = makeLiteral "0.5";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                listview = {
-                  fixed-height = makeLiteral "0px";
-                  border = makeLiteral "0px";
-                  scrollbar = true;
-                  padding = makeLiteral "0px";
-                  spacing = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                };
-
-                element = {
-                  border = makeLiteral "0px";
-                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor (designFactor * 2.0))}px";
-                  padding = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                  spacing = makeLiteral "0px";
-                  cursor = makeLiteral "pointer";
-                };
-
-                "element normal.normal" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@text";
-                };
-
-                "element normal.urgent" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@red";
-                };
-
-                "element normal.active" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@blue";
-                };
-
-                "element alternate.normal" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@text";
-                };
-
-                "element alternate.urgent" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@red";
-                };
-
-                "element alternate.active" = {
-                  background-color = makeLiteral "@mantle";
-                  text-color = makeLiteral "@blue";
-                };
-
-                "element selected.normal" = {
-                  background-color = makeLiteral "@surface0";
-                  text-color = makeLiteral "@lavender";
-                };
-
-                "element selected.urgent" = {
-                  background-color = makeLiteral "@surface0";
-                  text-color = makeLiteral "@red";
-                };
-
-                "element selected.active" = {
-                  background-color = makeLiteral "@surface0";
-                  text-color = makeLiteral "@blue";
-                };
-
-                element-icon = {
-                  margin = makeLiteral "0px ${pkgs.lib.toString (builtins.floor designFactor)} 0px 0px";
-                  background-color = makeLiteral "transparent";
-                  size = makeLiteral "1.0000em";
-                  text-color = makeLiteral "inherit";
-                  cursor = makeLiteral "inherit";
-                };
-
-                element-text = {
-                  background-color = makeLiteral "transparent";
-                  text-color = makeLiteral "inherit";
-                  cursor = makeLiteral "inherit";
-                  highlight = makeLiteral "inherit";
-                };
-
-                scrollbar = {
-                  width = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                  border = makeLiteral "1px";
-                  border-radius = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                  border-color = makeLiteral "@surface1";
-                  background-color = makeLiteral "@mantle";
-                  padding = makeLiteral "0px";
-                  handle-width = makeLiteral "${pkgs.lib.toString (builtins.floor designFactor)}px";
-                  handle-color = makeLiteral "@lavender";
-                  cursor = makeLiteral "pointer";
-                };
-              };
-          };
-
           zed-editor = {
             enable = true;
             package = (
@@ -5685,12 +5312,6 @@ in
                 command = "${pkgs.mcp-server-sequential-thinking}/bin/mcp-server-sequential-thinking";
               };
 
-              mcp-server-time = {
-                enabled = true;
-
-                command = "${pkgs.mcp-server-time}/bin/mcp-server-time";
-              };
-
               open-websearch = {
                 enabled = true;
 
@@ -5711,34 +5332,6 @@ in
                 grid = true;
               };
             };
-          };
-
-          mangohud = {
-            enable = true;
-            package = pkgs.mangohud;
-          };
-
-          lutris = {
-            enable = true;
-            package = (
-              pkgs.lutris.override {
-                steamSupport = config.nixpkgs.config.allowUnfree;
-              }
-            );
-
-            extraPackages =
-              with pkgs;
-              [
-                protontricks
-                umu-launcher
-                vulkan-loader
-                vulkan-tools
-                winetricks
-              ]
-              ++ [
-                config.home-manager.users.normal.programs.mangohud.package
-                config.programs.gamemode.package
-              ];
           };
 
           yt-dlp = {
@@ -5829,8 +5422,6 @@ in
             fontSize = pkgs.lib.toString (builtins.floor (designFactor * 1.5));
           };
 
-          rofi.enable = false; # Manually Done Instead
-
           zed = {
             enable = config.home-manager.users.normal.programs.zed-editor.enable;
 
@@ -5844,12 +5435,6 @@ in
             };
 
             italics = false;
-          };
-
-          mangohud = {
-            enable = config.home-manager.users.normal.programs.mangohud.enable;
-
-            flavor = config.catppuccin.flavor;
           };
         }; # From catppuccinThemeFlake
 

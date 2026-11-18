@@ -47,6 +47,6 @@
       showMotd = true;
     };
 
-    # systemd.sockets.cockpit.wantedBy = [ ]; # No Automatic Start
+    systemd.sockets.cockpit.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
   };
 }

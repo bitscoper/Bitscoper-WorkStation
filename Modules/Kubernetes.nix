@@ -9,6 +9,36 @@
   ...
 }:
 let
+  schedulerTlsCertificateFiles =
+    pkgs.runCommand "Kubernetes_Scheduler_TLS_Certificate_Files"
+      {
+        nativeBuildInputs = with pkgs; [
+          openssl
+        ];
+      }
+      ''
+        set -euo pipefail
+
+        mkdir -p "$out"
+
+        openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out "$out/Private.key"
+
+        openssl req -new -key "$out/Private.key" -out Scheduler.csr -subj "/CN=system:kube-scheduler"
+
+        cat > Scheduler_Extensions.cnf <<EOF
+        [scheduler_tls_certificate]
+        basicConstraints = critical, CA:FALSE
+        keyUsage = critical, digitalSignature
+        extendedKeyUsage = clientAuth
+        subjectKeyIdentifier = hash
+        authorityKeyIdentifier = keyid,issuer
+        EOF
+
+        serial="$(openssl rand -hex 16)"
+
+        openssl x509 -req -in Scheduler.csr -CA "${tlsCACertificateFile}" -CAkey "${tlsCertificatePrivateKeyFile}" -set_serial "0x$serial" -out "$out/Certificate.crt" -days 365 -sha512 -extfile Scheduler_Extensions.cnf -extensions scheduler_tls_certificate
+      '';
+
   administratorTlsCertificateFiles =
     pkgs.runCommand "Kubernetes_Administrator_TLS_Certificate_Files"
       {
@@ -17,6 +47,8 @@ let
         ];
       }
       ''
+        set -euo pipefail
+
         mkdir -p "$out"
 
         openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out "$out/Private.key"
@@ -34,7 +66,7 @@ let
 
         printf '1000\n' > CA.srl
 
-        openssl x509 -req -in Administrator.csr -CA "${tlsCACertificateFile}" -CAkey "${tlsCertificatePrivateKeyFile}" -CAserial CA.srl -out "$out/Certificate.crt" -days 36499 -sha512 -extfile Administrator_Extensions.cnf -extensions administrator_tls_certificate
+        openssl x509 -req -in Administrator.csr -CA "${tlsCACertificateFile}" -CAkey "${tlsCertificatePrivateKeyFile}" -CAserial CA.srl -out "$out/Certificate.crt" -days 365 -sha512 -extfile Administrator_Extensions.cnf -extensions administrator_tls_certificate
       '';
 
   administratorKubeconfig = config.services.kubernetes.lib.mkKubeConfig "cluster-admin" {
@@ -260,8 +292,8 @@ in
             server = config.services.kubernetes.apiserverAddress;
 
             caFile = tlsCACertificateFile;
-            certFile = tlsCertificateFile;
-            keyFile = tlsCertificatePrivateKeyFile;
+            certFile = "${schedulerTlsCertificateFiles}/Certificate.crt";
+            keyFile = "${schedulerTlsCertificateFiles}/Private.key";
           };
         };
 
@@ -301,47 +333,71 @@ in
       };
     };
 
-    systemd.services.kube-addon-manager = {
-      environment.KUBECONFIG = config.services.kubernetes.lib.mkKubeConfig "addon-manager" {
-        server = config.services.kubernetes.apiserverAddress;
+    systemd = {
+      services = {
+        kube-addon-manager = {
+          environment.KUBECONFIG = config.services.kubernetes.lib.mkKubeConfig "addon-manager" {
+            server = config.services.kubernetes.apiserverAddress;
 
-        caFile = tlsCACertificateFile;
-        certFile = tlsCertificateFile;
-        keyFile = tlsCertificatePrivateKeyFile;
+            caFile = tlsCACertificateFile;
+            certFile = tlsCertificateFile;
+            keyFile = tlsCertificatePrivateKeyFile;
+          };
+
+          preStart = ''
+            export KUBECONFIG=${administratorKubeconfig}
+
+            ${pkgs.lib.concatMapStringsSep "\n" (file: ''
+              ${config.services.kubernetes.package}/bin/kubectl apply -f ${file}
+            '') bootstrapAddonFiles}
+          '';
+
+          serviceConfig.PermissionsStartOnly = true;
+          wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        };
+
+        etcd.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        flannel.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
+        kube-proxy.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        kube-apiserver.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        kube-controller-manager.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        kube-scheduler.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+        kubelet.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
       };
 
-      preStart = ''
-        export KUBECONFIG=${administratorKubeconfig}
-
-        ${pkgs.lib.concatMapStringsSep "\n" (file: ''
-          ${config.services.kubernetes.package}/bin/kubectl apply -f ${file}
-        '') bootstrapAddonFiles}
-      '';
-
-      serviceConfig.PermissionsStartOnly = true;
+      targets.kubernetes.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
     };
 
-    environment.systemPackages =
-      with pkgs;
-      [
-        # kubectl-validate # FIXME: Build Failure
-        kubectl
-        kubectl-doctor
-        kubectl-evict-pod
-        kubectl-graph
-        kubectl-images
-        kubectl-ktop
-        kubectl-neat
-        kubectl-node-shell
-        kubectl-tree
-        kubectl-view-secret
-        kubescape
-        kubeshark
-        seabird
-      ]
-      ++ [
-        config.services.kubernetes.package
-      ];
+    environment = {
+      systemPackages =
+        with pkgs;
+        [
+          # kubectl-validate # FIXME: Build Failure
+          kubectl
+          kubectl-doctor
+          kubectl-evict-pod
+          kubectl-graph
+          kubectl-images
+          kubectl-ktop
+          kubectl-neat
+          kubectl-node-shell
+          kubectl-tree
+          kubectl-view-secret
+          kubescape
+          kubeshark
+          seabird
+        ]
+        ++ [
+          config.services.kubernetes.package
+        ];
+
+      shellAliases = {
+        start_kubernetes = "sudo systemctl start etcd.service flannel.service kube-proxy.service kube-addon-manager.service kube-apiserver.service kube-controller-manager.service kube-scheduler.service kubelet.service";
+
+        stop_kubernetes = "sudo systemctl stop etcd.service flannel.service kube-proxy.service kube-addon-manager.service kube-apiserver.service kube-controller-manager.service kube-scheduler.service kubelet.service";
+      };
+    };
 
     home-manager.sharedModules = [
       {

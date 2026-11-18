@@ -41,6 +41,8 @@
               get =
                 key:
                 pkgs.runCommand "${key}_from_CPU-X_Desktop_File" { } ''
+                  set -euo pipefail
+
                   ${pkgs.python3}/bin/python3 - << 'EOF' > $out
                   import configparser
 
