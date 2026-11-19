@@ -47,5 +47,10 @@
     ];
 
     systemd.services.icecast.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
+    environment.systemPackages = with pkgs; [
+      butt
+      mixxx
+    ];
   };
 }

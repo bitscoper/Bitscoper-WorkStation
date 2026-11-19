@@ -307,7 +307,7 @@
             };
 
             "luks-bb7b9c97-627f-420e-9388-5d047601b984" = {
-              device = "/dev/disk/by-uuid/luks-bb7b9c97-627f-420e-9388-5d047601b984";
+              device = "/dev/disk/by-uuid/bb7b9c97-627f-420e-9388-5d047601b984";
 
               allowDiscards = true;
               bypassWorkqueues = true;
@@ -377,7 +377,6 @@
 
         kernelParams = [
           "intel_iommu=on"
-          "resume=/dev/mapper/luks-bb7b9c97-627f-420e-9388-5d047601b984"
         ];
 
         initrd = {

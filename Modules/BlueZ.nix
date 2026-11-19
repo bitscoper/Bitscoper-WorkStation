@@ -38,6 +38,7 @@
         General = {
           MaxControllers = 0; # 0 = Unlimited
           ControllerMode = "dual";
+          Enable = "Source,Sink,Media,Socket";
 
           Name = config.networking.hostName;
 
@@ -134,9 +135,20 @@
       };
     };
 
+    home-manager.sharedModules = [
+      {
+        services.mpris-proxy = {
+          enable = true;
+          package = config.hardware.bluetooth.package;
+        };
+      }
+    ];
+
     environment.systemPackages = with pkgs; [
       bluez-alsa
       bluez-tools
+      obexftp
+      openobex
       overskride
     ];
   };

@@ -7,6 +7,10 @@
 }:
 {
   config = {
+    programs.nix-ld.libraries = with pkgs; [
+      libsecret
+    ];
+
     services.gnome.gnome-keyring.enable = true;
 
     home-manager.sharedModules = [
@@ -25,6 +29,10 @@
 
     xdg.portal.extraPortals = [
       config.home-manager.users.normal.services.gnome-keyring.package
+    ];
+
+    environment.systemPackages = with pkgs; [
+      libsecret
     ];
   };
 }

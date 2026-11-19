@@ -7,6 +7,17 @@
 }:
 {
   config = {
+    boot = {
+      kernelParams = [
+        "split_lock_detect=off"
+      ];
+
+      kernel.sysctl = {
+        "kernel.split_lock_mitigate" = 0;
+        "vm.max_map_count" = 2147483642;
+      };
+    };
+
     programs = {
       nix-ld.libraries = with pkgs; [
         gamemode.lib
@@ -20,8 +31,28 @@
       };
     };
 
-    systemd.tmpfiles.rules = [
-      "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
+    systemd = {
+      tmpfiles.rules = [
+        "L+ /usr/bin/umu-run - - - - ${pkgs.umu-launcher}/bin/umu-run"
+      ];
+
+      settings.Manager.DefaultLimitNOFILE = 524288; # Esync
+    };
+
+    security.pam.loginLimits = [
+      {
+        domain = config.users.users.normal.name;
+        item = "nofile";
+        type = "soft";
+        value = "524288";
+      } # Esync
+
+      {
+        domain = config.users.users.normal.name;
+        item = "nofile";
+        type = "hard";
+        value = "524288";
+      } # Esync
     ];
 
     services.udev.packages = with pkgs; [

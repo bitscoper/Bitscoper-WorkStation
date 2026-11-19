@@ -126,31 +126,44 @@ in
     homeManagerFlake.nixosModules.home-manager
     catppuccinThemeFlake.nixosModules.catppuccin
 
+    ./Modules/AppImage.nix
     ./Modules/Avahi.nix
     ./Modules/bat.nix
     ./Modules/BlueZ.nix
+    ./Modules/brightnessctl.nix
+    ./Modules/Btrfs.nix
     ./Modules/chrony.nix
     ./Modules/Cine.nix
     ./Modules/cliphist.nix
     ./Modules/Cockpit.nix
     ./Modules/Contour.nix
     ./Modules/CPU-X.nix
+    ./Modules/D-Bus.nix
     ./Modules/direnv.nix
     ./Modules/Evince.nix
+    ./Modules/Exhibit.nix
     ./Modules/Fastfetch.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
     ./Modules/Firefox.nix
     ./Modules/Flutter.nix
+    ./Modules/fprintd.nix
+    ./Modules/fwupd.nix
+    ./Modules/Git.nix
     ./Modules/GNOME_Keyring.nix
     ./Modules/GNU_Bash.nix
     ./Modules/GNU_GRand_Unified_Bootloader.nix
     ./Modules/GnuPG.nix
+    ./Modules/GPSd.nix
+    ./Modules/GStreamer.nix
+    ./Modules/GTK.nix
     ./Modules/Hardinfo2.nix
     ./Modules/hypridle.nix
+    ./Modules/Hyprland.nix
     ./Modules/hyprlock.nix
     ./Modules/hyprpaper.nix
     ./Modules/Hyprshot.nix
+    ./Modules/I2C.nix
     ./Modules/Icecast.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
@@ -173,20 +186,26 @@ in
     ./Modules/PeaZip.nix
     ./Modules/PHP.nix
     ./Modules/PipeWire.nix
+    ./Modules/Playerctl.nix
     ./Modules/Plymouth.nix
     ./Modules/Podman.nix
     ./Modules/polkit.nix
     ./Modules/PostgreSQL.nix
+    ./Modules/qBittorrent.nix
     ./Modules/Qt.nix
     ./Modules/Rofi.nix
+    ./Modules/rtl-sdr.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
     ./Modules/Starship.nix
     ./Modules/Sudo.nix
     ./Modules/SwayNotificationCenter.nix
     ./Modules/sysctl.nix
     ./Modules/Syshud.nix
+    ./Modules/Tailscale.nix
+    ./Modules/udev.nix
     ./Modules/udiskie.nix
     ./Modules/Ungoogled_Chromium.nix
+    ./Modules/Universal_Wayland_Session_Manager.nix
     ./Modules/vivid.nix
     ./Modules/Waybar.nix
     ./Modules/Waydroid.nix
@@ -350,11 +369,7 @@ in
       "iommu=pt"
       "mitigations=auto"
       "rd.systemd.show_status=true"
-      "rd.udev.log_level=err"
       "splash"
-      "threadirqs"
-      "udev.log_level=err"
-      "udev.log_priority=err"
     ]
     ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-configuration.nix
 
@@ -378,23 +393,9 @@ in
 
     tmp = {
       cleanOnBoot = true;
-
-      zramSettings = {
-        fs-type = "ext4";
-        compression-algorithm = "zstd";
-      };
     };
 
-    kexec.enable = config.boot.crashDump.enable;
-    crashDump = {
-      enable = true;
-
-      reservedMemory = "128M";
-      kernelParams = [
-        "1"
-        "boot.shell_on_fail"
-      ];
-    };
+    kexec.enable = true;
 
     consoleLogLevel = 4; # 4 = KERN_WARNING
   };
@@ -402,7 +403,6 @@ in
   powerManagement = {
     enable = true;
 
-    cpuFreqGovernor = "performance";
     scsiLinkPolicy = "max_performance";
 
     # powerUpCommands = '''';
@@ -415,9 +415,7 @@ in
     enableAllFirmware = config.nixpkgs.config.allowUnfree;
     enableRedistributableFirmware = true;
     firmware = with pkgs; [
-      alsa-firmware
       linux-firmware
-      sof-firmware
     ];
 
     firmwareCompression = "zstd";
@@ -440,22 +438,12 @@ in
       defaultSchedulerRotational = "bfq";
     };
 
-    i2c = {
-      enable = true;
-      group = "i2c";
-    };
-
     graphics = {
       enable = true;
       enable32Bit = true;
 
       extraPackages = config.specificHardwareConfiguration.hardware.graphics.extraPackages; # From hardware-configuration.nix
       extraPackages32 = config.specificHardwareConfiguration.hardware.graphics.extraPackages32; # From hardware-configuration.nix
-    };
-
-    rtl-sdr = {
-      enable = true;
-      package = pkgs.rtl-sdr;
     };
   };
 
@@ -476,8 +464,6 @@ in
       Manager = {
         DefaultIOAccounting = true;
         DefaultIPAccounting = true;
-
-        DefaultLimitNOFILE = 524288; # Esync
       };
     };
 
@@ -485,13 +471,6 @@ in
       "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
     ]
     ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
-  };
-
-  zramSwap = {
-    enable = true;
-
-    algorithm = config.boot.tmp.zramSettings.compression-algorithm;
-    swapDevices = 1;
   };
 
   security = {
@@ -561,50 +540,6 @@ in
             "vlock"
           ]
       ); # ls /etc/pam.d/
-
-      loginLimits = [
-        {
-          domain = "@audio";
-          item = "memlock";
-          type = "-";
-          value = "unlimited";
-        }
-
-        {
-          domain = "@audio";
-          item = "rtprio";
-          type = "-";
-          value = "99";
-        }
-
-        {
-          domain = "@audio";
-          item = "nofile";
-          type = "soft";
-          value = "524288"; # 524288 > 99999
-        }
-
-        {
-          domain = "@audio";
-          item = "nofile";
-          type = "hard";
-          value = "524288"; # 524288 > 99999
-        }
-
-        {
-          domain = config.users.users.normal.name;
-          item = "nofile";
-          type = "soft";
-          value = "524288";
-        } # Esync
-
-        {
-          domain = config.users.users.normal.name;
-          item = "nofile";
-          type = "hard";
-          value = "524288";
-        } # Esync
-      ];
     };
 
     enableWrappers = true;
@@ -635,7 +570,7 @@ in
     fqdn = "${config.networking.hostName}.${config.networking.domain}";
 
     wireless = {
-      dbusControlled = true;
+      dbusControlled = config.services.dbus.enable;
       userControlled = true;
       enableHardening = true;
     };
@@ -681,10 +616,6 @@ in
       # allowedTCPPorts = [
       # ];
       allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
-
-      trustedInterfaces = [
-        "virbr0"
-      ];
     };
 
     nameservers = [
@@ -755,28 +686,6 @@ in
       interval = "weekly";
     };
 
-    btrfs.autoScrub = {
-      enable = true;
-      interval = "weekly";
-    };
-
-    beesd = { };
-
-    dbus = {
-      enable = true;
-      dbusPackage = (
-        pkgs.dbus.override {
-          enableSystemd = true;
-        }
-      );
-
-      implementation = "broker";
-
-      packages = with pkgs; [
-        fprintd
-      ];
-    };
-
     resolved = {
       enable = true;
 
@@ -793,15 +702,6 @@ in
           ];
         };
       };
-    };
-
-    fwupd = {
-      enable = true;
-      package = (
-        pkgs.fwupd.override {
-          enablePassim = false;
-        }
-      );
     };
 
     upower = {
@@ -865,22 +765,6 @@ in
 
     colord.enable = true;
 
-    udev = {
-      enable = true;
-      packages = with pkgs; [
-        libmtp.out
-        rtl-sdr
-      ];
-
-      extraRules = ''
-        KERNEL=="rtc0", GROUP="audio"
-        KERNEL=="hpet", GROUP="audio"
-        DEVPATH=="/devices/virtual/misc/cpu_dma_latency", OWNER="root", GROUP="audio", MODE="0660"
-        SUBSYSTEM=="backlight", ACTION=="add", KERNEL=="*", MODE="0666" RUN+="${pkgs.coreutils-full}/bin/chmod a+w /sys/class/backlight/%k/brightness"
-      ''
-      + config.specificHardwareConfiguration.services.udev.extraRules;
-    };
-
     smartd = {
       enable = true;
 
@@ -901,52 +785,16 @@ in
       mountOnMedia = false;
     };
 
-    zram-generator = {
-      enable = true;
-      package = pkgs.zram-generator;
-    };
-
     accounts-daemon.enable = true;
-
-    fprintd = {
-      enable = true;
-      package = if config.services.fprintd.tod.enable then pkgs.fprintd-tod else pkgs.fprintd;
-
-      tod = {
-        enable = config.specificHardwareConfiguration.services.fprintd.tod.enable;
-        driver = pkgs.lib.optionals config.services.fprintd.tod.enable config.specificHardwareConfiguration.services.fprintd.tod.package;
-      };
-    };
 
     gvfs = {
       enable = true;
       package = (
         pkgs.gvfs.override {
           gnomeSupport = false;
-          udevSupport = true;
+          udevSupport = config.services.udev.enable;
         }
       );
-    };
-
-    gpsd = {
-      enable = true;
-
-      readonly = true;
-
-      listenany = true;
-      port = 2947;
-
-      debugLevel = 0; # 0 = Disabled
-    };
-
-    tailscale = {
-      enable = true;
-      package = pkgs.tailscale;
-
-      disableTaildrop = false;
-
-      port = 0; # 0 = Automatic
-      openFirewall = true;
     };
 
     sysstat = {
@@ -962,35 +810,6 @@ in
   };
 
   programs = {
-    uwsm = {
-      enable = true;
-      package = (
-        pkgs.uwsm.override {
-          fumonSupport = true;
-          uuctlSupport = false;
-          uwsmAppSupport = true;
-        }
-      );
-    };
-
-    hyprland = {
-      enable = true;
-      package = (
-        pkgs.hyprland.override {
-          debug = config.environment.enableDebugInfo;
-          enableXWayland = config.programs.hyprland.xwayland.enable;
-          withSystemd = true;
-          wrapRuntimeDeps = true;
-        }
-      );
-      portalPackage = pkgs.xdg-desktop-portal-hyprland;
-
-      withUWSM = true;
-      xwayland.enable = false;
-    };
-
-    xwayland.enable = config.programs.hyprland.xwayland.enable;
-
     nix-ld = {
       enable = true;
       package = pkgs.nix-ld;
@@ -999,7 +818,6 @@ in
         options.programs.nix-ld.libraries.default
         ++ (with pkgs; [
           glib.out
-          libsecret
           llvmPackages.stdenv.cc.cc.lib
           sqlite
           stdenv.cc
@@ -1019,51 +837,11 @@ in
       };
     };
 
-    appimage = {
-      enable = true;
-      package = (
-        pkgs.appimage-run.override {
-          extraPkgs =
-            pkgs: with pkgs; [
-              libepoxy
-              libsoup_3
-              webkitgtk_4_1
-            ];
-        }
-      );
-
-      binfmt = true;
-    };
-
     command-not-found.enable = true;
 
     usbtop.enable = true;
 
     nano.enable = false;
-
-    git = {
-      enable = true;
-      package = (
-        pkgs.gitFull.override {
-          guiSupport = true;
-          sendEmailSupport = true;
-          svnSupport = true;
-          withLibsecret = true;
-          withManual = true;
-          withpcre2 = true;
-          withSsh = config.home-manager.users.normal.programs.ssh.enable;
-        }
-      );
-
-      lfs = {
-        enable = true;
-        package = pkgs.git-lfs;
-
-        enablePureSSHTransfer = config.home-manager.users.normal.programs.ssh.enable;
-      };
-
-      prompt.enable = true;
-    };
 
     dconf = {
       enable = true;
@@ -1250,7 +1028,6 @@ in
         # apkeep # FIXME: Build Failure
         # darling-dmg # Marked as Broken
         # flake-checker # FIXME: Build Failure
-        # gearlever # FIXME: Build Failure
         # genealogos-cli # FIXME: Build Failure
         # markitdown # FIXME: Build Failure
         # newsflash # FIXME: Build Failure
@@ -1277,7 +1054,6 @@ in
         apfs-fuse
         apfsprogs
         apkleaks
-        appimageupdate-qt
         archivemount
         arduino-cli
         arduino-core
@@ -1299,13 +1075,7 @@ in
         bindfs
         blanket
         bleachbit
-        brightnessctl
         btfs
-        btrfs-assistant
-        btrfs-heatmap
-        btrfs-progs
-        bustle
-        butt
         bzip3
         calligraphy
         carburetor
@@ -1321,8 +1091,6 @@ in
         cloc
         cloneit
         cloudflared
-        cmake-format
-        cmake-lint
         codeowners
         codevis
         colorgrind
@@ -1363,7 +1131,6 @@ in
         door-knocker
         dosfstools
         dot2tex
-        dtui
         dvb-apps
         e2fsprogs
         efibootmgr
@@ -1378,7 +1145,6 @@ in
         etherape
         evtest-qt
         exfatprogs
-        exhibit
         exiftool
         extract-dtb
         f2fs-tools
@@ -1401,7 +1167,6 @@ in
         fritzing
         fuse-overlayfs
         fuse3
-        fwupd-efi
         gawd
         gawk
         gcc
@@ -1415,22 +1180,16 @@ in
         ghatm
         ghrepo-stats
         gimp-with-plugins
-        git-big-picture
-        git-filter-repo
-        git-open
-        git-repo
         github-backup
         github-changelog-generator
         github-distributed-owners
-        gitlogue
         glab
         glib
+        glibc
         glib-networking
         gnome-characters
-        gnome-firmware
         gnome-frog
         gnome-multi-writer
-        gnss-sdr
         gnucash
         gnugrep
         gnumake
@@ -1440,9 +1199,7 @@ in
         go2tv
         goldendict-ng
         google-lighthouse
-        gource
         gphoto2fs
-        gpredict
         gpu-viewer
         graphviz
         gtk-frdp
@@ -1461,14 +1218,9 @@ in
         httpdirfs
         hw-probe
         hydra-check
-        hyprgraphics
-        hyprland-protocols
         hyprmag
         hyprshutdown
         hyprtoolkit
-        hyprutils
-        hyprwire
-        i2c-tools
         ifuse
         imagemagickBig
         imhex
@@ -1509,7 +1261,6 @@ in
         libnotify
         libogg
         libopus
-        libsecret
         libsixel
         libultrahdr
         libva-utils
@@ -1536,8 +1287,6 @@ in
         metronome
         mfcuk
         mfoc
-        millisecond
-        mixxx
         monkeys-audio
         morphosis
         mousam
@@ -1560,7 +1309,6 @@ in
         ntfsprogs-plus
         nurl
         nvme-cli
-        obexftp
         onionshare-gui
         openafs
         openai-whisper
@@ -1568,9 +1316,7 @@ in
         opencore-amr
         openh264
         openjpeg
-        openobex
         openssl
-        orbvis
         otree
         packet
         paleta
@@ -1585,7 +1331,6 @@ in
         picard-tools
         platformio
         play
-        playerctl
         poop # POOP = Performance Optimizer Observation Platform
         powershell
         procps
@@ -1606,16 +1351,12 @@ in
         rpi-imager
         rpmextract
         rt-tests
-        rtl-sdr-librtlsdr
         runme
-        satdump
-        satellite
         sbc
         sbom2dot
         sbomnix
         schroedinger
         scorecard
-        sdrangel
         seer # seergdb
         selectdefaultapplication
         semver-tool
@@ -1658,7 +1399,6 @@ in
         tsukae
         turnon
         udftools
-        ugit
         unarc
         undollar
         unhide-gui
@@ -1712,14 +1452,17 @@ in
         (curlFull.override {
           brotliSupport = true;
           c-aresSupport = true;
+          gnutlsSupport = false;
           gsaslSupport = true;
           gssSupport = true;
           http2Support = true;
           http3Support = true;
+          httpsigSupport = true;
           idnSupport = true;
+          ldapSupport = true;
           opensslSupport = true;
           pslSupport = true;
-
+          rustlsSupport = false;
           scpSupport = true;
           websocketSupport = true;
           zlibSupport = true;
@@ -1843,7 +1586,7 @@ in
         })
 
         (nwg-displays.override {
-          hyprlandSupport = true;
+          hyprlandSupport = config.programs.hyprland.enable;
         })
 
         (p7zip.override {
@@ -1867,37 +1610,6 @@ in
           withSqlite = true;
         })
 
-        (qbittorrent.override {
-          guiSupport = true;
-          trackerSearch = true;
-          webuiSupport = true;
-        })
-
-        (sdrpp.override {
-          airspy_source = true;
-          airspyhf_source = true;
-          audio_sink = true;
-          bladerf_source = true;
-          file_source = true;
-          frequency_manager = true;
-          hackrf_source = true;
-          limesdr_source = true;
-          m17_decoder = true;
-          meteor_demodulator = true;
-          network_sink = true;
-          plutosdr_source = true;
-          portaudio_sink = true;
-          recorder = true;
-          rfspace_source = true;
-          rigctl_server = true;
-          rtl_sdr_source = true;
-          rtl_tcp_source = true;
-          scanner = true;
-          soapy_source = true;
-          spyserver_source = true;
-          usrp_source = true;
-        })
-
         (testdisk-qt.override {
           enableExtFs = true;
           enableNtfs = true;
@@ -1917,55 +1629,11 @@ in
           withLibpsl = true;
           withOpenssl = true;
         })
-      ]
-
-      ++ (with pkgs.gst_all_1; [
-        (gst-libav.override {
-          enableDocumentation = config.documentation.enable;
-        })
-
-        (gst-plugins-bad.override {
-          ajaSupport = true;
-          bluezSupport = config.hardware.bluetooth.enable;
-          enableDocumentation = config.documentation.enable;
-          enableGplPlugins = true;
-          enableZbar = true;
-          guiSupport = true;
-          ldacbtSupport = true;
-          microdnsSupport = true;
-          opencvSupport = true;
-          openh264Support = true;
-          webrtcAudioProcessingSupport = true;
-        })
-
-        (gst-plugins-base.override {
-          enableAlsa = config.services.pipewire.alsa.enable;
-          enableCdparanoia = true;
-          enableDocumentation = config.documentation.enable;
-          enableWayland = true;
-        })
-
-        (gst-plugins-good.override {
-          enableDocumentation = config.documentation.enable;
-          enableJack = true;
-          enableWayland = true;
-          gtkSupport = true;
-          qt6Support = config.qt.enable;
-        })
-
-        (gst-plugins-ugly.override {
-          enableDocumentation = config.documentation.enable;
-          enableGplPlugins = true;
-        })
-
-        (gstreamer.override {
-          enableDocumentation = config.documentation.enable;
-        })
 
         (zint-qt.override {
           withGUI = true;
         })
-      ])
+      ]
 
       ++ (with pkgs.kdePackages; [
         kalgebra
@@ -2032,7 +1700,6 @@ in
       ++ config.hardware.graphics.extraPackages32
       ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
-      ++ config.services.udev.packages
       ++ config.xdg.portal.configPackages
       ++ config.xdg.portal.extraPortals
 
@@ -2133,25 +1800,9 @@ in
         "font/ttf" = "com.github.FontManager.FontViewer.desktop";
         "font/woff" = "com.github.FontManager.FontViewer.desktop";
         "font/woff2" = "com.github.FontManager.FontViewer.desktop";
-
-        "application/prs.wavefront-obj" = "io.github.nokse22.Exhibit.desktop";
-        "application/vnd.ms-3mfdocument" = "io.github.nokse22.Exhibit.desktop";
-        "model/3mf" = "io.github.nokse22.Exhibit.desktop";
-        "model/gltf-binary" = "io.github.nokse22.Exhibit.desktop";
-        "model/gltf-json" = "io.github.nokse22.Exhibit.desktop";
-        "model/iges" = "io.github.nokse22.Exhibit.desktop";
-        "model/obj" = "io.github.nokse22.Exhibit.desktop";
-        "model/step" = "io.github.nokse22.Exhibit.desktop";
-        "model/stl" = "io.github.nokse22.Exhibit.desktop";
-        "model/x-other" = "io.github.nokse22.Exhibit.desktop";
-
-        "application/x-bittorrent" = "org.qbittorrent.qBittorrent.desktop";
-        "x-scheme-handler/magnet" = "org.qbittorrent.qBittorrent.desktop";
       };
     };
   };
-
-  gtk.iconCache.enable = true;
 
   catppuccin = {
     enable = true;
@@ -2175,8 +1826,6 @@ in
       flavor = config.catppuccin.flavor;
       accent = config.catppuccin.accent;
     };
-
-    gtk.icon.enable = false; # Done Manually Instead
   }; # From catppuccinThemeFlake
 
   documentation = {
@@ -2248,10 +1897,6 @@ in
           "cdrom"
           "dialout"
           "disk"
-          "floppy"
-          "fwupd-refresh"
-          "gpsd"
-          "i2c"
           "input"
           "lp"
           "networkmanager"
@@ -2259,7 +1904,6 @@ in
           "plugdev"
           "render"
           "systemd-journal"
-          "tape"
           "tty"
           "users"
           "uucp"
@@ -2332,738 +1976,6 @@ in
           subpixelRendering = config.fonts.fontconfig.subpixel.rgba;
         };
 
-        wayland.windowManager.hyprland = {
-          enable = config.programs.hyprland.enable;
-          package = config.programs.hyprland.package;
-
-          systemd = {
-            enable = false;
-
-            enableXdgAutostart = true;
-
-            variables = [
-              "--all"
-            ];
-          };
-
-          xwayland.enable = config.programs.hyprland.xwayland.enable;
-
-          configType = "lua";
-          sourceFirst = true;
-
-          settings = {
-            monitor = [
-              {
-                output = ""; # "" = All
-                mode = "highres";
-                position = "auto";
-                transform = 0;
-                scale = 1.0;
-              }
-            ];
-
-            on = {
-              _args = [
-                "hyprland.start"
-                (pkgs.lib.generators.mkLuaInline ''
-                  function()
-                    hl.exec_cmd("dbus-update-activation-environment --systemd --all")
-                  end
-                '')
-              ];
-            };
-
-            bind = [
-              {
-                _args = [
-                  "XF86MonBrightnessUp"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86MonBrightnessDown"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"brightnessctl set 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "XF86AudioRaiseVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%+\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioLowerVolume"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-\")")
-                  {
-                    repeating = true;
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioMicMute"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "XF86AudioPlay"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPause"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl play-pause\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioStop"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl stop\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioPrev"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl previous\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-              {
-                _args = [
-                  "XF86AudioNext"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"playerctl next\")")
-                  {
-                    locked = true;
-                  }
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"2\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"3\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"4\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"5\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"6\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"7\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"8\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"9\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"10\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse_up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m-1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + mouse_down"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({workspace = \"m+1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + S"
-                  (pkgs.lib.generators.mkLuaInline " hl.dsp.workspace.toggle_special(\"magic\")")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + up"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"u\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + right"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"r\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + down"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"d\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + left"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.focus({direction = \"l\"})")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + SHIFT + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + S"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 1"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"1\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 2"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"2\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 3"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"3\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 4"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"4\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 5"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"5\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 6"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"6\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 7"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"7\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 8"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"8\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 9"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"9\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + 0"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"10\", follow=false})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + SHIFT + ALT + S"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.move({workspace = \"special:magic\", follow=false})")
-                ];
-              }
-
-              {
-                _args = [
-                  "SUPER + mouse:272"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.drag()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              } # Left Button
-              {
-                _args = [
-                  "SUPER + mouse:273"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.resize()")
-                  {
-                    mouse = true;
-                  }
-                ];
-              } # Right Button
-              {
-                _args = [
-                  "ALT + F11"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"maximized\"})")
-                ];
-              }
-              {
-                _args = [
-                  "F11"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.fullscreen({mode = \"fullscreen\"})")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + Q"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.close()")
-                ];
-              }
-              {
-                _args = [
-                  "SUPER + ALT + Q"
-                  (pkgs.lib.generators.mkLuaInline "hl.dsp.window.kill()")
-                ];
-              }
-            ];
-
-            config = {
-              general = {
-                allow_tearing = true;
-
-                gaps_workspaces = 0;
-
-                layout = "dwindle";
-
-                gaps_in = builtins.floor (designFactor / 4.0);
-                gaps_out = {
-                  top = builtins.floor (designFactor / 2.0);
-                  right = builtins.floor (designFactor / 2.0);
-                  bottom = builtins.floor (designFactor / 2.0);
-                  left = builtins.floor (designFactor / 2.0);
-                };
-
-                float_gaps = builtins.floor (designFactor / 2.0);
-
-                border_size = 1;
-                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
-                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
-
-                resize_on_border = true;
-                hover_icon_on_border = true;
-
-                no_focus_fallback = false;
-
-                snap = {
-                  enabled = true;
-
-                  respect_gaps = true;
-                  monitor_gap = builtins.floor (designFactor / 2.0);
-                  window_gap = builtins.floor (designFactor / 2.0);
-
-                  border_overlap = false;
-                };
-
-                modal_parent_blocking = true;
-
-                locale = "en_US";
-              };
-
-              decoration = {
-                shadow = {
-                  enabled = true;
-
-                  sharp = false;
-                };
-
-                border_part_of_window = true;
-                rounding = builtins.floor designFactor;
-                rounding_power = 4.0; # 4.0 = Squircle
-
-                active_opacity = 1.0;
-                fullscreen_opacity = 1.0;
-                inactive_opacity = 1.0;
-
-                dim_special = 0.25;
-                dim_modal = true;
-                dim_inactive = false;
-                dim_strength = 0.0;
-
-                blur = {
-                  enabled = true;
-                  new_optimizations = true;
-
-                  special = true;
-                  popups = true;
-                  input_methods = true;
-
-                  ignore_opacity = false;
-                  xray = true;
-                };
-
-                glow = {
-                  enabled = false;
-                };
-              };
-
-              animations = {
-                enabled = true;
-
-                workspace_wraparound = false;
-              };
-
-              input = {
-                numlock_by_default = false;
-                kb_layout = "us";
-
-                force_no_accel = false;
-                scroll_button_lock = true;
-                natural_scroll = false;
-                left_handed = false;
-
-                special_fallthrough = false;
-
-                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
-                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
-                mouse_refocus = true;
-
-                touchpad = {
-                  disable_while_typing = true;
-
-                  flip_x = false;
-                  flip_y = false;
-
-                  middle_button_emulation = false;
-                  clickfinger_behavior = false;
-
-                  tap_to_click = true;
-
-                  tap_and_drag = true;
-                  drag_3fg = 1; # 1 = 3 Fingers
-                  drag_lock = 2; # 2 = Enabled Sticky
-
-                  natural_scroll = true;
-                };
-
-                touchdevice = {
-                  enabled = true;
-                };
-
-                tablet = {
-                  left_handed = false;
-                };
-
-                virtualkeyboard = {
-                  release_pressed_on_close = true;
-                };
-              };
-
-              gestures = {
-                workspace_swipe_create_new = true;
-                workspace_swipe_forever = true;
-
-                # Touchpad
-                workspace_swipe_invert = false;
-
-                # Touchscreen
-                workspace_swipe_touch = true;
-                workspace_swipe_touch_invert = false;
-              };
-
-              group = {
-                auto_group = false;
-
-                merge_groups_on_drag = true;
-                merge_groups_on_groupbar = true;
-
-                group_on_movetoworkspace = false;
-                merge_floated_into_tiled_on_groupbar = false;
-                insert_after_current = true;
-                focus_removed_window = true;
-
-                groupbar = {
-                  enabled = true;
-                  stacked = false;
-
-                  render_titles = true;
-                  scrolling = true;
-                  middle_click_close = false;
-
-                  keep_upper_gap = true;
-                  gradients = true;
-                  blur = true;
-                  round_only_edges = false;
-                  gradient_round_only_edges = false;
-                };
-              };
-
-              misc = {
-                disable_watchdog_warning = false;
-                disable_xdg_env_checks = false;
-                disable_autoreload = false;
-                disable_scale_notification = false;
-
-                allow_session_lock_restore = true;
-                session_lock_xray = false;
-
-                key_press_enables_dpms = true;
-                mouse_move_enables_dpms = true;
-                vrr = 1; # 1 = On
-                mouse_move_focuses_monitor = true;
-
-                disable_splash_rendering = true;
-                disable_hyprland_logo = true;
-
-                close_special_on_empty = true;
-
-                enable_swallow = true;
-
-                name_vk_after_proc = true;
-                enable_anr_dialog = true;
-
-                exit_window_retains_fullscreen = false;
-
-                focus_on_activate = true;
-
-                always_follow_on_dnd = true;
-
-                animate_mouse_windowdragging = true;
-                animate_manual_resizes = true;
-
-                middle_click_paste = true;
-
-                font_family = fontPreferences.sansSerif;
-              };
-
-              layers = {
-                layers_hog_keyboard_focus = true;
-              };
-
-              binds = {
-                allow_workspace_cycles = false;
-                workspace_back_and_forth = false;
-                hide_special_on_workspace_change = false;
-
-                window_direction_monitor_fallback = true;
-                ignore_group_lock = false;
-                movefocus_cycles_groupfirst = true;
-                movefocus_cycles_fullscreen = false;
-                allow_pin_fullscreen = true;
-
-                disable_keybind_grabbing = true;
-                pass_mouse_when_bound = false;
-              };
-
-              xwayland.enabled = config.programs.hyprland.xwayland.enable;
-
-              render = {
-                cm_enabled = true;
-                cm_auto_hdr = 0; # 0 = Off
-                send_content_type = true;
-                new_render_scheduling = true;
-                xp_mode = false;
-                commit_timing_enabled = true;
-              };
-
-              cursor = {
-                invisible = false;
-                hide_on_key_press = false;
-                hide_on_tablet = false;
-                hide_on_touch = true;
-
-                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
-                enable_hyprcursor = true;
-                sync_gsettings_theme = true;
-
-                no_warps = false;
-                persistent_warps = true;
-                warp_back_after_non_mouse_input = true;
-
-                zoom_rigid = true;
-                zoom_detached_camera = false;
-                zoom_disable_aa = false;
-              };
-
-              ecosystem = {
-                enforce_permissions = false;
-
-                no_update_news = false;
-                no_donation_nag = false;
-              };
-
-              quirks = {
-                prefer_hdr = 0; # 0 = Off
-              };
-
-              dwindle = {
-                force_split = 0; # 0 = Split Follows Mouse
-                use_active_for_splits = true;
-                smart_split = false;
-                preserve_split = true;
-
-                smart_resizing = true;
-
-                precise_mouse_move = true;
-              };
-            }; # Sorted from "General" to "Quirks" according to the "Configuring > Core > Config options" Page.
-
-          };
-
-          extraConfig = ''
-            pcall(require, "monitors") -- Import if available.
-          ''; # nwg-displays
-
-          xdph.settings = {
-            general = {
-              toplevel_dynamic_bind = true;
-            };
-
-            screencopy = {
-              allow_token_by_default = true;
-
-              force_shm = false;
-              cursor_mode = 2; # 2 = Embedded Mode # Lacks Support for 4 (Metadata Mode)
-              max_fps = 0; # 0 = Unlimited
-            };
-          }; # xdg-desktop-portal-hyprland
-        };
-
         xdg = {
           portal = {
             enable = config.xdg.portal.enable;
@@ -3109,128 +2021,6 @@ in
           # stateFile = { };
 
           # cacheFile = { };
-        };
-
-        gtk = {
-          enable = true;
-
-          font = {
-            name = fontPreferences.sansSerif;
-            package = pkgs.nerd-fonts.noto;
-            size = builtins.floor (designFactor * 1.5);
-          };
-
-          colorScheme = "dark";
-          theme = {
-            name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard+normal";
-            package = (
-              pkgs.catppuccin-gtk.override {
-                accents = [
-                  config.catppuccin.accent
-                ];
-                size = "standard";
-                tweaks = [
-                  "normal"
-                ];
-                variant = config.catppuccin.flavor;
-              }
-            );
-          };
-
-          iconTheme = {
-            name = "Papirus-Dark";
-            package = (
-              pkgs.papirus-icon-theme.override {
-                color = "black";
-              }
-            );
-          };
-
-          cursorTheme = {
-            name = config.home-manager.users.normal.home.pointerCursor.name;
-            package = config.home-manager.users.normal.home.pointerCursor.package;
-            size = config.home-manager.users.normal.home.pointerCursor.size;
-          };
-
-          gtk4 = {
-            enable = true;
-
-            font = {
-              name = config.home-manager.users.normal.gtk.font.name;
-              package = config.home-manager.users.normal.gtk.font.package;
-              size = config.home-manager.users.normal.gtk.font.size;
-            };
-
-            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
-            iconTheme = {
-              name = config.home-manager.users.normal.gtk.iconTheme.name;
-              package = config.home-manager.users.normal.gtk.iconTheme.package;
-            };
-
-            cursorTheme = {
-              name = config.home-manager.users.normal.gtk.cursorTheme.name;
-              package = config.home-manager.users.normal.gtk.cursorTheme.package;
-              size = config.home-manager.users.normal.gtk.cursorTheme.size;
-            };
-          };
-
-          gtk3 = {
-            enable = true;
-
-            font = {
-              name = config.home-manager.users.normal.gtk.font.name;
-              package = config.home-manager.users.normal.gtk.font.package;
-              size = config.home-manager.users.normal.gtk.font.size;
-            };
-
-            colorScheme = config.home-manager.users.normal.gtk.colorScheme;
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
-            iconTheme = {
-              name = config.home-manager.users.normal.gtk.iconTheme.name;
-              package = config.home-manager.users.normal.gtk.iconTheme.package;
-            };
-
-            cursorTheme = {
-              name = config.home-manager.users.normal.gtk.cursorTheme.name;
-              package = config.home-manager.users.normal.gtk.cursorTheme.package;
-              size = config.home-manager.users.normal.gtk.cursorTheme.size;
-            };
-          };
-
-          gtk2 = {
-            enable = true;
-
-            font = {
-              name = config.home-manager.users.normal.gtk.font.name;
-              package = config.home-manager.users.normal.gtk.font.package;
-              size = config.home-manager.users.normal.gtk.font.size;
-            };
-
-            theme = {
-              name = config.home-manager.users.normal.gtk.theme.name;
-              package = config.home-manager.users.normal.gtk.theme.package;
-            };
-
-            iconTheme = {
-              name = config.home-manager.users.normal.gtk.iconTheme.name;
-              package = config.home-manager.users.normal.gtk.iconTheme.package;
-            };
-
-            cursorTheme = {
-              name = config.home-manager.users.normal.gtk.cursorTheme.name;
-              package = config.home-manager.users.normal.gtk.cursorTheme.package;
-              size = config.home-manager.users.normal.gtk.cursorTheme.size;
-            };
-          };
         };
 
         services = {
@@ -3283,12 +2073,6 @@ in
                 enabled = true;
 
                 command = "${pkgs.mcp-server-fetch}/bin/mcp-server-fetch";
-              };
-
-              mcp-server-git = {
-                enabled = true;
-
-                command = "${pkgs.mcp-server-git}/bin/mcp-server-git";
               };
 
               mcp-server-sequential-thinking = {
@@ -3359,21 +2143,12 @@ in
           flavor = config.catppuccin.flavor;
           accent = config.catppuccin.accent;
 
-          hyprland = {
-            enable = config.programs.hyprland.enable;
-
-            flavor = config.catppuccin.flavor;
-            accent = config.catppuccin.accent;
-          };
-
           cursors = {
             enable = config.catppuccin.cursors.enable;
 
             flavor = config.catppuccin.flavor;
             accent = config.catppuccin.accent;
           };
-
-          gtk.icon.enable = config.catppuccin.gtk.icon.enable;
 
           hyprtoolkit = {
             enable = config.catppuccin.enable;

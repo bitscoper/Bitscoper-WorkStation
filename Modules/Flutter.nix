@@ -80,6 +80,8 @@ in
           clang-analyzer
           clang-tools
           clang_22
+          cmake-format
+          cmake-lint
           flutter
           lld_22
           llvm_22
