@@ -400,10 +400,7 @@
       environment = {
         sessionVariables = {
           STEAM_COMPAT_MOUNTS = "/mnt/I_SATA_SSD:/run/current-system/sw/share/nix-ld/lib/";
-
           MESA_SHADER_CACHE_DIR = "/mnt/I_SATA_SSD/Games/Cache/Mesa_Shader/";
-          DXVK_STATE_CACHE_PATH = "/mnt/I_SATA_SSD/Games/Cache/DXVK_State/";
-          VKD3D_SHADER_CACHE_PATH = "/mnt/I_SATA_SSD/Games/Cache/VKD3D_Shader/";
         };
       };
 

@@ -26,6 +26,8 @@
       nautilus-python
     ];
 
+    services.gnome.sushi.enable = true;
+
     programs = {
       nautilus-open-any-terminal = {
         enable = true;

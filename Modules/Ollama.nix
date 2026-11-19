@@ -17,6 +17,8 @@
       openFirewall = true;
     };
 
+    systemd.services.ollama.wantedBy = pkgs.lib.mkForce [ ]; # No Automatic Start
+
     environment.systemPackages = with pkgs; [
       # newelle # FIXME: Build Failure
     ];

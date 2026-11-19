@@ -122,8 +122,6 @@
       }
     ];
 
-    environment.variables.CHROME_EXECUTABLE = "chromium-browser";
-
     xdg.mime.defaultApplications = {
       "x-scheme-handler/http" = "chromium-browser.desktop";
       "x-scheme-handler/https" = "chromium-browser.desktop";

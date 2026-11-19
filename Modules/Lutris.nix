@@ -41,7 +41,6 @@
 
       sessionVariables = {
         WINE_DRIVER = "wayland";
-        VKD3D_CONFIG = "vkd3d_shader_cache";
       };
     };
 
