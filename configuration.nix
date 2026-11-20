@@ -138,6 +138,7 @@ in
     ./Modules/Cockpit.nix
     ./Modules/Contour.nix
     ./Modules/CPU-X.nix
+    ./Modules/Curtail.nix
     ./Modules/D-Bus.nix
     ./Modules/direnv.nix
     ./Modules/Evince.nix
@@ -145,6 +146,7 @@ in
     ./Modules/Fastfetch.nix
     ./Modules/Fcitx_5.nix
     ./Modules/fdroidcl.nix
+    ./Modules/FFmpeg.nix
     ./Modules/Firefox.nix
     ./Modules/Flutter.nix
     ./Modules/fprintd.nix
@@ -165,6 +167,7 @@ in
     ./Modules/Hyprshot.nix
     ./Modules/I2C.nix
     ./Modules/Icecast.nix
+    ./Modules/ImHex.nix
     ./Modules/Jellyfin.nix
     ./Modules/KeePassXC.nix
     ./Modules/Kubernetes.nix
@@ -174,6 +177,7 @@ in
     ./Modules/Lutris.nix
     ./Modules/MariaDB.nix
     ./Modules/Nautilus.nix
+    ./Modules/NetworkManager.nix
     ./Modules/nix-index.nix
     ./Modules/Nocturne.nix
     ./Modules/nwg-bar.nix
@@ -193,6 +197,7 @@ in
     ./Modules/PostgreSQL.nix
     ./Modules/qBittorrent.nix
     ./Modules/Qt.nix
+    ./Modules/Resources.nix
     ./Modules/Rofi.nix
     ./Modules/rtl-sdr.nix
     ./Modules/Simple_Desktop_Display_Manager.nix
@@ -201,7 +206,9 @@ in
     ./Modules/SwayNotificationCenter.nix
     ./Modules/sysctl.nix
     ./Modules/Syshud.nix
+    ./Modules/systemd.nix
     ./Modules/Tailscale.nix
+    ./Modules/Tor.nix
     ./Modules/udev.nix
     ./Modules/udiskie.nix
     ./Modules/Ungoogled_Chromium.nix
@@ -212,6 +219,8 @@ in
     ./Modules/Wayscriber.nix
     ./Modules/WayVNC.nix
     ./Modules/Wireshark.nix
+    ./Modules/xdg-desktop-portal-gtk.nix
+    ./Modules/XDG.nix
     ./Modules/Zed.nix
 
     ./hardware-configuration.nix
@@ -320,8 +329,6 @@ in
   };
 
   boot = {
-    isContainer = false;
-
     kernel = {
       enable = true;
     };
@@ -368,7 +375,6 @@ in
       "initcall_blacklist=simpledrm_platform_driver_init"
       "iommu=pt"
       "mitigations=auto"
-      "rd.systemd.show_status=true"
       "splash"
     ]
     ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-configuration.nix
@@ -383,10 +389,6 @@ in
         "xhci_pci"
       ]
       ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-configuration.nix
-
-      systemd = {
-        package = config.systemd.package;
-      };
 
       network.enable = true;
     };
@@ -447,31 +449,9 @@ in
     };
   };
 
-  systemd = {
-    package = (
-      pkgs.systemd.override {
-        withAcl = true;
-        withCryptsetup = true;
-        withDocumentation = config.documentation.enable;
-        withLogind = true;
-        withOpenSSL = true;
-        withPam = true;
-        withPolkit = config.security.polkit.enable;
-      }
-    );
-
-    settings = {
-      Manager = {
-        DefaultIOAccounting = true;
-        DefaultIPAccounting = true;
-      };
-    };
-
-    tmpfiles.rules = [
-      "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
-    ]
-    ++ config.specificHardwareConfiguration.systemd.tmpfiles.rules;
-  };
+  systemd.tmpfiles.rules = [
+    "L+ /lib/modules/ - - - - /run/current-system/kernel-modules/lib/modules/"
+  ];
 
   security = {
     allowSimultaneousMultithreading = true;
@@ -578,36 +558,6 @@ in
     useDHCP = if config.networking.networkmanager.dhcp == "internal" then false else true;
     dhcpcd.enable = false;
 
-    networkmanager = {
-      enable = true;
-      package = (
-        pkgs.networkmanager.override {
-          withSystemd = true;
-        }
-      );
-      plugins = with pkgs; [
-        networkmanager-l2tp
-        networkmanager-openvpn
-        networkmanager-ssh
-      ];
-
-      ethernet.macAddress = "permanent";
-
-      wifi = {
-        backend = "wpa_supplicant";
-
-        powersave = false;
-
-        scanRandMacAddress = true;
-        macAddress = "permanent";
-      };
-
-      dhcp = "internal";
-      dns = "systemd-resolved";
-
-      logLevel = "WARN";
-    };
-
     firewall = {
       enable = true;
 
@@ -615,15 +565,10 @@ in
 
       # allowedTCPPorts = [
       # ];
-      allowedUDPPorts = config.networking.firewall.allowedTCPPorts;
-    };
 
-    nameservers = [
-      "9.9.9.9#dns.quad9.net"
-      "149.112.112.112#dns.quad9.net"
-      "2620:fe::fe#dns.quad9.net"
-      "2620:fe::9#dns.quad9.net"
-    ];
+      # allowedUDPPorts = [
+      # ];
+    };
   };
 
   i18n = {
@@ -668,40 +613,11 @@ in
   };
 
   services = {
-    journald = {
-      settings = {
-        Journal = {
-          Audit = "keep";
-
-          ForwardToSyslog = false;
-          Storage = "persistent";
-        };
-      };
-    };
-
     das_watchdog.enable = true;
 
     fstrim = {
       enable = true;
       interval = "weekly";
-    };
-
-    resolved = {
-      enable = true;
-
-      settings = {
-        Resolve = {
-          DNSSEC = true;
-          DNSOverTLS = true;
-
-          DNS = config.networking.nameservers;
-          FallbackDNS = [ ];
-
-          Domains = [
-            "~."
-          ];
-        };
-      };
     };
 
     upower = {
@@ -718,30 +634,6 @@ in
       criticalPowerAction = "PowerOff";
 
       ignoreLid = true;
-    };
-
-    logind = {
-      settings = {
-        Login = {
-          killUserProcesses = true;
-
-          lidSwitch = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
-          lidSwitchDocked = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
-          lidSwitchExternalPower = pkgs.lib.optionals config.services.upower.ignoreLid "ignore";
-
-          powerKey = "poweroff";
-          powerKeyLongPress = "poweroff";
-
-          rebootKey = "reboot";
-          rebootKeyLongPress = "reboot";
-
-          suspendKey = "suspend";
-          suspendKeyLongPress = "suspend";
-
-          hibernateKey = "hibernate";
-          hibernateKeyLongPress = "hibernate";
-        };
-      };
     };
 
     acpid = {
@@ -851,94 +743,19 @@ in
           lockAll = true;
 
           settings = {
-            "com/github/huluti/Curtail" = {
-              new-file = true;
-              png-lossless-level = pkgs.lib.gvariant.mkInt32 6;
-              recursive = true;
-              webp-lossless-level = pkgs.lib.gvariant.mkInt32 6;
-            }; # https://raw.githubusercontent.com/Huluti/Curtail/main/data/com.github.huluti.Curtail.gschema.xml
-
-            "org/gnome/desktop/interface" = {
-              gtk-enable-primary-paste = true;
-              monospace-font-name = "${fontPreferences.monospace} ${
-                pkgs.lib.toString (builtins.floor (designFactor * 1.5))
-              }";
-            };
-
             "org/gnome/desktop/privacy" = {
               remember-recent-files = false;
-            };
-
-            "org/gnome/desktop/wm/preferences" = {
-              button-layout = "appmenu:minimize,maximize,close";
-            };
-
-            "org/gnome/Resources" = {
-              apps-show-combined-memory = true;
-              apps-show-cpu = true;
-              apps-show-decoder = true;
-              apps-show-drive-read-speed = true;
-              apps-show-drive-read-total = true;
-              apps-show-drive-write-speed = true;
-              apps-show-drive-write-total = true;
-              apps-show-encoder = true;
-              apps-show-gpu = true;
-              apps-show-gpu-memory = true;
-              apps-show-memory = true;
-              apps-show-swap = true;
-              base = "Binary";
-              network-bits = false;
-              processes-show-combined-memory = true;
-              processes-show-commandline = true;
-              processes-show-cpu = true;
-              processes-show-decoder = true;
-              processes-show-drive-read-speed = true;
-              processes-show-drive-read-total = true;
-              processes-show-drive-write-speed = true;
-              processes-show-drive-write-total = true;
-              processes-show-encoder = true;
-              processes-show-gpu = true;
-              processes-show-gpu-memory = true;
-              processes-show-id = true;
-              processes-show-memory = true;
-              processes-show-priority = true;
-              processes-show-swap = true;
-              processes-show-system-cpu-time = true;
-              processes-show-total-cpu-time = true;
-              processes-show-user = true;
-              processes-show-user-cpu-time = true;
-              refresh-speed = "VeryFast";
-              show-graph-grids = true;
-              show-logical-cpus = true;
-              show-virtual-drives = true;
-              show-virtual-network-interfaces = true;
-              sidebar-meter-type = "Graph";
-              temperature-unit = "Celsius";
-            };
-
-            "org/gtk/settings/file-chooser" = {
-              show-hidden = true;
-              sort-directories-first = true;
             };
           };
         }
       ];
     };
 
-    seahorse.enable = true;
-
     partition-manager = {
       enable = true;
     };
 
     k3b.enable = true;
-
-    nm-applet = {
-      enable = true;
-      package = pkgs.networkmanagerapplet;
-
-      indicator = true;
-    };
 
     localsend = {
       enable = true;
@@ -1078,7 +895,6 @@ in
         btfs
         bzip3
         calligraphy
-        carburetor
         cartero
         cavasik
         celt
@@ -1105,11 +921,9 @@ in
         crlfuzz
         crow-translate
         cryptsetup
-        curtail
         cve-bin-tool
         cyclonedx-cli
         cyclonedx-python
-        d-spy
         daemon
         darktable
         davfs2
@@ -1143,7 +957,6 @@ in
         erofs-utils
         esptool
         etherape
-        evtest-qt
         exfatprogs
         exiftool
         extract-dtb
@@ -1153,7 +966,6 @@ in
         fdt-viewer
         fdupes
         ffmpegthumbnailer
-        ffpb
         fh
         file
         fileinfo
@@ -1185,8 +997,8 @@ in
         github-distributed-owners
         glab
         glib
-        glibc
         glib-networking
+        glibc
         gnome-characters
         gnome-frog
         gnome-multi-writer
@@ -1223,7 +1035,6 @@ in
         hyprtoolkit
         ifuse
         imagemagickBig
-        imhex
         inetutils
         inkscape-with-extensions
         inotify-tools
@@ -1244,6 +1055,7 @@ in
         krename
         krita
         krita-plugin-gmic
+        kronometer
         labplot
         lenspect
         letterpress
@@ -1309,7 +1121,6 @@ in
         ntfsprogs-plus
         nurl
         nvme-cli
-        onionshare-gui
         openafs
         openai-whisper
         openapv
@@ -1346,7 +1157,6 @@ in
         qtrvsim
         raider
         rdap
-        resources
         rp-pppoe
         rpi-imager
         rpmextract
@@ -1430,9 +1240,6 @@ in
         windowtolayer
         wvkbd # wvkbd-mobintl
         xar
-        xdg-user-dirs
-        xdg-user-dirs-gtk
-        xdg-utils
         xeol
         xfsdump
         xfsprogs
@@ -1468,116 +1275,6 @@ in
           zlibSupport = true;
           zstdSupport = true;
         })
-
-        (
-          (ffmpeg-full.override {
-            withAlsa = config.services.pipewire.alsa.enable;
-            withAom = true;
-            withAribb24 = true;
-            withAribcaption = true;
-            withAss = true;
-            withAvisynth = true;
-            withBluray = true;
-            withBs2b = true;
-            withBzlib = true;
-            withCaca = true;
-            withCdio = true;
-            withCelt = true;
-            withChromaprint = true;
-            withCodec2 = true;
-            withDav1d = true;
-            withDavs2 = true;
-            withDc1394 = true;
-            withDrm = true;
-            withDvdnav = true;
-            withDvdread = true;
-            withFlite = true;
-            withFontconfig = true;
-            withFreetype = true;
-            withFrei0r = true;
-            withFribidi = true;
-            withGme = true;
-            withGnutls = true;
-            withGrayscale = true;
-            withGsm = true;
-            withHarfbuzz = true;
-            withIconv = true;
-            withIlbc = true;
-            withJack = true;
-            withJxl = true;
-            withKvazaar = true;
-            withLadspa = true;
-            withLc3 = true;
-            withLcevcdec = true;
-            withLcms2 = true;
-            withLzma = true;
-            withModplug = true;
-            withMp3lame = true;
-            withMultithread = true;
-            withMysofa = true;
-            withNetwork = true;
-            withOpenal = true;
-            withOpencl = true;
-            withOpencoreAmrnb = true;
-            withOpencoreAmrwb = true;
-            withOpengl = true;
-            withOpenh264 = true;
-            withOpenjpeg = true;
-            withOpenmpt = true;
-            withOpus = true;
-            withPlacebo = true;
-            withPulse = config.services.pipewire.pulse.enable;
-            withQrencode = true;
-            withQuirc = true;
-            withRav1e = true;
-            withRist = true;
-            withRtmp = true;
-            withRubberband = true;
-            withSamba = true;
-            withSdl2 = true;
-            withShaderc = true;
-            withShine = true;
-            withSnappy = true;
-            withSoxr = true;
-            withSpeex = true;
-            withSrt = true;
-            withSsh = config.home-manager.users.normal.programs.ssh.enable;
-            withSvg = true;
-            withSvtav1 = true;
-            withSwscaleAlpha = true;
-            withTheora = true;
-            withTwolame = true;
-            withUavs3d = true;
-            withUnfree = config.nixpkgs.config.allowUnfree;
-            withV4l2 = true;
-            withV4l2M2m = true;
-            withVaapi = true;
-            withVdpau = true;
-            withVidStab = true;
-            withVmaf = true;
-            withVoAmrwbenc = true;
-            withVorbis = true;
-            withVpx = true;
-            withVulkan = true;
-            withVvenc = true;
-            withWebp = true;
-            withX264 = true;
-            withX265 = true;
-            withXavs = true;
-            withXavs2 = true;
-            withXevd = true;
-            withXeve = true;
-            withXml2 = true;
-            withXvid = true;
-            withZimg = true;
-            withZlib = true;
-            withZmq = true;
-            withZvbi = true;
-          }).overrideAttrs
-            (_: {
-              doCheck = false;
-            })
-        )
 
         (guvcview.override {
           pulseaudioSupport = config.services.pipewire.pulse.enable;
@@ -1615,16 +1312,6 @@ in
           enableNtfs = true;
         }) # qphotorec
 
-        (tor-browser.override {
-          audioSupport = true;
-          libnotifySupport = true;
-          libvaSupport = true;
-          mediaSupport = true;
-          pipewireSupport = config.services.pipewire.enable;
-          pulseaudioSupport = config.services.pipewire.pulse.enable;
-          waylandSupport = true;
-        })
-
         (wget.override {
           withLibpsl = true;
           withOpenssl = true;
@@ -1639,14 +1326,13 @@ in
         kalgebra
         kalzium
         kcachegrind
-        kclock
         kcolorchooser
         kdenlive
-        kjournald
         kmahjongg
         kmouth
         kontrast
         kshisen
+        ktimer
         kwave
       ])
 
@@ -1691,17 +1377,13 @@ in
 
       ++ [
         config.hardware.firmware
-        config.programs.nm-applet.package # Also Provides nm-connection-editor
       ]
 
       ++ config.boot.extraModulePackages
       ++ config.fonts.packages
       ++ config.hardware.graphics.extraPackages
       ++ config.hardware.graphics.extraPackages32
-      ++ config.networking.networkmanager.plugins
       ++ config.programs.nix-ld.libraries
-      ++ config.xdg.portal.configPackages
-      ++ config.xdg.portal.extraPortals
 
       ++ pkgs.lib.optionals config.nixpkgs.config.allowUnfree (
         with pkgs;
@@ -1723,22 +1405,13 @@ in
       "/share/applications"
       "/share/i18n"
       "/share/thumbnailers"
-      "/share/xdg-desktop-portal"
     ];
 
-    # etc = { };
-
     variables = {
-      # LD_LIBRARY_PATH = pkgs.lib.mkForce (
-      #   pkgs.lib.makeLibraryPath config.programs.nix-ld.libraries + ":$LD_LIBRARY_PATH"
-      # );
-
       GI_TYPELIB_PATH = pkgs.lib.mkForce "${pkgs.libportal}/lib/girepository-1.0:${pkgs.libportal-gtk4}/lib/girepository-1.0:GI_TYPELIB_PATH";
     };
 
     sessionVariables = {
-      ADW_DISABLE_PORTAL = 1;
-
       EGL_PLATFORM = "wayland";
       GDK_BACKEND = "wayland";
       SDL_VIDEODRIVER = "wayland";
@@ -1767,41 +1440,17 @@ in
     enableDebugInfo = false;
   };
 
-  xdg = {
-    sounds.enable = true;
-    icons.enable = true;
-    menus.enable = true;
-
-    autostart.enable = true;
-
-    portal = {
-      enable = true;
-      extraPortals = [
-        pkgs.xdg-desktop-portal-gtk
-      ]; # config.programs.hyprland.portalPackage adds pkgs.xdg-desktop-portal-hyprland to it.
-
-      xdgOpenUsePortal = true;
-    };
-
-    mime = {
-      enable = true;
-
-      addedAssociations = config.xdg.mime.defaultApplications;
-
-      # https://www.iana.org/assignments/media-types/media-types.xhtml
-      defaultApplications = {
-        "application/vnd.ms-opentype" = "com.github.FontManager.FontViewer.desktop";
-        "application/x-font-otf" = "com.github.FontManager.FontViewer.desktop";
-        "application/x-font-ttf" = "com.github.FontManager.FontViewer.desktop";
-        "font/collection" = "com.github.FontManager.FontViewer.desktop";
-        "font/otf" = "com.github.FontManager.FontViewer.desktop";
-        "font/sfnt" = "com.github.FontManager.FontViewer.desktop";
-        "font/ttc" = "com.github.FontManager.FontViewer.desktop";
-        "font/ttf" = "com.github.FontManager.FontViewer.desktop";
-        "font/woff" = "com.github.FontManager.FontViewer.desktop";
-        "font/woff2" = "com.github.FontManager.FontViewer.desktop";
-      };
-    };
+  xdg.mime.defaultApplications = {
+    "application/vnd.ms-opentype" = "com.github.FontManager.FontViewer.desktop";
+    "application/x-font-otf" = "com.github.FontManager.FontViewer.desktop";
+    "application/x-font-ttf" = "com.github.FontManager.FontViewer.desktop";
+    "font/collection" = "com.github.FontManager.FontViewer.desktop";
+    "font/otf" = "com.github.FontManager.FontViewer.desktop";
+    "font/sfnt" = "com.github.FontManager.FontViewer.desktop";
+    "font/ttc" = "com.github.FontManager.FontViewer.desktop";
+    "font/ttf" = "com.github.FontManager.FontViewer.desktop";
+    "font/woff" = "com.github.FontManager.FontViewer.desktop";
+    "font/woff2" = "com.github.FontManager.FontViewer.desktop";
   };
 
   catppuccin = {
@@ -1899,11 +1548,8 @@ in
           "disk"
           "input"
           "lp"
-          "networkmanager"
-          "nm-openvpn"
           "plugdev"
           "render"
-          "systemd-journal"
           "tty"
           "users"
           "uucp"
@@ -1937,8 +1583,6 @@ in
             enableShellIntegration = true;
             enableBashIntegration = true;
           };
-
-          preferXdgDirectories = true;
 
           pointerCursor = {
             enable = true;
@@ -1976,59 +1620,7 @@ in
           subpixelRendering = config.fonts.fontconfig.subpixel.rgba;
         };
 
-        xdg = {
-          portal = {
-            enable = config.xdg.portal.enable;
-            extraPortals = config.xdg.portal.extraPortals;
-
-            xdgOpenUsePortal = config.xdg.portal.xdgOpenUsePortal;
-          };
-
-          mime.enable = true;
-
-          mimeApps = {
-            enable = true;
-
-            associations = {
-              added = config.xdg.mime.addedAssociations;
-              removed = config.xdg.mime.removedAssociations;
-            };
-            defaultApplications = config.xdg.mime.defaultApplications;
-          };
-
-          userDirs = {
-            createDirectories = true;
-            setSessionVariables = true;
-          };
-
-          configFile = {
-            "mimeapps.list".force = true;
-          };
-
-          dataFile = {
-            "imhex/themes/catppuccin-${config.catppuccin.flavor}.json" = {
-              enable = true;
-
-              source = builtins.fetchurl {
-                url = "https://raw.githubusercontent.com/catppuccin/imhex/refs/heads/main/themes/catppuccin-${config.catppuccin.flavor}.json";
-              };
-
-              target = "imhex/themes/catppuccin-${config.catppuccin.flavor}.json";
-              executable = null;
-            };
-          };
-
-          # stateFile = { };
-
-          # cacheFile = { };
-        };
-
         services = {
-          network-manager-applet = {
-            enable = config.programs.nm-applet.enable;
-            package = config.programs.nm-applet.package;
-          };
-
           poweralertd.enable = true;
         };
 

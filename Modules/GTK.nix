@@ -140,5 +140,26 @@
         catppuccin.gtk.icon.enable = config.catppuccin.gtk.icon.enable;
       }
     ];
+
+    environment.sessionVariables.ADW_DISABLE_PORTAL = 1;
+
+    programs.dconf.profiles.user.databases = [
+      {
+        lockAll = true;
+
+        settings = {
+          "org/gnome/desktop/interface" = {
+            gtk-enable-primary-paste = true;
+            monospace-font-name = "${fontPreferences.monospace} ${
+              pkgs.lib.toString (builtins.floor (designFactor * 1.5))
+            }";
+          };
+
+          "org/gnome/desktop/wm/preferences" = {
+            button-layout = "appmenu:minimize,maximize,close";
+          };
+        };
+      }
+    ];
   };
 }

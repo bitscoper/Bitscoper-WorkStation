@@ -7,9 +7,13 @@
 }:
 {
   config = {
-    programs.nix-ld.libraries = with pkgs; [
-      libsecret
-    ];
+    programs = {
+      nix-ld.libraries = with pkgs; [
+        libsecret
+      ];
+
+      seahorse.enable = true;
+    };
 
     services.gnome.gnome-keyring.enable = true;
 

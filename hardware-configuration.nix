@@ -373,10 +373,13 @@
           options kvm_intel nested=1
           options kvm_intel emulate_invalid_guest_state=0
           options spidev bufsiz=16642
+          options snd-hda-intel model=alc256-asus-aio
         '';
 
         kernelParams = [
           "intel_iommu=on"
+          "usbcore.quirks=2563:028e:r" # Fixes "Fantech EOS Lite GP15L Multi-Platform Gamepad"
+          # "usbcore.old_scheme_first=1"
         ];
 
         initrd = {

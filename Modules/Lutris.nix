@@ -63,8 +63,9 @@
       systemPackages =
         with pkgs;
         [
-          gamepad-mirror
-          jstest-gtk
+          evtest
+          evtest-qt
+          gamepad-tool
           linuxConsoleTools
           protonup-qt
         ]
