@@ -102,8 +102,9 @@
         xdg.configFile = {
           "nwg-bar/bar.json" = {
             enable = true;
+            force = true;
 
-            source = pkgs.writeText "nwg-bar.json" ''
+            text = ''
               [
                 {
                   "label": "_Lock",
@@ -129,13 +130,14 @@
             ''; # FIXME: hyprshutdown Does Not Work
 
             target = "nwg-bar/bar.json";
-            executable = null;
+            executable = false;
           };
 
           "nwg-bar/style.css" = {
             enable = true;
+            force = true;
 
-            source = pkgs.writeText "nwg-bar.css" ''
+            text = ''
               /* Catppuccin Mocha */
               @define-color rosewater #f5e0dc;
               @define-color flamingo #f2cdcd;
@@ -213,7 +215,7 @@
             '';
 
             target = "nwg-bar/style.css";
-            executable = null;
+            executable = false;
           };
         };
 

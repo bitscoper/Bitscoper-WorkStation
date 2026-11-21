@@ -36,8 +36,6 @@
           DefaultIPAccounting = true;
         };
       };
-
-      tmpfiles.rules = config.specificHardwareConfiguration.systemd.tmpfiles.rules;
     };
 
     networking.nameservers = [

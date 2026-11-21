@@ -55,8 +55,9 @@
         xdg.configFile = {
           "contour/contour.yml" = {
             enable = true;
+            force = true;
 
-            source = pkgs.writeText "contour.yml" ''
+            text = ''
               platform_plugin: auto
               renderer:
                 backend: vulkan
@@ -248,18 +249,19 @@
             '';
 
             target = "contour/contour.yml";
-            executable = null;
+            executable = false;
           };
 
           "contour/settings.yml" = {
             enable = true;
+            force = true;
 
-            source = pkgs.writeText "contour-settings.yml" ''
+            text = ''
               {}
             '';
 
             target = "contour/settings.yml";
-            executable = null;
+            executable = false;
           };
         };
 

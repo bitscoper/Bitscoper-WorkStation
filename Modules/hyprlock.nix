@@ -61,7 +61,9 @@
                 halign = "center";
                 valign = "top";
                 position = "0, -${
-                  pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.10))
+                  pkgs.lib.toString (
+                    builtins.floor (config.customOptions.hardwareSpecificConfiguration.screen.height * 0.10)
+                  )
                 }";
 
                 text_align = "center";
@@ -76,7 +78,9 @@
                 halign = "center";
                 valign = "bottom";
                 position = "0, ${
-                  pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.04))
+                  pkgs.lib.toString (
+                    builtins.floor (config.customOptions.hardwareSpecificConfiguration.screen.height * 0.04)
+                  )
                 }";
 
                 text_align = "center";
@@ -93,7 +97,9 @@
                 halign = "center";
                 valign = "bottom";
                 position = "0, ${
-                  pkgs.lib.toString (builtins.floor (config.specificHardwareConfiguration.screen.height * 0.10))
+                  pkgs.lib.toString (
+                    builtins.floor (config.customOptions.hardwareSpecificConfiguration.screen.height * 0.10)
+                  )
                 }";
 
                 size = "${pkgs.lib.toString (builtins.floor (designFactor * 42.0))}, ${

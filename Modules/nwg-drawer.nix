@@ -33,8 +33,9 @@
       {
         xdg.configFile."nwg-drawer/style.css" = {
           enable = true;
+          force = true;
 
-          source = pkgs.writeText "nwg-drawer.css" ''
+          text = ''
             /* Catppuccin Mocha */
             @define-color rosewater #f5e0dc;
             @define-color flamingo #f2cdcd;
@@ -105,7 +106,7 @@
           '';
 
           target = "nwg-drawer/style.css";
-          executable = null;
+          executable = false;
         };
 
         wayland.windowManager.hyprland.settings.bind = [

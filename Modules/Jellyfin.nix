@@ -63,6 +63,8 @@
     home-manager.sharedModules = [
       {
         home.activation.permitJellyfin = ''
+          set -euo pipefail
+
           ${pkgs.acl}/bin/setfacl --modify user:jellyfin:--x $HOME
         '';
       }

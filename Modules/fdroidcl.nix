@@ -14,8 +14,9 @@
       {
         xdg.configFile."fdroidcl/config.toml" = {
           enable = true;
+          force = true;
 
-          source = pkgs.writeText "fdroidcl.toml" ''
+          text = ''
             setups = []
 
             [[repos]]
@@ -55,7 +56,7 @@
           '';
 
           target = "fdroidcl/config.toml";
-          executable = null;
+          executable = false;
         };
       }
     ];

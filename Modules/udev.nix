@@ -18,8 +18,6 @@
       packages = with pkgs; [
         libmtp.out
       ];
-
-      extraRules = config.specificHardwareConfiguration.services.udev.extraRules;
     };
 
     environment.systemPackages = config.services.udev.packages;

@@ -426,6 +426,7 @@ in
         home = {
           file.".kube/config" = {
             enable = true;
+            force = true;
 
             source = administratorKubeconfig;
 

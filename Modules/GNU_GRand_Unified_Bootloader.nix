@@ -41,7 +41,7 @@
         fsIdentifier = "uuid";
         device = "nodev";
 
-        gfxmodeEfi = "${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)},auto";
+        gfxmodeEfi = "${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.width)}x${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.height)},auto";
         gfxpayloadEfi = "keep";
         splashMode = "normal";
 

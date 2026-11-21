@@ -47,9 +47,9 @@ let
           -fuzz 16% \
           -transparent black \
           -background "#1e1e2e" \
-          -resize ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)}\> \
+          -resize ${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.width)}x${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.height)}\> \
           -gravity center \
-          -extent ${pkgs.lib.toString (config.specificHardwareConfiguration.screen.width)}x${pkgs.lib.toString (config.specificHardwareConfiguration.screen.height)} \
+          -extent ${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.width)}x${pkgs.lib.toString (config.customOptions.hardwareSpecificConfiguration.screen.height)} \
           $out
       '';
   # It assumes that the background color of BGRT is black and that 16% fuzz is sufficient.
@@ -223,6 +223,11 @@ in
     ./Modules/XDG.nix
     ./Modules/Zed.nix
 
+    ./Hardware_Specific_Modules/ASUS_VivoBook_X415EA.nix
+    ./Hardware_Specific_Modules/Fantech_EOS_Lite_GP15L_Multi-Platform_Gamepad.nix
+    ./Hardware_Specific_Modules/SDDPNQD-512G-1102.nix
+    ./Hardware_Specific_Modules/WDS1TB2G0A-00.nix
+
     ./hardware-configuration.nix
   ];
 
@@ -276,16 +281,11 @@ in
   };
 
   nixpkgs = {
-    hostPlatform = {
-      system = "${config.specificHardwareConfiguration.cpu.architecture}-linux";
-    };
-
     config = {
       allowAliases = false;
       allowUnfree = true;
 
       permittedInsecurePackages = pkgs.lib.optionals config.nixpkgs.config.allowUnfree [
-        "mbedtls-3.6.1-unstable-2025-08-11"
         "ventoy-1.1.18"
       ];
     };
@@ -318,6 +318,8 @@ in
 
     activationScripts = {
       linkLocales = ''
+        set -euo pipefail
+
         mkdir --parents /usr/share/i18n
         ln --symbolic --force --no-dereference /run/current-system/sw/share/i18n/locales /usr/share/i18n/locales
       '';
@@ -360,15 +362,12 @@ in
       "at24" # SDR/DDR/DDR2/DDR3 SPD and I²C
       "ee1004" # DDR4 SPD
       "spd5118" # DDR5 SPD
-    ]
-    ++ config.specificHardwareConfiguration.kernelModules; # From hardware-configuration.nix
+    ];
 
     blacklistedKernelModules = [
       "efifb"
       "simplefb"
     ];
-
-    extraModprobeConfig = config.specificHardwareConfiguration.boot.extraModprobeConfig; # From hardware-configuration.nix
 
     kernelParams = [
       "boot.shell_on_fail"
@@ -376,8 +375,7 @@ in
       "iommu=pt"
       "mitigations=auto"
       "splash"
-    ]
-    ++ config.specificHardwareConfiguration.boot.kernelParams; # From hardware-configuration.nix
+    ];
 
     initrd = {
       enable = true;
@@ -387,8 +385,7 @@ in
         "usb_storage"
         "usbhid"
         "xhci_pci"
-      ]
-      ++ config.specificHardwareConfiguration.boot.initrd.availableKernelModules; # From hardware-configuration.nix
+      ];
 
       network.enable = true;
     };
@@ -422,13 +419,6 @@ in
 
     firmwareCompression = "zstd";
 
-    cpu = {
-      "${config.specificHardwareConfiguration.cpu.vendor}" = {
-        updateMicrocode = true;
-        microcodePackage = pkgs."microcode-${config.specificHardwareConfiguration.cpu.vendor}";
-      };
-    };
-
     block = {
       scheduler = {
         "mmcblk[0-9]*" = "bfq";
@@ -443,9 +433,6 @@ in
     graphics = {
       enable = true;
       enable32Bit = true;
-
-      extraPackages = config.specificHardwareConfiguration.hardware.graphics.extraPackages; # From hardware-configuration.nix
-      extraPackages32 = config.specificHardwareConfiguration.hardware.graphics.extraPackages32; # From hardware-configuration.nix
     };
   };
 
@@ -1179,6 +1166,7 @@ in
         spectre-meltdown-checker
         speedtest
         spytrap-adb
+        sqlite-analyzer
         squashfuse
         srain
         sslscan
@@ -1339,7 +1327,6 @@ in
       ++ (with pkgs.linphonePackages; [
         bc-decaf
         bc-ispell
-        bc-mbedtls
         bc-soci
         bc-zxing-cpp
         bctoolbox
@@ -1421,8 +1408,7 @@ in
 
       XCURSOR_THEME = config.home-manager.users.normal.home.pointerCursor.name;
       XCURSOR_SIZE = config.home-manager.users.normal.home.pointerCursor.size;
-    }
-    // config.specificHardwareConfiguration.environment.sessionVariables;
+    };
 
     shellAliases = {
       unbind_i8042_driver = "echo -n i8042 | sudo tee /sys/bus/platform/drivers/i8042/unbind >/dev/null";
