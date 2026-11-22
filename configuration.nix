@@ -335,23 +335,16 @@ in
       enable = true;
     };
 
-    kernelPackages = pkgs.linuxPackages_xanmod_latest.extend (
-      final: previous: {
-        kernel = previous.kernel.override (arguments: {
-          kernelPatches = lib.filter (patch: patch.name != "tools-add-128-bit-integer-types-for-aarch64") (
-            arguments.kernelPatches or [ ]
-          );
-        });
-      }
-    );
+    kernelPackages = pkgs.linuxPackages_zen;
 
     extraModulePackages = with config.boot.kernelPackages; [
-      # apfs # FIXME: Build Failure
       # openafs # FIXME: Build Failure
       # zfs_2_4 # Marked as Broken
+      apfs
       bcachefs
       cpupower
       mm-tools
+      systemd
       tmon
       turbostat
     ];

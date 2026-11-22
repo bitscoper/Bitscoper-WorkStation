@@ -398,6 +398,221 @@ in
 
               chmod 0644 "$target"
             '';
+
+          downloadLutrisMedia = ''
+              set -euo pipefail
+
+              export PATH="${pkgs.coreutils-full}/bin:${pkgs.gnused}/bin:${pkgs.gnugrep}/bin:${pkgs.nix}/bin:''${PATH:-}"
+
+              LUTRIS="${config.home-manager.users.normal.programs.lutris.package}"
+              WRAPPER="${config.home-manager.users.normal.programs.lutris.package}/bin/lutris"
+
+              PYTHON="${pkgs.python3Packages.python.interpreter}"
+
+              if [[ ! -x "$WRAPPER" ]]; then
+                exit 1
+              fi
+
+              if [[ ! -x "$PYTHON" ]]; then
+                exit 1
+              fi
+
+              TMP="$(mktemp -d)"
+              trap 'rm -rf "$TMP"' EXIT
+
+              nix-store --query --requisites "$LUTRIS" \
+                > "$TMP/store-closure"
+
+              mapfile -t STORE_REFS < "$TMP/store-closure"
+
+              PYTHON_TAG="$(
+                "$PYTHON" -c \
+                  'import sys; print("python%d.%d" % sys.version_info[:2])'
+              )"
+
+              INIT="$(
+                sed -nE \
+                  's/.*--symlink[[:space:]]+([^[:space:]]+)[[:space:]]+\/init.*/\1/p' \
+                  "$WRAPPER" |
+                  head -n1
+              )"
+
+              if [[ -z "$INIT" || ! -f "$INIT" ]]; then
+                exit 1
+              fi
+
+              PYTHONPATH="/usr/lib64/$PYTHON_TAG/site-packages:/usr/lib/$PYTHON_TAG/site-packages"
+              GI_TYPELIB_PATH="/usr/lib64/girepository-1.0:/usr/lib/girepository-1.0"
+
+              for ref in "''${STORE_REFS[@]}"; do
+                site="$ref/lib/$PYTHON_TAG/site-packages"
+
+                if [[ -d "$site" ]]; then
+                  PYTHONPATH="$PYTHONPATH:$site"
+                fi
+
+                typelib="$ref/lib/girepository-1.0"
+
+                if [[ -d "$typelib" ]]; then
+                  GI_TYPELIB_PATH="$GI_TYPELIB_PATH:$typelib"
+                fi
+              done
+
+              cat > "$TMP/init" <<EOF
+            #!/bin/sh
+
+            export PYTHONNOUSERSITE=true
+            export PYTHONPATH="$PYTHONPATH"
+            export GI_TYPELIB_PATH="$GI_TYPELIB_PATH"
+
+            "$PYTHON" - <<'PYTEST' || exit 1
+            import gi
+            from gi.repository import GLib
+            PYTEST
+
+            exec "$PYTHON" - <<'PYCODE'
+            import os
+            import requests
+            from concurrent.futures import ThreadPoolExecutor
+
+            from lutris import settings
+            from lutris.database.games import get_games
+            from lutris.util.http import download_file
+
+            slugs = {
+                game["slug"]
+                for game in get_games()
+                if game.get("slug")
+            }
+
+            if not slugs:
+                raise SystemExit(0)
+
+            paths = {
+                "banners": settings.BANNER_PATH,
+                "icons": settings.ICON_PATH,
+                "covers": settings.COVERART_PATH,
+            }
+
+            for path in paths.values():
+                os.makedirs(path, exist_ok=True)
+
+            available = {
+                "banners": {
+                    f.rsplit(".", 1)[0]
+                    for f in os.listdir(paths["banners"])
+                },
+                "icons": {
+                    f.rsplit(".", 1)[0].replace("lutris_", "")
+                    for f in os.listdir(paths["icons"])
+                    if f.startswith("lutris_")
+                },
+                "covers": {
+                    f.rsplit(".", 1)[0]
+                    for f in os.listdir(paths["covers"])
+                },
+            }
+
+            complete = (
+                available["banners"]
+                & available["icons"]
+                & available["covers"]
+            )
+
+            missing = slugs - complete
+
+            if not missing:
+                raise SystemExit(0)
+
+            url = settings.SITE_URL + "/api/games"
+            games = []
+            page = 1
+
+            while True:
+                response = requests.post(
+                    url if page == 1 else f"{url}?page={page}",
+                    json={
+                        "games": list(missing),
+                        "page": page,
+                    },
+                    timeout=60,
+                )
+
+                response.raise_for_status()
+                data = response.json()
+
+                games.extend(data.get("results", []))
+
+                if not data.get("next"):
+                    break
+
+                page += 1
+
+            downloads = []
+
+            for game in games:
+                slug = game["slug"]
+
+                media = {
+                    "banners": game.get("banner_url") or game.get("banner"),
+                    "icons": game.get("icon_url") or game.get("icon"),
+                    "covers": game.get("coverart"),
+                }
+
+                for kind, media_url in media.items():
+                    if not media_url or slug in available[kind]:
+                        continue
+
+                    filename = (
+                        f"lutris_{slug}.png"
+                        if kind == "icons"
+                        else f"{slug}.jpg"
+                    )
+
+                    destination = os.path.join(
+                        paths[kind],
+                        filename,
+                    )
+
+                    downloads.append(
+                        (kind, slug, media_url, destination)
+                    )
+
+            def fetch(item):
+                kind, slug, media_url, destination = item
+
+                try:
+                    return bool(
+                        download_file(
+                            media_url,
+                            destination,
+                            raise_errors=True,
+                        )
+                    )
+
+                except Exception:
+                    return False
+
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                list(executor.map(fetch, downloads))
+
+            PYCODE
+            EOF
+
+              chmod +x "$TMP/init"
+
+              cp "$WRAPPER" "$TMP/lutris-wrapper"
+
+              sed -i \
+                "s|--symlink $INIT /init|--symlink $TMP/init /init|" \
+                "$TMP/lutris-wrapper"
+
+              if ! grep -Fq -- "--symlink $TMP/init /init" "$TMP/lutris-wrapper"; then
+                exit 1
+              fi
+
+              "$TMP/lutris-wrapper"
+          '';
         };
       }
     ];
@@ -408,15 +623,6 @@ in
 
     customOptions.lutris.games = [
       rec {
-        name = "Battlefield 3";
-        lutrisSlug = "battlefield-3";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
-
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_3/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_3/bf3.exe";
-      }
-
-      rec {
         name = "Battlefield 4";
         lutrisSlug = "battlefield-4";
         lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
@@ -426,12 +632,57 @@ in
       }
 
       rec {
+        name = "Battlefield: Bad Company 2";
+        lutrisSlug = "battlefield-bad-company-2";
+        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+
+        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_Bad_Company_2/";
+        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_Bad_Company_2/BFBC2Game.exe";
+      }
+
+      rec {
         name = "Call of Duty 2";
         lutrisSlug = "call-of-duty-2";
         lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
 
         lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_2/";
         executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_2/CoD2SP_s.exe";
+      }
+
+      rec {
+        name = "Call of Duty 4: Modern Warfare";
+        lutrisSlug = "call-of-duty-4-modern-warfare";
+        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+
+        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_4_Modern_Warfare/";
+        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_4_Modern_Warfare/iw3sp.exe";
+      }
+
+      rec {
+        name = "Call of Duty: Modern Warfare 2";
+        lutrisSlug = "call-of-duty-modern-warfare-2";
+        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+
+        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_Modern_Warfare_2/";
+        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_Modern_Warfare_2/iw4sp.exe";
+      }
+
+      rec {
+        name = "Call of Duty: World at War";
+        lutrisSlug = "call-of-duty-world-at-war";
+        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+
+        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_World_at_War/";
+        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_World_at_War/CoDWaW.exe";
+      }
+
+      rec {
+        name = "Need for Speed: Hot Pursuit";
+        lutrisSlug = "need-for-speed-hot-pursuit";
+        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+
+        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Need_for_Speed_Hot_Pursuit/";
+        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Need_for_Speed_Hot_Pursuit/NFS11.exe";
       }
 
       rec {

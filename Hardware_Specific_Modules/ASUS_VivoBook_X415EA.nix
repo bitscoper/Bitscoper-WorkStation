@@ -115,5 +115,9 @@
         driver = pkgs.emptyDirectory;
       };
     };
+
+    environment.systemPackages = with pkgs; [
+      intel-gpu-tools
+    ];
   };
 }
