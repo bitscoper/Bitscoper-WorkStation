@@ -36,7 +36,7 @@
         efiSupport = true;
         zfsSupport = true;
         enableCryptodisk = true;
-        useOSProber = true;
+        useOSProber = false;
 
         fsIdentifier = "uuid";
         device = "nodev";

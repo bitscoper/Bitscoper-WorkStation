@@ -40,23 +40,51 @@ in
               name = pkgs.lib.mkOption {
                 type = pkgs.lib.types.str;
                 description = "Name of Game";
+                default = "";
+                example = "";
               };
               lutrisSlug = pkgs.lib.mkOption {
                 type = pkgs.lib.types.str;
                 description = "Lutris Slug of Game";
+                default = "";
+                example = "";
               };
-              lutrisConfigurationFileName = pkgs.lib.mkOption {
+              nameOfLutrisConfigurationFile = pkgs.lib.mkOption {
                 type = pkgs.lib.types.str;
-                description = "Lutris Configuration File Name";
+                description = "Name of Lutris Configuration File of Game";
+                default = "";
+                example = "";
               };
 
-              lutrisPrefixPath = pkgs.lib.mkOption {
-                type = pkgs.lib.types.str;
-                description = "Lutris Prefix of Game";
+              environmentVariables = pkgs.lib.mkOption {
+                type = pkgs.lib.types.attrsOf pkgs.lib.types.str;
+                description = "Environment Variables For Game";
+                default = { };
+                example = { };
               };
-              executablePath = pkgs.lib.mkOption {
+              pathOfLutrisPrefix = pkgs.lib.mkOption {
                 type = pkgs.lib.types.str;
-                description = "Path of Game Executable";
+                description = "Path of Lutris Prefix of Game";
+                default = "";
+                example = "";
+              };
+              workingDirectory = pkgs.lib.mkOption {
+                type = pkgs.lib.types.str;
+                description = "Working Directory of Game";
+                default = "";
+                example = "";
+              };
+              pathOfExecutable = pkgs.lib.mkOption {
+                type = pkgs.lib.types.str;
+                description = "Path of Executable of Game";
+                default = "";
+                example = "";
+              };
+              arguments = pkgs.lib.mkOption {
+                type = pkgs.lib.types.str;
+                description = "Arguments to Executable of Game";
+                default = "";
+                example = "";
               };
             };
           }
@@ -64,26 +92,32 @@ in
         internal = false;
         visible = true;
         readOnly = false;
-        description = "List of Games with Their Lutris Slugs";
+        description = "Games";
         default = [
         ];
         example = [
           {
             name = "";
             lutrisSlug = "";
-            lutrisConfigurationFileName = "";
+            nameOfLutrisConfigurationFile = "";
 
-            lutrisPrefixPath = "";
-            executablePath = "";
+            environmentVariables = { };
+            pathOfLutrisPrefix = "";
+            workingDirectory = "";
+            pathOfExecutable = "";
+            arguments = "";
           }
 
           {
             name = "";
             lutrisSlug = "";
-            lutrisConfigurationFileName = "";
+            nameOfLutrisConfigurationFile = "";
 
-            lutrisPrefixPath = "";
-            executablePath = "";
+            environmentVariables = { };
+            pathOfLutrisPrefix = "";
+            workingDirectory = "";
+            pathOfExecutable = "";
+            arguments = "";
           }
         ];
       };
@@ -157,6 +191,8 @@ in
 
       sessionVariables = {
         WINE_DRIVER = "wayland";
+        __GL_SHADER_DISK_CACHE = 1;
+        DXVK_HUD = "compiler";
       };
     };
 
@@ -232,19 +268,31 @@ in
         }
         // builtins.listToAttrs (
           map (game: {
-            name = "lutris/games/${game.lutrisConfigurationFileName}.yml";
+            name = "lutris/games/${game.nameOfLutrisConfigurationFile}.yml";
 
             value = {
               enable = true;
               force = true;
 
-              text = ''
-                game:
-                  exe: ${builtins.toJSON game.executablePath}
-                  prefix: ${builtins.toJSON game.lutrisPrefixPath}
-              '';
+              text =
+                pkgs.lib.optionalString (game.environmentVariables != { }) (
+                  "system:\n  env:\n"
+                  + pkgs.lib.concatStringsSep "\n" (
+                    pkgs.lib.mapAttrsToList (
+                      name: value: "    ${name}: ${builtins.toJSON value}"
+                    ) game.environmentVariables
+                  )
+                  + "\n"
+                )
+                + ''
+                  game:
+                    prefix: ${builtins.toJSON game.pathOfLutrisPrefix}
+                    working_dir: ${builtins.toJSON game.workingDirectory}
+                    exe: ${builtins.toJSON game.pathOfExecutable}
+                    args: ${builtins.toJSON game.arguments}
+                '';
 
-              target = "lutris/games/${game.lutrisConfigurationFileName}.yml";
+              target = "lutris/games/${game.nameOfLutrisConfigurationFile}.yml";
               executable = false;
             };
           }) config.customOptions.lutris.games
@@ -303,7 +351,7 @@ in
                       1,
                       ${currentTime},
                       NULL,
-                      ${sqlQuote game.lutrisConfigurationFileName},
+                      ${sqlQuote game.nameOfLutrisConfigurationFile},
                       0,
                       0,
                       0,
@@ -625,76 +673,82 @@ in
       rec {
         name = "Battlefield 4";
         lutrisSlug = "battlefield-4";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_4/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_4/bf4.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_4/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_4/";
+        pathOfExecutable = "${workingDirectory}bf4.exe";
       }
 
       rec {
         name = "Battlefield: Bad Company 2";
         lutrisSlug = "battlefield-bad-company-2";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_Bad_Company_2/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_Bad_Company_2/BFBC2Game.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Battlefield_Bad_Company_2/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Battlefield_Bad_Company_2/";
+        pathOfExecutable = "${workingDirectory}BFBC2Game.exe";
       }
 
       rec {
         name = "Call of Duty 2";
         lutrisSlug = "call-of-duty-2";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_2/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_2/CoD2SP_s.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_2/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_2/";
+        pathOfExecutable = "${workingDirectory}CoD2SP_s.exe";
       }
 
       rec {
         name = "Call of Duty 4: Modern Warfare";
         lutrisSlug = "call-of-duty-4-modern-warfare";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_4_Modern_Warfare/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_4_Modern_Warfare/iw3sp.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_4_Modern_Warfare/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_4_Modern_Warfare/";
+        pathOfExecutable = "${workingDirectory}iw3sp.exe";
       }
 
       rec {
         name = "Call of Duty: Modern Warfare 2";
         lutrisSlug = "call-of-duty-modern-warfare-2";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_Modern_Warfare_2/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_Modern_Warfare_2/iw4sp.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_Modern_Warfare_2/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_Modern_Warfare_2/";
+        pathOfExecutable = "${workingDirectory}iw4sp.exe";
       }
 
       rec {
         name = "Call of Duty: World at War";
         lutrisSlug = "call-of-duty-world-at-war";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_World_at_War/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_World_at_War/CoDWaW.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Call_of_Duty_World_at_War/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Call_of_Duty_World_at_War/";
+        pathOfExecutable = "${workingDirectory}CoDWaW.exe";
       }
 
       rec {
         name = "Need for Speed: Hot Pursuit";
         lutrisSlug = "need-for-speed-hot-pursuit";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Need_for_Speed_Hot_Pursuit/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Need_for_Speed_Hot_Pursuit/NFS11.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Need_for_Speed_Hot_Pursuit/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Need_for_Speed_Hot_Pursuit/";
+        pathOfExecutable = "${workingDirectory}NFS11.exe";
       }
 
       rec {
         name = "Titanfall 2";
         lutrisSlug = "titanfall-2";
-        lutrisConfigurationFileName = "${lutrisSlug}-${currentTime}";
+        nameOfLutrisConfigurationFile = "${lutrisSlug}-${currentTime}";
 
-        lutrisPrefixPath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Titanfall_2/";
-        executablePath = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Titanfall_2/Titanfall2.exe";
+        pathOfLutrisPrefix = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfLutrisPrefixes}/Titanfall_2/";
+        workingDirectory = "${config.customOptions.lutris.hardwareSpecificPaths.directoryOfInstalledGameFiles}/Titanfall_2/";
+        pathOfExecutable = "${workingDirectory}Titanfall2.exe";
       }
     ];
   };
 }
-
-# Preferences > "Lutris settings" > Updates > "Media updates" > "Download Missing Media"

@@ -44,7 +44,7 @@
             cycle = true;
 
             disable-history = true;
-            terminal = config.customOptions.executableNameOfTerminalEmulator;
+            terminal = config.customOptions.nameOfExecutableOfTerminalEmulator;
           };
 
           theme =
@@ -273,7 +273,7 @@
           {
             _args = [
               "SUPER + ALT + RETURN"
-              (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} bash -ic \\\"$cmd; bash -i\\\"\")")
+              (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"cmd=$(compgen -c | sort -u | rofi -dmenu -sync -window-title 'Commands' -p 'Commands'); [ -n \\\"$cmd\\\" ] && uwsm-app -- ${config.customOptions.nameOfExecutableOfTerminalEmulator} bash -ic \\\"$cmd; bash -i\\\"\")")
             ];
           }
         ];

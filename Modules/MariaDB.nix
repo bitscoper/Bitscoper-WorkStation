@@ -31,8 +31,8 @@
         FLUSH PRIVILEGES;
         CREATE USER IF NOT EXISTS 'root'@'localhost';
         CREATE USER IF NOT EXISTS 'root'@'%';
-        ALTER USER 'root'@'localhost' IDENTIFIED BY '${config.secrets.password_1}';
-        ALTER USER 'root'@'%' IDENTIFIED BY '${config.secrets.password_1}';
+        ALTER USER 'root'@'localhost' IDENTIFIED BY '${config.customOptions.passwords.password_1}';
+        ALTER USER 'root'@'%' IDENTIFIED BY '${config.customOptions.passwords.password_1}';
         GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
         GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
         FLUSH PRIVILEGES;

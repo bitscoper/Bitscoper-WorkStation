@@ -113,7 +113,7 @@
           {
             _args = [
               "SUPER + RETURN"
-              (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term ${config.customOptions.executableNameOfTerminalEmulator} -nofs -fm ${config.customOptions.executableNameOfFileManager}\")")
+              (pkgs.lib.generators.mkLuaInline "hl.dsp.exec_cmd(\"uwsm-app -- nwg-drawer -ovl -k -closebtn none -c 8 -spacing 24 -is 64 -g '${config.home-manager.users.normal.gtk.theme.name}' -i '${config.home-manager.users.normal.gtk.iconTheme.name}' -pbuseicontheme -s style.css -lang en -nocats -wm uwsm -term ${config.customOptions.nameOfExecutableOfTerminalEmulator} -nofs -fm ${config.customOptions.nameOfExecutableOfFileManager}\")")
             ];
           }
         ];

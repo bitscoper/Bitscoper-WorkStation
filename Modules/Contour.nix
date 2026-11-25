@@ -9,12 +9,12 @@
 }:
 {
   options.customOptions = {
-    executableNameOfTerminalEmulator = pkgs.lib.mkOption {
+    nameOfExecutableOfTerminalEmulator = pkgs.lib.mkOption {
       type = pkgs.lib.types.str;
       internal = false;
       visible = true;
       readOnly = false;
-      description = "Executable Name of Terminal Emulator";
+      description = "Name of Executable of Terminal Emulator";
       default = "contour";
       example = "contour";
     };
@@ -32,7 +32,7 @@
 
   config = {
     customOptions = {
-      executableNameOfTerminalEmulator = "contour";
+      nameOfExecutableOfTerminalEmulator = "contour";
       workingDirectoryFlagOfTerminalEmulator = "working-directory";
     };
 

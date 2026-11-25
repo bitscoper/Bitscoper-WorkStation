@@ -51,7 +51,7 @@
       checkConfig = true;
 
       initialScript = pkgs.writeText "postgresqlInitialScript.sql" ''
-        ALTER USER postgres WITH PASSWORD '${config.secrets.password_1}';
+        ALTER USER postgres WITH PASSWORD '${config.customOptions.passwords.password_1}';
       '';
     };
 

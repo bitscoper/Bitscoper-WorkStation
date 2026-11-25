@@ -19,15 +19,15 @@
 
       admin = {
         user = "root";
-        password = config.secrets.password_1;
+        password = config.customOptions.passwords.password_1;
       };
 
       extraConfig = ''
         <location>${config.networking.fqdn}</location>
         <admin>root@${config.networking.fqdn}</admin>
         <authentication>
-          <source-password>${config.secrets.password_2}</source-password>
-          <relay-password>${config.secrets.password_2}</relay-password>
+          <source-password>${config.customOptions.passwords.password_2}</source-password>
+          <relay-password>${config.customOptions.passwords.password_2}</relay-password>
         </authentication>
         <directory>
           <yp-url>http://dir.xiph.org/cgi-bin/yp-cgi</yp-url>

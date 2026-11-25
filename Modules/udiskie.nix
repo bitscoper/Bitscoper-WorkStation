@@ -22,7 +22,7 @@
             program_options = {
               menu = "nested";
 
-              terminal = "uwsm-app -- ${config.customOptions.executableNameOfTerminalEmulator} ${config.customOptions.workingDirectoryFlagOfTerminalEmulator}";
+              terminal = "uwsm-app -- ${config.customOptions.nameOfExecutableOfTerminalEmulator} ${config.customOptions.workingDirectoryFlagOfTerminalEmulator}";
               file_manager = "uwsm-app -- xdg-open";
 
               password_cache = 5; # 5 Minutes

@@ -7,19 +7,19 @@
 }:
 {
   options.customOptions = {
-    executableNameOfFileManager = pkgs.lib.mkOption {
+    nameOfExecutableOfFileManager = pkgs.lib.mkOption {
       type = pkgs.lib.types.str;
       internal = false;
       visible = true;
       readOnly = false;
-      description = "Executable Name of File Manager";
+      description = "Name of Executable of File Manager";
       default = "nautilus";
       example = "nautilus";
     };
   };
 
   config = {
-    customOptions.executableNameOfFileManager = "nautilus";
+    customOptions.nameOfExecutableOfFileManager = "nautilus";
 
     environment.systemPackages = with pkgs; [
       nautilus
@@ -31,7 +31,7 @@
     programs = {
       nautilus-open-any-terminal = {
         enable = true;
-        terminal = config.customOptions.executableNameOfTerminalEmulator;
+        terminal = config.customOptions.nameOfExecutableOfTerminalEmulator;
       };
 
       dconf.profiles.user.databases = [

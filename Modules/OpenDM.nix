@@ -35,7 +35,7 @@
     ];
 
     environment.systemPackages = with pkgs; [
-      opendm
+      # opendm # FIXME: Build Failure
     ];
   };
 }

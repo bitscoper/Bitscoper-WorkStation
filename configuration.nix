@@ -226,9 +226,8 @@ in
     ./Hardware_Specific_Modules/ASUS_VivoBook_X415EA.nix
     ./Hardware_Specific_Modules/Fantech_EOS_Lite_GP15L_Multi-Platform_Gamepad.nix
     ./Hardware_Specific_Modules/SDDPNQD-512G-1102.nix
-    ./Hardware_Specific_Modules/WDS1TB2G0A-00.nix
 
-    ./hardware-configuration.nix
+    ./User_Preferences.nix
   ];
 
   nix = {
@@ -952,7 +951,6 @@ in
         findutils
         flare-floss
         flawz
-        flightgear
         font-manager
         fontfor
         freerouting
@@ -1309,6 +1307,7 @@ in
         kcachegrind
         kcolorchooser
         kdenlive
+        kdf
         kmahjongg
         kmouth
         kontrast

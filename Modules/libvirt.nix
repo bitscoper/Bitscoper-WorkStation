@@ -89,7 +89,6 @@
         guestfs-tools
         libguestfs-with-appliance
         libvirt-glib
-        OVMFFull
         qemu-user
         qemu-utils
         spice-glib
