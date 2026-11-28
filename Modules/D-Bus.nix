@@ -17,19 +17,8 @@
       implementation = "broker";
     };
 
-    home-manager.sharedModules = [
-      {
-        wayland.windowManager.hyprland.settings.on = {
-          _args = [
-            "hyprland.start"
-            (pkgs.lib.generators.mkLuaInline ''
-              function()
-                hl.exec_cmd("dbus-update-activation-environment --systemd --all")
-              end
-            '')
-          ];
-        };
-      }
+    customOptions.commandsOnStartOfHyprland = [
+      "hl.exec_cmd(\"dbus-update-activation-environment --systemd --all\")"
     ];
 
     environment.systemPackages = with pkgs; [

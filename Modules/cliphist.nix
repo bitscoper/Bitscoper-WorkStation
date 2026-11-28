@@ -11,21 +11,14 @@
       wl-clipboard
     ];
 
+    customOptions.commandsOnStartOfHyprland = [
+      "hl.exec_cmd(\"uwsm-app -- wl-paste --type text --watch cliphist store\")"
+      "hl.exec_cmd(\"uwsm-app -- wl-paste --type image --watch cliphist store\")"
+    ];
+
     home-manager.sharedModules = [
       {
         wayland.windowManager.hyprland.settings = {
-          on = {
-            _args = [
-              "hyprland.start"
-              (pkgs.lib.generators.mkLuaInline ''
-                function()
-                  hl.exec_cmd("uwsm-app -- wl-paste --type text --watch cliphist store")
-                  hl.exec_cmd("uwsm-app -- wl-paste --type image --watch cliphist store")
-                end
-              '')
-            ];
-          };
-
           bind = [
             {
               _args = [

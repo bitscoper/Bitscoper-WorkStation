@@ -8,6 +8,18 @@
   ...
 }:
 {
+  options = {
+    customOptions.commandsOnStartOfHyprland = pkgs.lib.mkOption {
+      type = pkgs.lib.types.listOf pkgs.lib.types.str;
+      internal = false;
+      visible = true;
+      readOnly = false;
+      description = "Commands on Start of Hyprland";
+      default = { };
+      example = { };
+    };
+  };
+
   config = {
     programs = {
       hyprland = {
@@ -51,6 +63,288 @@
           sourceFirst = true;
 
           settings = {
+            config = {
+              general = {
+                allow_tearing = true;
+
+                gaps_workspaces = 0;
+
+                layout = "dwindle";
+
+                gaps_in = builtins.floor (designFactor / 4.0);
+                gaps_out = {
+                  top = builtins.floor (designFactor / 2.0);
+                  right = builtins.floor (designFactor / 2.0);
+                  bottom = builtins.floor (designFactor / 2.0);
+                  left = builtins.floor (designFactor / 2.0);
+                };
+
+                float_gaps = builtins.floor (designFactor / 2.0);
+
+                border_size = 1;
+                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
+                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
+                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
+
+                resize_on_border = true;
+                hover_icon_on_border = true;
+
+                no_focus_fallback = false;
+
+                snap = {
+                  enabled = true;
+
+                  respect_gaps = true;
+                  monitor_gap = builtins.floor (designFactor / 2.0);
+                  window_gap = builtins.floor (designFactor / 2.0);
+
+                  border_overlap = false;
+                };
+
+                modal_parent_blocking = true;
+
+                locale = "en_US";
+              };
+
+              decoration = {
+                shadow = {
+                  enabled = true;
+
+                  sharp = false;
+                };
+
+                border_part_of_window = true;
+                rounding = builtins.floor designFactor;
+                rounding_power = 4.0; # 4.0 = Squircle
+
+                active_opacity = 1.0;
+                fullscreen_opacity = 1.0;
+                inactive_opacity = 1.0;
+
+                dim_special = 0.25;
+                dim_modal = true;
+                dim_inactive = false;
+                dim_strength = 0.0;
+
+                blur = {
+                  enabled = true;
+                  new_optimizations = true;
+
+                  special = true;
+                  popups = true;
+                  input_methods = true;
+
+                  ignore_opacity = false;
+                  xray = true;
+                };
+
+                glow = {
+                  enabled = false;
+                };
+              };
+
+              animations = {
+                enabled = true;
+
+                workspace_wraparound = false;
+              };
+
+              input = {
+                numlock_by_default = false;
+                kb_layout = "us";
+
+                force_no_accel = false;
+                scroll_button_lock = true;
+                natural_scroll = false;
+                left_handed = false;
+
+                special_fallthrough = false;
+
+                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
+                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
+                mouse_refocus = true;
+
+                touchpad = {
+                  disable_while_typing = true;
+
+                  flip_x = false;
+                  flip_y = false;
+
+                  middle_button_emulation = false;
+                  clickfinger_behavior = false;
+
+                  tap_to_click = true;
+
+                  tap_and_drag = true;
+                  drag_3fg = 1; # 1 = 3 Fingers
+                  drag_lock = 2; # 2 = Enabled Sticky
+
+                  natural_scroll = true;
+                };
+
+                touchdevice = {
+                  enabled = true;
+                };
+
+                tablet = {
+                  left_handed = false;
+                };
+
+                virtualkeyboard = {
+                  release_pressed_on_close = true;
+                };
+              };
+
+              gestures = {
+                workspace_swipe_create_new = true;
+                workspace_swipe_forever = true;
+
+                # Touchpad
+                workspace_swipe_invert = false;
+
+                # Touchscreen
+                workspace_swipe_touch = true;
+                workspace_swipe_touch_invert = false;
+              };
+
+              group = {
+                auto_group = false;
+
+                merge_groups_on_drag = true;
+                merge_groups_on_groupbar = true;
+
+                group_on_movetoworkspace = false;
+                merge_floated_into_tiled_on_groupbar = false;
+                insert_after_current = true;
+                focus_removed_window = true;
+
+                groupbar = {
+                  enabled = true;
+                  stacked = false;
+
+                  render_titles = true;
+                  scrolling = true;
+                  middle_click_close = false;
+
+                  keep_upper_gap = true;
+                  gradients = true;
+                  blur = true;
+                  round_only_edges = false;
+                  gradient_round_only_edges = false;
+                };
+              };
+
+              misc = {
+                disable_watchdog_warning = false;
+                disable_xdg_env_checks = false;
+                disable_autoreload = false;
+                disable_scale_notification = false;
+
+                allow_session_lock_restore = true;
+                session_lock_xray = false;
+
+                key_press_enables_dpms = true;
+                mouse_move_enables_dpms = true;
+                vrr = 1; # 1 = On
+                mouse_move_focuses_monitor = true;
+
+                disable_splash_rendering = true;
+                disable_hyprland_logo = true;
+
+                close_special_on_empty = true;
+
+                enable_swallow = true;
+
+                name_vk_after_proc = true;
+                enable_anr_dialog = true;
+
+                exit_window_retains_fullscreen = false;
+
+                focus_on_activate = true;
+
+                always_follow_on_dnd = true;
+
+                animate_mouse_windowdragging = true;
+                animate_manual_resizes = true;
+
+                middle_click_paste = true;
+
+                font_family = fontPreferences.sansSerif;
+              };
+
+              layers = {
+                layers_hog_keyboard_focus = true;
+              };
+
+              binds = {
+                allow_workspace_cycles = false;
+                workspace_back_and_forth = false;
+                hide_special_on_workspace_change = false;
+
+                window_direction_monitor_fallback = true;
+                ignore_group_lock = false;
+                movefocus_cycles_groupfirst = true;
+                movefocus_cycles_fullscreen = false;
+                allow_pin_fullscreen = true;
+
+                disable_keybind_grabbing = true;
+                pass_mouse_when_bound = false;
+              };
+
+              xwayland.enabled = config.programs.hyprland.xwayland.enable;
+
+              render = {
+                cm_enabled = true;
+                cm_auto_hdr = 0; # 0 = Off
+                send_content_type = true;
+                new_render_scheduling = true;
+                xp_mode = false;
+                commit_timing_enabled = true;
+              };
+
+              cursor = {
+                invisible = false;
+                hide_on_key_press = false;
+                hide_on_tablet = false;
+                hide_on_touch = true;
+
+                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
+                enable_hyprcursor = true;
+                sync_gsettings_theme = true;
+
+                no_warps = false;
+                persistent_warps = true;
+                warp_back_after_non_mouse_input = true;
+
+                zoom_rigid = true;
+                zoom_detached_camera = false;
+                zoom_disable_aa = false;
+              };
+
+              ecosystem = {
+                enforce_permissions = false;
+
+                no_update_news = false;
+                no_donation_nag = false;
+              };
+
+              quirks = {
+                prefer_hdr = 0; # 0 = Off
+              };
+
+              dwindle = {
+                force_split = 0; # 0 = Split Follows Mouse
+                use_active_for_splits = true;
+                smart_split = false;
+                preserve_split = true;
+
+                smart_resizing = true;
+
+                precise_mouse_move = true;
+              };
+            }; # Sorted from "General" to "Quirks" according to the "Configuring > Core > Config options" Page.
+
             monitor = [
               {
                 output = ""; # "" = All
@@ -343,288 +637,19 @@
               }
             ];
 
-            config = {
-              general = {
-                allow_tearing = true;
-
-                gaps_workspaces = 0;
-
-                layout = "dwindle";
-
-                gaps_in = builtins.floor (designFactor / 4.0);
-                gaps_out = {
-                  top = builtins.floor (designFactor / 2.0);
-                  right = builtins.floor (designFactor / 2.0);
-                  bottom = builtins.floor (designFactor / 2.0);
-                  left = builtins.floor (designFactor / 2.0);
-                };
-
-                float_gaps = builtins.floor (designFactor / 2.0);
-
-                border_size = 1;
-                "col.inactive_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.active_border" = pkgs.lib.mkLuaInline "colors.surface2";
-                "col.nogroup_border" = pkgs.lib.mkLuaInline "colors.surface1";
-                "col.nogroup_border_active" = pkgs.lib.mkLuaInline "colors.surface2";
-
-                resize_on_border = true;
-                hover_icon_on_border = true;
-
-                no_focus_fallback = false;
-
-                snap = {
-                  enabled = true;
-
-                  respect_gaps = true;
-                  monitor_gap = builtins.floor (designFactor / 2.0);
-                  window_gap = builtins.floor (designFactor / 2.0);
-
-                  border_overlap = false;
-                };
-
-                modal_parent_blocking = true;
-
-                locale = "en_US";
-              };
-
-              decoration = {
-                shadow = {
-                  enabled = true;
-
-                  sharp = false;
-                };
-
-                border_part_of_window = true;
-                rounding = builtins.floor designFactor;
-                rounding_power = 4.0; # 4.0 = Squircle
-
-                active_opacity = 1.0;
-                fullscreen_opacity = 1.0;
-                inactive_opacity = 1.0;
-
-                dim_special = 0.25;
-                dim_modal = true;
-                dim_inactive = false;
-                dim_strength = 0.0;
-
-                blur = {
-                  enabled = true;
-                  new_optimizations = true;
-
-                  special = true;
-                  popups = true;
-                  input_methods = true;
-
-                  ignore_opacity = false;
-                  xray = true;
-                };
-
-                glow = {
-                  enabled = false;
-                };
-              };
-
-              animations = {
-                enabled = true;
-
-                workspace_wraparound = false;
-              };
-
-              input = {
-                numlock_by_default = false;
-                kb_layout = "us";
-
-                force_no_accel = false;
-                scroll_button_lock = true;
-                natural_scroll = false;
-                left_handed = false;
-
-                special_fallthrough = false;
-
-                follow_mouse = 1; # 1 = Cursor movement will always change focus to the window under the cursor.
-                focus_on_close = 1; # 1 = When a window is closed, focus will shift to the window under the cursor.
-                mouse_refocus = true;
-
-                touchpad = {
-                  disable_while_typing = true;
-
-                  flip_x = false;
-                  flip_y = false;
-
-                  middle_button_emulation = false;
-                  clickfinger_behavior = false;
-
-                  tap_to_click = true;
-
-                  tap_and_drag = true;
-                  drag_3fg = 1; # 1 = 3 Fingers
-                  drag_lock = 2; # 2 = Enabled Sticky
-
-                  natural_scroll = true;
-                };
-
-                touchdevice = {
-                  enabled = true;
-                };
-
-                tablet = {
-                  left_handed = false;
-                };
-
-                virtualkeyboard = {
-                  release_pressed_on_close = true;
-                };
-              };
-
-              gestures = {
-                workspace_swipe_create_new = true;
-                workspace_swipe_forever = true;
-
-                # Touchpad
-                workspace_swipe_invert = false;
-
-                # Touchscreen
-                workspace_swipe_touch = true;
-                workspace_swipe_touch_invert = false;
-              };
-
-              group = {
-                auto_group = false;
-
-                merge_groups_on_drag = true;
-                merge_groups_on_groupbar = true;
-
-                group_on_movetoworkspace = false;
-                merge_floated_into_tiled_on_groupbar = false;
-                insert_after_current = true;
-                focus_removed_window = true;
-
-                groupbar = {
-                  enabled = true;
-                  stacked = false;
-
-                  render_titles = true;
-                  scrolling = true;
-                  middle_click_close = false;
-
-                  keep_upper_gap = true;
-                  gradients = true;
-                  blur = true;
-                  round_only_edges = false;
-                  gradient_round_only_edges = false;
-                };
-              };
-
-              misc = {
-                disable_watchdog_warning = false;
-                disable_xdg_env_checks = false;
-                disable_autoreload = false;
-                disable_scale_notification = false;
-
-                allow_session_lock_restore = true;
-                session_lock_xray = false;
-
-                key_press_enables_dpms = true;
-                mouse_move_enables_dpms = true;
-                vrr = 1; # 1 = On
-                mouse_move_focuses_monitor = true;
-
-                disable_splash_rendering = true;
-                disable_hyprland_logo = true;
-
-                close_special_on_empty = true;
-
-                enable_swallow = true;
-
-                name_vk_after_proc = true;
-                enable_anr_dialog = true;
-
-                exit_window_retains_fullscreen = false;
-
-                focus_on_activate = true;
-
-                always_follow_on_dnd = true;
-
-                animate_mouse_windowdragging = true;
-                animate_manual_resizes = true;
-
-                middle_click_paste = true;
-
-                font_family = fontPreferences.sansSerif;
-              };
-
-              layers = {
-                layers_hog_keyboard_focus = true;
-              };
-
-              binds = {
-                allow_workspace_cycles = false;
-                workspace_back_and_forth = false;
-                hide_special_on_workspace_change = false;
-
-                window_direction_monitor_fallback = true;
-                ignore_group_lock = false;
-                movefocus_cycles_groupfirst = true;
-                movefocus_cycles_fullscreen = false;
-                allow_pin_fullscreen = true;
-
-                disable_keybind_grabbing = true;
-                pass_mouse_when_bound = false;
-              };
-
-              xwayland.enabled = config.programs.hyprland.xwayland.enable;
-
-              render = {
-                cm_enabled = true;
-                cm_auto_hdr = 0; # 0 = Off
-                send_content_type = true;
-                new_render_scheduling = true;
-                xp_mode = false;
-                commit_timing_enabled = true;
-              };
-
-              cursor = {
-                invisible = false;
-                hide_on_key_press = false;
-                hide_on_tablet = false;
-                hide_on_touch = true;
-
-                no_hardware_cursors = 2; # 2 = Automatic (Disabled When Tearing)
-                enable_hyprcursor = true;
-                sync_gsettings_theme = true;
-
-                no_warps = false;
-                persistent_warps = true;
-                warp_back_after_non_mouse_input = true;
-
-                zoom_rigid = true;
-                zoom_detached_camera = false;
-                zoom_disable_aa = false;
-              };
-
-              ecosystem = {
-                enforce_permissions = false;
-
-                no_update_news = false;
-                no_donation_nag = false;
-              };
-
-              quirks = {
-                prefer_hdr = 0; # 0 = Off
-              };
-
-              dwindle = {
-                force_split = 0; # 0 = Split Follows Mouse
-                use_active_for_splits = true;
-                smart_split = false;
-                preserve_split = true;
-
-                smart_resizing = true;
-
-                precise_mouse_move = true;
-              };
-            }; # Sorted from "General" to "Quirks" according to the "Configuring > Core > Config options" Page.
-
+            on = {
+              _args = [
+                "hyprland.start"
+
+                (pkgs.lib.generators.mkLuaInline ''
+                  function()
+                  ${pkgs.lib.concatMapStringsSep "\n" (
+                    command: "  ${command}"
+                  ) config.customOptions.commandsOnStartOfHyprland}
+                  end
+                '')
+              ];
+            };
           };
 
           extraConfig = ''
@@ -657,6 +682,10 @@
 
     environment.systemPackages = with pkgs; [
       hyprland-protocols
+
+      (nwg-displays.override {
+        hyprlandSupport = config.programs.hyprland.enable;
+      })
     ];
   };
 }

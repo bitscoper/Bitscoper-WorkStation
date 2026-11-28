@@ -8,6 +8,113 @@ My NixOS Configuration
 
 </div>
 
+## Details
+
+### Modules
+
+- AppImage
+- Avahi
+- bat
+- BlueZ
+- brightnessctl
+- Btrfs
+- chrony
+- Cine
+- cliphist
+- Cockpit
+- Contour
+- CPU-X
+- Curtail
+- D-Bus
+- direnv
+- Evince
+- Exhibit
+- Fastfetch
+- Fcitx 5
+- fdroidcl
+- FFmpeg
+- Firefox
+- Flutter
+- fprintd
+- fwupd
+- Git
+- GNOME Keyring
+- GNU Bash
+- GNU GRand Unified Bootloader
+- GnuPG
+- GPSd
+- GStreamer
+- GTK
+- Hardinfo2
+- hypridle
+- Hyprland
+- hyprlock
+- hyprpaper
+- Hyprshot
+- I2C
+- Icecast
+- ImHex
+- Jellyfin
+- KeePassXC
+- Kubernetes
+- LibreOffice
+- libvirt
+- Loupe
+- Lutris
+- MariaDB
+- Nautilus
+- NetworkManager
+- nix-index
+- Nocturne
+- nwg-bar
+- nwg-drawer
+- Ollama
+- Open Broadcaster Software Studio
+- OpenCode
+- OpenDM
+- OpenSSH
+- PeaZip
+- PHP
+- PipeWire
+- Playerctl
+- Plymouth
+- Podman
+- polkit
+- PostgreSQL
+- qBittorrent
+- Qt
+- Resources
+- Rofi
+- rtl-sdr
+- Simple Desktop Display Manager
+- Starship
+- Sudo
+- SwayNotificationCenter
+- sysctl
+- Syshud
+- systemd
+- Tailscale
+- Tor
+- udev
+- udiskie
+- Ungoogled Chromium
+- Universal Wayland Session Manager
+- vivid
+- Waybar
+- Waydroid
+- Wayscriber
+- WayVNC
+- Wireshark
+- xdg-desktop-portal-gtk
+- XDG
+- Zed
+
+### Hardware Specific Modules
+
+- ASUS VivoBook X415EA
+- Fantech EOS Lite GP15L Multi-Platform Gamepad
+- SDDPNQD-512G-1102
+
 ## Run
 
 ```sh

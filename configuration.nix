@@ -1261,10 +1261,6 @@ in
           useQt = false;
         })
 
-        (nwg-displays.override {
-          hyprlandSupport = config.programs.hyprland.enable;
-        })
-
         (p7zip.override {
           enableUnfree = config.nixpkgs.config.allowUnfree; # Includes RAR
         })
